@@ -10,10 +10,13 @@ use Illuminate\Support\Collection;
 use Modules\Comms\Domain\DataObjects\AutomationEntityDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationEventDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationScanRecord;
+use Modules\Comms\Domain\DataObjects\CalendarSourceDefinition;
+use Modules\Comms\Domain\DataObjects\CalendarSourceRecord;
 use Modules\Comms\Domain\DataObjects\WidgetDefinition;
 use Modules\Comms\Domain\DataObjects\WidgetResolverResult;
 use Modules\Comms\Domain\Registry\AutomationEntityRegistry;
 use Modules\Comms\Domain\Registry\AutomationEventRegistry;
+use Modules\Comms\Domain\Registry\CalendarSourceRegistry;
 use Modules\Comms\Domain\Registry\DeepLinkRegistry;
 use Modules\Comms\Domain\Registry\WidgetRegistry;
 use Modules\Comms\Domain\Support\FakeEmailGatewayDriver;
@@ -21,21 +24,31 @@ use Modules\Comms\Domain\Support\FakePushGatewayDriver;
 use Modules\Comms\Domain\Support\FakeSmsGatewayDriver;
 use Modules\Comms\Domain\Support\FakeWhatsAppGatewayDriver;
 use Modules\Comms\Models\AutomationRule;
+use Modules\Comms\Models\CalendarEvent;
+use Modules\Comms\Models\CalendarFeedToken;
+use Modules\Comms\Models\EventAttendee;
+use Modules\Comms\Models\EventRegistration;
 use Modules\Comms\Models\GatewayCostReconciliation;
 use Modules\Comms\Models\MessageConversation;
 use Modules\Comms\Models\MessageGateway;
 use Modules\Comms\Models\MessageSegment;
+use Modules\Comms\Models\Newsletter;
+use Modules\Comms\Models\Notice;
+use Modules\Comms\Models\NoticeRead;
 use Modules\Comms\Models\RuleExecution;
 use Modules\Comms\Models\ScanRun;
 use Modules\Comms\Models\SchoolWidgetSetting;
 use Modules\Comms\Models\SenderId;
 use Modules\Comms\Models\WhatsAppBusinessAccount;
 use Modules\Comms\Models\WhatsAppTemplate;
+use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationChannelDriverRegistry;
+use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\Notification;
 use Modules\Core\Models\School;
+use Modules\Core\Models\Term;
 use Modules\Finance\Domain\Actions\CalculateSubledgerBalanceAction;
 use Modules\Finance\Domain\DataObjects\CalculateSubledgerBalanceData;
 use Modules\Finance\Models\Invoice;
@@ -88,6 +101,8 @@ class CommsServiceProvider extends ModuleServiceProvider
         $this->registerAutomationEvents();
         $this->registerDashboardWidgets();
         $this->registerDeepLinks();
+        $this->registerCalendarSources();
+        $this->registerCom06NotificationKeys();
     }
 
     /**
@@ -126,6 +141,20 @@ class CommsServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(ScanRun::class, fn (School $school): ScanRun => ScanRun::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(SchoolWidgetSetting::class, fn (School $school): SchoolWidgetSetting => SchoolWidgetSetting::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(CalendarEvent::class, fn (School $school): CalendarEvent => CalendarEvent::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Notice::class, fn (School $school): Notice => Notice::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(NoticeRead::class, fn (School $school): NoticeRead => NoticeRead::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Newsletter::class, fn (School $school): Newsletter => Newsletter::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(EventRegistration::class, fn (School $school): EventRegistration => EventRegistration::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(EventAttendee::class, fn (School $school): EventAttendee => EventAttendee::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(CalendarFeedToken::class, fn (School $school): CalendarFeedToken => CalendarFeedToken::factory()->create(['school_id' => $school->id]));
     }
 
     /**
@@ -364,6 +393,68 @@ class CommsServiceProvider extends ModuleServiceProvider
     }
 
     /**
+     * Book I COM-06 §2 ⭐/BR-COM-06-001 — see `CalendarSourceRegistry`'s
+     * own docblock for the documented scope boundary. `CORE-03`'s own
+     * `Term` (`starts_on`/`ends_on`, already real and already Book A)
+     * is the one real source registered in this pass.
+     */
+    private function registerCalendarSources(): void
+    {
+        CalendarSourceRegistry::register(new CalendarSourceDefinition(
+            moduleCode: 'CORE-03',
+            sourceType: 'term_dates',
+            defaultAudienceScope: 'whole_school',
+            defaultColour: '#4b5563',
+            syncer: function (int $schoolId): Collection {
+                return Term::where('school_id', $schoolId)
+                    ->get()
+                    ->map(fn (Term $term): CalendarSourceRecord => new CalendarSourceRecord(
+                        sourceModuleId: $term->id,
+                        academicYearId: $term->academic_year_id,
+                        termId: $term->id,
+                        title: "Term {$term->number}: {$term->name}",
+                        startsAt: $term->starts_on->copy()->startOfDay(),
+                        endsAt: $term->ends_on->copy()->endOfDay(),
+                        isAllDay: true,
+                    ));
+            },
+        ));
+    }
+
+    /**
+     * Book I COM-06 §3/BR-COM-06-005/007/009 — the real notification
+     * keys this module owns, mirroring `Modules\Boarding\Providers\BoardingServiceProvider`'s
+     * own `NotificationKeyRegistry::register()` calls for
+     * `boarding.missing_learner_escalation`.
+     */
+    private function registerCom06NotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.calendar_event_cancelled',
+            variables: ['event.title'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardian',
+            isTransactional: true,
+        ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.notice_escalation',
+            variables: ['notice.title', 'unread_percent'],
+            defaultChannels: ['email'],
+            defaultAudience: 'staff',
+            isUrgent: true,
+        ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.event_waitlist_promoted',
+            variables: ['event.title'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardian',
+            isTransactional: true,
+        ));
+    }
+
+    /**
      * Book I COM-01 §6. `sms_normalise_before_send` stays `true`
      * unconditionally in this pass — `FakeSmsGatewayDriver` always
      * normalises, matching what "(locked)" means for this setting.
@@ -383,6 +474,8 @@ class CommsServiceProvider extends ModuleServiceProvider
             ['portal.offline_cache_max_days', 'int', '7', 'Maximum age, in days, of cached offline data before it is considered stale.'],
             ['portal.dashboard_widget_max_per_persona', 'int', '12', 'Maximum widgets a school may enable per persona dashboard.'],
             ['portal.learner_min_grade_ordinal', 'int', '5', 'Grade level ordinal at and above which a learner portal account may exist (BR-CORE-05-022).'],
+            ['comms.notice_escalation_delay_minutes', 'int', '60', 'Minutes after an urgent notice publishes before its unread rate may trigger an escalation.'],
+            ['comms.notice_escalation_unread_threshold_percent', 'int', '50', 'Unread percentage at or above which an urgent notice escalates to its poster.'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
