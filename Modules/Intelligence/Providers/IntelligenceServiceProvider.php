@@ -8,6 +8,10 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Modules\Academic\Models\AttendanceSummary;
 use Modules\Academic\Models\TermSubjectResult;
+use Modules\Boarding\Domain\Actions\MarkRollCallAction;
+use Modules\Boarding\Domain\Actions\RecordCheckpointMovementAction;
+use Modules\Boarding\Domain\DataObjects\MarkRollCallData;
+use Modules\Boarding\Domain\DataObjects\RecordCheckpointMovementData;
 use Modules\Comms\Domain\DataObjects\WidgetDefinition;
 use Modules\Comms\Domain\DataObjects\WidgetResolverResult;
 use Modules\Comms\Domain\Registry\WidgetRegistry;
@@ -21,27 +25,35 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Invoice;
 use Modules\Intelligence\Domain\Actions\GetKpiValueAction;
+use Modules\Intelligence\Domain\DataObjects\HardwareScanRouteDefinition;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
 use Modules\Intelligence\Domain\DataObjects\ReportEntityDefinition;
 use Modules\Intelligence\Domain\DataObjects\ReportFieldDefinition;
 use Modules\Intelligence\Domain\DataObjects\RiskIndicatorDefinition;
 use Modules\Intelligence\Domain\DataObjects\RiskIndicatorResult;
+use Modules\Intelligence\Domain\Registry\HardwareScanRouteRegistry;
 use Modules\Intelligence\Domain\Registry\KpiRegistry;
 use Modules\Intelligence\Domain\Registry\ReportFieldRegistry;
 use Modules\Intelligence\Domain\Registry\RiskIndicatorRegistry;
+use Modules\Intelligence\Models\ApiClient;
+use Modules\Intelligence\Models\ApiUsageLog;
 use Modules\Intelligence\Models\BoardPack;
 use Modules\Intelligence\Models\CustomReport;
 use Modules\Intelligence\Models\CustomReportSchedule;
 use Modules\Intelligence\Models\EnrolmentForecast;
 use Modules\Intelligence\Models\ExecutiveDigest;
 use Modules\Intelligence\Models\FeeDefaultRiskScore;
+use Modules\Intelligence\Models\HardwareDevice;
 use Modules\Intelligence\Models\KpiTarget;
 use Modules\Intelligence\Models\LearnerRiskScore;
 use Modules\Intelligence\Models\ReportExecution;
 use Modules\Intelligence\Models\ReportShare;
 use Modules\Intelligence\Models\RiskScoreWeight;
+use Modules\Intelligence\Models\SsoProvisioningConfig;
 use Modules\Intelligence\Models\StaffWellbeingIndicator;
 use Modules\Intelligence\Models\WarehouseSnapshot;
+use Modules\Intelligence\Models\WebhookDelivery;
+use Modules\Intelligence\Models\WebhookSubscription;
 use Modules\Intelligence\Models\WithdrawalRiskFlag;
 use Modules\Payroll\Models\PayGradeNotch;
 use Modules\People\Models\Student;
@@ -50,10 +62,11 @@ use Modules\Welfare\Models\SickBayAdmission;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 /**
- * Book J INT-01/INT-02/INT-03 — Reporting Engine & Data Warehouse (the
- * field registry every later INT/SAA module assumes exists, §0.3),
- * Executive Dashboards, Digests & Board Packs, and Early Warning &
- * Predictive Analytics.
+ * Book J INT-01/INT-02/INT-03/INT-04 — Reporting Engine & Data
+ * Warehouse (the field registry every later INT/SAA module assumes
+ * exists, §0.3), Executive Dashboards, Digests & Board Packs, Early
+ * Warning & Predictive Analytics, and Public API, Webhooks &
+ * Integrations.
  */
 class IntelligenceServiceProvider extends ModuleServiceProvider
 {
@@ -67,6 +80,7 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerHardwareScanRoutes();
         $this->registerReportFields();
         $this->registerNotificationKeys();
         $this->registerKpis();
@@ -121,6 +135,18 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(WithdrawalRiskFlag::class, fn (School $school): WithdrawalRiskFlag => WithdrawalRiskFlag::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(StaffWellbeingIndicator::class, fn (School $school): StaffWellbeingIndicator => StaffWellbeingIndicator::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ApiClient::class, fn (School $school): ApiClient => ApiClient::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ApiUsageLog::class, fn (School $school): ApiUsageLog => ApiUsageLog::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(WebhookSubscription::class, fn (School $school): WebhookSubscription => WebhookSubscription::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(WebhookDelivery::class, fn (School $school): WebhookDelivery => WebhookDelivery::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(SsoProvisioningConfig::class, fn (School $school): SsoProvisioningConfig => SsoProvisioningConfig::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(HardwareDevice::class, fn (School $school): HardwareDevice => HardwareDevice::factory()->create(['school_id' => $school->id]));
     }
 
     /**
@@ -233,6 +259,10 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             ['risk.recompute_hour', 'int', '3', 'Hour the nightly risk-score recompute runs.'],
             ['risk.forecast_minimum_terms', 'int', '6', 'Terms of enrolment history below which a forecast is marked low-confidence.'],
             ['risk.staff_workload_watch_threshold_percent', 'int', '110', 'Utilisation percent above which a term counts toward a staff wellbeing watch/concern flag.'],
+            ['integration.default_rate_limit_per_minute', 'int', '60', 'Default per-minute rate limit for a newly issued API client.'],
+            ['integration.webhook_max_retries', 'int', '8', 'Delivery attempts before a webhook delivery is marked abandoned.'],
+            ['integration.webhook_disable_after_failures', 'int', '20', 'Consecutive delivery failures before a webhook subscription auto-disables.'],
+            ['integration.hardware_heartbeat_window_minutes', 'int', '15', 'Minutes of silence before a hardware device is marked offline.'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
@@ -481,6 +511,32 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
                     source: 'BRD-07 behaviour_records, count this term',
                 );
             },
+        ));
+    }
+
+    /**
+     * Book J INT-04 §3 ⭐/BR-INT-04-007/008. Two real routes — `roll_call`
+     * and `gate` both call `BRD-02`'s own existing Actions, exactly as a
+     * manual entry would, with `device_source`/`method` recorded so the
+     * origin is never lost. See `HardwareScanRouteRegistry`'s own
+     * docblock for why `attendance` has no route registered in this pass.
+     */
+    private function registerHardwareScanRoutes(): void
+    {
+        HardwareScanRouteRegistry::register(new HardwareScanRouteDefinition(
+            purpose: 'roll_call',
+            resolver: fn (Student $student, int $rollCallId, ?string $deviceSource, int $recordedByUserId, array $context) => app(MarkRollCallAction::class)->execute(new MarkRollCallData(
+                rollCallId: $rollCallId, studentId: $student->id, status: 'present',
+                markedByUserId: $recordedByUserId, deviceSource: $deviceSource,
+            )),
+        ));
+
+        HardwareScanRouteRegistry::register(new HardwareScanRouteDefinition(
+            purpose: 'gate',
+            resolver: fn (Student $student, int $checkpointId, ?string $deviceSource, int $recordedByUserId, array $context) => app(RecordCheckpointMovementAction::class)->execute(new RecordCheckpointMovementData(
+                studentId: $student->id, checkpointId: $checkpointId, direction: $context['direction'] ?? 'out',
+                method: $deviceSource ?? 'hardware', recordedByUserId: $recordedByUserId,
+            )),
         ));
     }
 }
