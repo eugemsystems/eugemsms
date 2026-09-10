@@ -18,17 +18,23 @@ use Modules\Comms\Domain\Registry\AutomationEntityRegistry;
 use Modules\Comms\Domain\Registry\AutomationEventRegistry;
 use Modules\Comms\Domain\Registry\CalendarSourceRegistry;
 use Modules\Comms\Domain\Registry\DeepLinkRegistry;
+use Modules\Comms\Domain\Registry\MeetingProviderDriverRegistry;
 use Modules\Comms\Domain\Registry\WidgetRegistry;
 use Modules\Comms\Domain\Support\FakeEmailGatewayDriver;
+use Modules\Comms\Domain\Support\FakeMeetingProviderDriver;
 use Modules\Comms\Domain\Support\FakePushGatewayDriver;
 use Modules\Comms\Domain\Support\FakeSmsGatewayDriver;
 use Modules\Comms\Domain\Support\FakeWhatsAppGatewayDriver;
 use Modules\Comms\Models\AutomationRule;
 use Modules\Comms\Models\CalendarEvent;
 use Modules\Comms\Models\CalendarFeedToken;
+use Modules\Comms\Models\ConsultationBooking;
+use Modules\Comms\Models\ConsultationWindow;
 use Modules\Comms\Models\EventAttendee;
 use Modules\Comms\Models\EventRegistration;
 use Modules\Comms\Models\GatewayCostReconciliation;
+use Modules\Comms\Models\MeetingAttendance;
+use Modules\Comms\Models\MeetingProvider;
 use Modules\Comms\Models\MessageConversation;
 use Modules\Comms\Models\MessageGateway;
 use Modules\Comms\Models\MessageSegment;
@@ -37,6 +43,7 @@ use Modules\Comms\Models\Notice;
 use Modules\Comms\Models\NoticeRead;
 use Modules\Comms\Models\RuleExecution;
 use Modules\Comms\Models\ScanRun;
+use Modules\Comms\Models\ScheduledMeeting;
 use Modules\Comms\Models\SchoolWidgetSetting;
 use Modules\Comms\Models\SenderId;
 use Modules\Comms\Models\WhatsAppBusinessAccount;
@@ -103,6 +110,8 @@ class CommsServiceProvider extends ModuleServiceProvider
         $this->registerDeepLinks();
         $this->registerCalendarSources();
         $this->registerCom06NotificationKeys();
+        $this->registerMeetingProviderDrivers();
+        $this->registerCom07NotificationKeys();
     }
 
     /**
@@ -155,6 +164,16 @@ class CommsServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(EventAttendee::class, fn (School $school): EventAttendee => EventAttendee::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(CalendarFeedToken::class, fn (School $school): CalendarFeedToken => CalendarFeedToken::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(MeetingProvider::class, fn (School $school): MeetingProvider => MeetingProvider::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ScheduledMeeting::class, fn (School $school): ScheduledMeeting => ScheduledMeeting::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ConsultationWindow::class, fn (School $school): ConsultationWindow => ConsultationWindow::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ConsultationBooking::class, fn (School $school): ConsultationBooking => ConsultationBooking::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(MeetingAttendance::class, fn (School $school): MeetingAttendance => MeetingAttendance::factory()->create(['school_id' => $school->id]));
     }
 
     /**
@@ -455,6 +474,32 @@ class CommsServiceProvider extends ModuleServiceProvider
     }
 
     /**
+     * Book I COM-07 §2/§6 — see `MeetingProviderDriverRegistry`'s own
+     * docblock. One fake driver serves every provider string this
+     * pass supports, the same "single fake driver" choice already
+     * made for COM-01's own four channel drivers.
+     */
+    private function registerMeetingProviderDrivers(): void
+    {
+        MeetingProviderDriverRegistry::register($this->app->make(FakeMeetingProviderDriver::class));
+    }
+
+    /**
+     * Book I COM-07 §3/§9 — the real notification keys this module
+     * owns, mirroring COM-06's own `registerCom06NotificationKeys()`.
+     */
+    private function registerCom07NotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.meeting_cancelled',
+            variables: ['meeting.starts_at'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardian',
+            isTransactional: true,
+        ));
+    }
+
+    /**
      * Book I COM-01 §6. `sms_normalise_before_send` stays `true`
      * unconditionally in this pass — `FakeSmsGatewayDriver` always
      * normalises, matching what "(locked)" means for this setting.
@@ -476,6 +521,9 @@ class CommsServiceProvider extends ModuleServiceProvider
             ['portal.learner_min_grade_ordinal', 'int', '5', 'Grade level ordinal at and above which a learner portal account may exist (BR-CORE-05-022).'],
             ['comms.notice_escalation_delay_minutes', 'int', '60', 'Minutes after an urgent notice publishes before its unread rate may trigger an escalation.'],
             ['comms.notice_escalation_unread_threshold_percent', 'int', '50', 'Unread percentage at or above which an urgent notice escalates to its poster.'],
+            ['meetings.waiting_room_default_for_learners', 'bool', '1', 'Whether a learner-facing meeting starts with its waiting room enabled (locked true).'],
+            ['attendance.online_minimum_attendance_percent', 'int', '70', 'Minimum percentage of an online lesson a participant must attend to be marked present, not present-but-flagged.'],
+            ['meetings.recording_retention_days', 'int', '90', 'Days a meeting recording is retained before its URL is purged.'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
