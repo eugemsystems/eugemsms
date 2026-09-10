@@ -38,6 +38,14 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\People\Models\Student;
 
+// A manual `Carbon::setTestNow()` reset at the end of a test body never
+// runs if an earlier expectation in that same test throws — leaking a
+// frozen "now" into every test that runs afterward in the same process.
+// `afterEach` runs unconditionally, pass or fail.
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
+
 /**
  * @return array{school: School, year: AcademicYear, term: Term, user: User}
  */
@@ -136,8 +144,6 @@ it('advances the escalation ladder on elapsed time regardless of acknowledgement
     Carbon::setTestNow(Carbon::now()->addMinutes(11));
 
     $advanced = app(AdvanceEscalationLadderAction::class)->execute($incident->id);
-
-    Carbon::setTestNow();
 
     expect($advanced->current_step)->toBe(2)
         ->and($advanced->status)->toBe('escalating');

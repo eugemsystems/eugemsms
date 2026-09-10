@@ -47,6 +47,14 @@ use Modules\People\Domain\DataObjects\LinkGuardianToStudentData;
 use Modules\People\Models\Guardian;
 use Modules\People\Models\Student;
 
+// A manual `Carbon::setTestNow()` reset at the end of a test body never
+// runs if an earlier expectation in that same test throws — leaking a
+// frozen "now" into every test that runs afterward in the same process.
+// `afterEach` runs unconditionally, pass or fail.
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
+
 /**
  * @return array{school: School, year: AcademicYear, term: Term, user: User}
  */
@@ -244,8 +252,6 @@ it('opens a BRD-02 missing-learner incident once an exeat is overdue past the co
 
     $checked = app(CheckOverdueExeatAction::class)->execute($exeat->id);
 
-    Carbon::setTestNow();
-
     expect($checked->status)->toBe('overdue');
 
     $incident = MissingLearnerIncident::where('student_id', $student->id)->whereNull('roll_call_id')->first();
@@ -295,8 +301,6 @@ it('pre-populates a roll call status as exeat for an approved, currently-active 
     ));
 
     $record = RollCallRecord::where('roll_call_id', $rollCall->id)->where('student_id', $student->id)->first();
-
-    Carbon::setTestNow();
 
     expect($record)->not->toBeNull()
         ->and($record->status)->toBe('exeat')

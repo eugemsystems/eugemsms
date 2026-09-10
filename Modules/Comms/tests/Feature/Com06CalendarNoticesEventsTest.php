@@ -46,6 +46,16 @@ use Modules\People\Models\Guardian;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 
+// A manual `Carbon::setTestNow()` reset at the end of a test body never
+// runs if an earlier expectation in that same test throws — leaking a
+// frozen "now" into every test that runs afterward in the same process
+// (order-dependent, so it can pass locally and fail in CI or a fresh
+// checkout purely by luck of execution order). `afterEach` runs
+// unconditionally, pass or fail.
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
+
 /**
  * @return array{school: School, user: User, year: AcademicYear, term: Term}
  */
@@ -228,8 +238,6 @@ it('escalates a substantially-unread urgent notice to its poster exactly once, a
     expect($first)->toBeTrue()
         ->and($second)->toBeTrue()
         ->and(Notification::where('notification_key', 'comms.notice_escalation')->where('status', 'sent')->count())->toBe(1);
-
-    Carbon::setTestNow();
 });
 
 /**

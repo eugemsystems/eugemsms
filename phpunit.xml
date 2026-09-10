@@ -27,6 +27,7 @@
             <directory>Modules/Reporting/tests/Unit</directory>
             <directory>Modules/Compliance/tests/Unit</directory>
             <directory>Modules/Comms/tests/Unit</directory>
+            <directory>Modules/Intelligence/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
@@ -50,6 +51,7 @@
             <directory>Modules/Reporting/tests/Feature</directory>
             <directory>Modules/Compliance/tests/Feature</directory>
             <directory>Modules/Comms/tests/Feature</directory>
+            <directory>Modules/Intelligence/tests/Feature</directory>
         </testsuite>
     </testsuites>
     <source>

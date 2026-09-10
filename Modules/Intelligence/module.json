@@ -1,0 +1,11 @@
+{
+    "name": "Intelligence",
+    "alias": "intelligence",
+    "description": "Book J INT-01 to INT-04 - Intelligence & Integrations: the ad hoc reporting engine and data warehouse, executive dashboards, early warning and predictive analytics, and the public API/webhooks/hardware device layer.",
+    "keywords": ["reporting", "analytics", "risk", "api", "webhooks", "hardware"],
+    "priority": 20,
+    "providers": [
+        "Modules\\Intelligence\\Providers\\IntelligenceServiceProvider"
+    ],
+    "files": []
+}

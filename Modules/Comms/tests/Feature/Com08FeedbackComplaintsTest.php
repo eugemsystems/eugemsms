@@ -28,6 +28,14 @@ use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 use Modules\Welfare\Models\SafeguardingConcern;
 
+// A manual `Carbon::setTestNow()` reset at the end of a test body never
+// runs if an earlier expectation in that same test throws — leaking a
+// frozen "now" into every test that runs afterward in the same process.
+// `afterEach` runs unconditionally, pass or fail.
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
+
 /**
  * @return array{school: School, user: User}
  */
@@ -97,8 +105,6 @@ it('computes the SLA due date from the category at intake, visible on the compla
 
     expect($complaint->sla_due_at->toDateTimeString())->toBe('2027-01-04 09:00:00')
         ->and($complaint->status)->toBe('received');
-
-    Carbon::setTestNow();
 });
 
 it('never includes an internal note in the raiser\'s own view of the thread (AC-COM-08-003)', function (): void {
@@ -202,8 +208,6 @@ it('alerts the assignee once when a complaint approaches its SLA, and their mana
     app(CheckComplaintSlaAction::class)->execute($complaint->id);
     expect(Notification::where('notification_key', 'comms.complaint_sla_breached')->where('status', 'sent')->count())->toBe(1)
         ->and(Notification::where('notification_key', 'comms.complaint_sla_breached')->first()->recipient_id)->toBe($manager->user_id);
-
-    Carbon::setTestNow();
 });
 
 it('records a decline as data in its own right, contributing to response-rate reporting (AC-COM-08-005)', function (): void {
