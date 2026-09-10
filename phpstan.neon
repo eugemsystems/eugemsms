@@ -65,3 +65,15 @@ parameters:
             identifier: argument.type
             path: Modules/Intelligence/Domain/Actions/ExecuteCustomReportAction.php
             message: '#Parameter \#1 \$expression of method Illuminate\\Database\\Eloquent\\Builder.*::selectRaw\(\) expects literal-string#'
+        # Larastan misinfers `KpiTarget::where(...)->where(...)->where(...)->first()`
+        # as non-nullable here (confirmed empirically: replacing `?->` with
+        # `->` produces zero new errors, where a correct nullable inference
+        # would flag "access on possibly null" at level 7). It is genuinely
+        # nullable at runtime — no target override is the common case, which
+        # is the entire reason for the `?? $kpi->defaultTargetValue` fallback
+        # immediately after it. Removing the nullsafe operator to satisfy this
+        # rule would introduce a real fatal error on the default (no
+        # override) path, so the rule is suppressed here, not the code fixed.
+        -
+            identifier: nullsafe.neverNull
+            path: Modules/Intelligence/Domain/Actions/GetKpiValueAction.php
