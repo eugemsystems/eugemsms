@@ -153,6 +153,34 @@ it('normalises curly quotes and em-dashes before calculating segments (AC-COM-01
         ->and($segment->segment_count)->toBe(1);
 });
 
+it('forces UCS-2 encoding for a genuine non-GSM-7 diacritic that normalisation cannot map away (BR-COM-01-009)', function (): void {
+    $f = com01Fixture();
+    NotificationKeyRegistry::register(new NotificationKeyDefinition(
+        key: 'test.real_diacritic', variables: ['name'], defaultChannels: ['sms'], defaultAudience: 'guardian',
+    ));
+    app(CreateNotificationTemplateAction::class)->execute(new CreateNotificationTemplateData(
+        key: 'test.real_diacritic', channel: 'sms', body: 'Dear {{ name }}, fees are due.',
+    ));
+
+    // GSM-7's own extended alphabet already covers ü/ä/ö/ñ/é/à (see
+    // GSM7_PATTERN) — those normalise for free. 'š' does not appear in
+    // that alphabet at all and has no NORMALIZE_MAP entry either (it
+    // isn't a Word/curly-quote artifact), so a name carrying it has no
+    // GSM-7 equivalent to fall back to and must correctly force UCS-2
+    // rather than being silently stripped or mis-costed as GSM-7.
+    $notification = app(DispatchNotificationAction::class)->execute(new DispatchNotificationData(
+        schoolId: $f['school']->id, notificationKey: 'test.real_diacritic', recipientType: 'guardian',
+        addresses: ['sms' => '0771234567'], channel: 'sms',
+        context: ['name' => 'Mrs Šumba'],
+    ));
+
+    $notification = $notification->fresh();
+    expect($notification->body)->toContain('Šumba');
+
+    $segment = MessageSegment::where('notification_id', $notification->id)->firstOrFail();
+    expect($segment->encoding)->toBe('ucs2');
+});
+
 it('pauses non-critical WhatsApp sends and fires an event when quality rating reaches the threshold (AC-COM-01-004, BR-COM-01-007)', function (): void {
     Event::fake([WhatsAppQualityDegraded::class]);
     $f = com01Fixture();

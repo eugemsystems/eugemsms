@@ -16,9 +16,11 @@ use Modules\Comms\Domain\DataObjects\RaiseComplaintData;
 use Modules\Comms\Domain\DataObjects\RegisterMessageGatewayData;
 use Modules\Comms\Domain\DataObjects\SubmitSurveyResponseData;
 use Modules\Comms\Models\ComplaintCategory;
+use Modules\Comms\Models\ComplaintUpdate;
 use Modules\Comms\Models\SurveyResponseAnswer;
 use Modules\Core\Domain\Actions\Notifications\CreateNotificationTemplateAction;
 use Modules\Core\Domain\DataObjects\Notifications\CreateNotificationTemplateData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\Notification;
 use Modules\Core\Models\School;
@@ -115,6 +117,20 @@ it('never includes an internal note in the raiser\'s own view of the thread (AC-
     expect($raiserThread)->toHaveCount(1)
         ->and($raiserThread->first()->content)->toBe('We are checking stock.')
         ->and($raiserThread->pluck('content'))->not->toContain('Internal: supplier is unreliable, escalate to procurement.');
+});
+
+it('never allows a posted complaint update to be changed (BR-COM-08-005)', function (): void {
+    $f = com08Fixture();
+    $category = ComplaintCategory::factory()->for($f['school'])->create();
+    $complaint = app(RaiseComplaintAction::class)->execute(new RaiseComplaintData(
+        schoolId: $f['school']->id, categoryId: $category->id, raisedByType: 'guardian',
+        subject: 'Noise complaint', description: 'Construction noise during exams.',
+    ));
+
+    $update = app(AddComplaintUpdateAction::class)->execute($complaint->id, 'comment', $f['user']->id, 'Noted.');
+
+    expect(fn () => ComplaintUpdate::findOrFail($update->id)->update(['content' => 'Changed my mind.']))
+        ->toThrow(InvalidStateTransitionException::class);
 });
 
 it('routes a complaint from a safeguarding-flagged category to BRD-08 instead of the ordinary queue (AC-COM-08-004, BR-COM-08-006)', function (): void {
