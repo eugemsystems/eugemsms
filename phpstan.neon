@@ -77,3 +77,14 @@ parameters:
         -
             identifier: nullsafe.neverNull
             path: Modules/Intelligence/Domain/Actions/GetKpiValueAction.php
+        # Same misinference as above, one call deeper: `$weights->get($key)`
+        # (a `Collection<string, RiskScoreWeight>` built from a real, often-
+        # empty query) is genuinely nullable — a school with no override
+        # for this indicator is the common case, exactly why
+        # `?->weight ?? $indicator->defaultWeight` exists. Confirmed
+        # empirically the same way (removing `?->` produces zero new
+        # errors, where a correct nullable inference would flag "access on
+        # possibly null" at level 7).
+        -
+            identifier: nullsafe.neverNull
+            path: Modules/Intelligence/Domain/Actions/ComputeLearnerRiskScoreAction.php

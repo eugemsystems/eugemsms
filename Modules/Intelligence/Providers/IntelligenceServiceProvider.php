@@ -6,6 +6,8 @@ namespace Modules\Intelligence\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Modules\Academic\Models\AttendanceSummary;
+use Modules\Academic\Models\TermSubjectResult;
 use Modules\Comms\Domain\DataObjects\WidgetDefinition;
 use Modules\Comms\Domain\DataObjects\WidgetResolverResult;
 use Modules\Comms\Domain\Registry\WidgetRegistry;
@@ -16,29 +18,42 @@ use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Core\Models\Term;
 use Modules\Finance\Models\Invoice;
 use Modules\Intelligence\Domain\Actions\GetKpiValueAction;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
 use Modules\Intelligence\Domain\DataObjects\ReportEntityDefinition;
 use Modules\Intelligence\Domain\DataObjects\ReportFieldDefinition;
+use Modules\Intelligence\Domain\DataObjects\RiskIndicatorDefinition;
+use Modules\Intelligence\Domain\DataObjects\RiskIndicatorResult;
 use Modules\Intelligence\Domain\Registry\KpiRegistry;
 use Modules\Intelligence\Domain\Registry\ReportFieldRegistry;
+use Modules\Intelligence\Domain\Registry\RiskIndicatorRegistry;
 use Modules\Intelligence\Models\BoardPack;
 use Modules\Intelligence\Models\CustomReport;
 use Modules\Intelligence\Models\CustomReportSchedule;
+use Modules\Intelligence\Models\EnrolmentForecast;
 use Modules\Intelligence\Models\ExecutiveDigest;
+use Modules\Intelligence\Models\FeeDefaultRiskScore;
 use Modules\Intelligence\Models\KpiTarget;
+use Modules\Intelligence\Models\LearnerRiskScore;
 use Modules\Intelligence\Models\ReportExecution;
 use Modules\Intelligence\Models\ReportShare;
+use Modules\Intelligence\Models\RiskScoreWeight;
+use Modules\Intelligence\Models\StaffWellbeingIndicator;
 use Modules\Intelligence\Models\WarehouseSnapshot;
+use Modules\Intelligence\Models\WithdrawalRiskFlag;
 use Modules\Payroll\Models\PayGradeNotch;
 use Modules\People\Models\Student;
+use Modules\Welfare\Models\BehaviourRecord;
+use Modules\Welfare\Models\SickBayAdmission;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 /**
- * Book J INT-01/INT-02 — Reporting Engine & Data Warehouse (the field
- * registry every later INT/SAA module assumes exists, §0.3) plus
- * Executive Dashboards, Digests & Board Packs.
+ * Book J INT-01/INT-02/INT-03 — Reporting Engine & Data Warehouse (the
+ * field registry every later INT/SAA module assumes exists, §0.3),
+ * Executive Dashboards, Digests & Board Packs, and Early Warning &
+ * Predictive Analytics.
  */
 class IntelligenceServiceProvider extends ModuleServiceProvider
 {
@@ -57,6 +72,7 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
         $this->registerKpis();
         $this->registerExecutiveWidgets();
         $this->registerFileCategories();
+        $this->registerRiskIndicators();
     }
 
     private function registerNotificationKeys(): void
@@ -93,6 +109,18 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(ExecutiveDigest::class, fn (School $school): ExecutiveDigest => ExecutiveDigest::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(BoardPack::class, fn (School $school): BoardPack => BoardPack::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(RiskScoreWeight::class, fn (School $school): RiskScoreWeight => RiskScoreWeight::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(LearnerRiskScore::class, fn (School $school): LearnerRiskScore => LearnerRiskScore::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(FeeDefaultRiskScore::class, fn (School $school): FeeDefaultRiskScore => FeeDefaultRiskScore::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(EnrolmentForecast::class, fn (School $school): EnrolmentForecast => EnrolmentForecast::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(WithdrawalRiskFlag::class, fn (School $school): WithdrawalRiskFlag => WithdrawalRiskFlag::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(StaffWellbeingIndicator::class, fn (School $school): StaffWellbeingIndicator => StaffWellbeingIndicator::factory()->create(['school_id' => $school->id]));
     }
 
     /**
@@ -141,7 +169,7 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
                     return 0.0;
                 }
 
-                return round((float) $overdue->avg(fn (Invoice $invoice): int => (int) Carbon::today()->diffInDays($invoice->due_date)), 2);
+                return round((float) $overdue->avg(fn (Invoice $invoice): int => (int) Carbon::today()->diffInDays($invoice->due_date, absolute: true)), 2);
             },
             higherIsBetter: false,
             defaultTargetValue: 14.0,
@@ -202,12 +230,15 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             ['reporting.ad_hoc_row_limit', 'int', '50000', 'Rows an ad hoc report may scan live before being redirected to the warehouse snapshot or a scheduled run.'],
             ['reporting.ad_hoc_time_budget_seconds', 'int', '30', 'Seconds an ad hoc report may run before being redirected.'],
             ['reporting.warehouse_rebuild_hour', 'int', '4', 'Hour the nightly warehouse snapshot rebuild runs, after all other nightly jobs.'],
+            ['risk.recompute_hour', 'int', '3', 'Hour the nightly risk-score recompute runs.'],
+            ['risk.forecast_minimum_terms', 'int', '6', 'Terms of enrolment history below which a forecast is marked low-confidence.'],
+            ['risk.staff_workload_watch_threshold_percent', 'int', '110', 'Utilisation percent above which a term counts toward a staff wellbeing watch/concern flag.'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
             SettingDefinitionRegistry::register($key, [
                 'module_code' => 'INT',
-                'group_key' => 'reporting',
+                'group_key' => explode('.', $key)[0],
                 'label' => $label,
                 'data_type' => $dataType,
                 'default_value' => $default,
@@ -270,6 +301,186 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             moduleCode: 'PPL-04', entityKey: 'pay_grade_notch', fieldKey: 'basic_salary_minor',
             label: 'Basic Salary', dataType: 'money', requiredPermission: 'staff.view_compensation',
             isAggregatable: true, isSensitive: true,
+        ));
+    }
+
+    /**
+     * Book J INT-03 §3 ⭐/BR-INT-03-001. Five real learner indicators —
+     * the same five, over the same five modules, as the spec's own
+     * worked example (§3). Each resolver reads one owning module's
+     * real cache/table directly and returns `null` (excluded, never
+     * padded to zero) when it has nothing adverse to report. Severity
+     * formulas are this pass's own reasonable interpretation — the
+     * spec gives one illustrative worked example, not a formula
+     * specification, so exact reproduction of its numbers was never
+     * the goal; a real, explainable, individually-verifiable
+     * computation is.
+     */
+    private function registerRiskIndicators(): void
+    {
+        RiskIndicatorRegistry::register(new RiskIndicatorDefinition(
+            key: 'attendance_decline',
+            moduleCode: 'ACA-04',
+            appliesTo: 'learner',
+            plainLanguageDescription: 'Attendance has declined compared to the previous term.',
+            defaultWeight: 30,
+            resolver: function (int $schoolId, int $studentId, int $termId): ?RiskIndicatorResult {
+                $term = Term::find($termId);
+
+                if ($term === null) {
+                    return null;
+                }
+
+                $previousTerm = Term::where('school_id', $schoolId)->where('starts_on', '<', $term->starts_on)->orderByDesc('starts_on')->first();
+
+                if ($previousTerm === null) {
+                    return null;
+                }
+
+                $current = AttendanceSummary::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $termId)->where('scope', 'term')->first();
+                $previous = AttendanceSummary::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $previousTerm->id)->where('scope', 'term')->first();
+
+                if ($current?->attendance_percent === null || $previous?->attendance_percent === null) {
+                    return null;
+                }
+
+                $currentPercent = (float) $current->attendance_percent;
+                $previousPercent = (float) $previous->attendance_percent;
+                $decline = $previousPercent - $currentPercent;
+
+                if ($decline <= 0) {
+                    return null;
+                }
+
+                return new RiskIndicatorResult(
+                    severityPercent: min(100.0, round($decline * 3, 2)),
+                    plainLanguage: sprintf('Attendance has fallen from %s%% to %s%% over the last two terms', round($previousPercent), round($currentPercent)),
+                    source: "ACA-04 attendance_summaries, terms {$previousTerm->name} and {$term->name}",
+                );
+            },
+        ));
+
+        RiskIndicatorRegistry::register(new RiskIndicatorDefinition(
+            key: 'mark_trajectory',
+            moduleCode: 'ACA-05',
+            appliesTo: 'learner',
+            plainLanguageDescription: 'Average mark has declined across multiple subjects this term.',
+            defaultWeight: 25,
+            resolver: function (int $schoolId, int $studentId, int $termId): ?RiskIndicatorResult {
+                $term = Term::find($termId);
+
+                if ($term === null) {
+                    return null;
+                }
+
+                $previousTerm = Term::where('school_id', $schoolId)->where('starts_on', '<', $term->starts_on)->orderByDesc('starts_on')->first();
+
+                if ($previousTerm === null) {
+                    return null;
+                }
+
+                $current = TermSubjectResult::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $termId)->whereNotNull('final_percent')->get()->keyBy('subject_id');
+                $previous = TermSubjectResult::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $previousTerm->id)->whereNotNull('final_percent')->get()->keyBy('subject_id');
+
+                $compared = 0;
+                $declined = 0;
+
+                foreach ($current as $subjectId => $result) {
+                    $prior = $previous->get($subjectId);
+
+                    if ($prior === null) {
+                        continue;
+                    }
+
+                    $compared++;
+
+                    if ((float) $result->final_percent < (float) $prior->final_percent) {
+                        $declined++;
+                    }
+                }
+
+                if ($compared === 0 || $declined === 0) {
+                    return null;
+                }
+
+                return new RiskIndicatorResult(
+                    severityPercent: min(100.0, round($declined / $compared * 100, 2)),
+                    plainLanguage: "Average mark has declined in {$declined} of {$compared} subjects this term",
+                    source: 'ACA-05 term_subject_results, trend over 2 terms',
+                );
+            },
+        ));
+
+        RiskIndicatorRegistry::register(new RiskIndicatorDefinition(
+            key: 'fee_arrears',
+            moduleCode: 'FIN-03',
+            appliesTo: 'learner',
+            plainLanguageDescription: "This learner's fee account is overdue.",
+            defaultWeight: 20,
+            resolver: function (int $schoolId, int $studentId, int $termId): ?RiskIndicatorResult {
+                $today = Carbon::today();
+                $overdue = Invoice::where('school_id', $schoolId)->where('student_id', $studentId)
+                    ->where('balance_minor', '>', 0)->where('due_date', '<', $today)->where('status', '!=', 'void')->get();
+
+                if ($overdue->isEmpty()) {
+                    return null;
+                }
+
+                $maxDays = (int) $overdue->max(fn (Invoice $i): int => (int) $today->diffInDays($i->due_date, absolute: true));
+
+                return new RiskIndicatorResult(
+                    severityPercent: min(100.0, round($maxDays / 90 * 100, 2)),
+                    plainLanguage: "Fee account is {$maxDays} days overdue",
+                    source: 'FIN-03 invoices, days_overdue',
+                );
+            },
+        ));
+
+        RiskIndicatorRegistry::register(new RiskIndicatorDefinition(
+            key: 'clinic_visits',
+            moduleCode: 'BRD-06',
+            appliesTo: 'learner',
+            plainLanguageDescription: 'Sick bay admissions this term are above the baseline.',
+            defaultWeight: 15,
+            resolver: function (int $schoolId, int $studentId, int $termId): ?RiskIndicatorResult {
+                $count = SickBayAdmission::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $termId)->count();
+                $baseline = 2;
+
+                if ($count <= $baseline) {
+                    return null;
+                }
+
+                return new RiskIndicatorResult(
+                    severityPercent: min(100.0, round(($count - $baseline) / $baseline * 100, 2)),
+                    plainLanguage: "{$count} sick bay admissions this term, above the school's baseline",
+                    source: 'BRD-06 sick_bay_admissions, count this term',
+                );
+            },
+        ));
+
+        RiskIndicatorRegistry::register(new RiskIndicatorDefinition(
+            key: 'disciplinary_frequency',
+            moduleCode: 'BRD-07',
+            appliesTo: 'learner',
+            plainLanguageDescription: 'Behaviour incidents recorded this term.',
+            defaultWeight: 10,
+            resolver: function (int $schoolId, int $studentId, int $termId): ?RiskIndicatorResult {
+                $count = BehaviourRecord::where('school_id', $schoolId)->where('student_id', $studentId)->where('term_id', $termId)->where('polarity', 'negative')->count();
+
+                if ($count === 0) {
+                    return null;
+                }
+
+                $description = $count <= 2
+                    ? "{$count} behaviour incident(s) this term, within normal range"
+                    : "{$count} behaviour incidents this term, above normal range";
+
+                return new RiskIndicatorResult(
+                    severityPercent: min(100.0, $count * 20),
+                    plainLanguage: $description,
+                    source: 'BRD-07 behaviour_records, count this term',
+                );
+            },
         ));
     }
 }
