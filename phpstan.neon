@@ -37,3 +37,31 @@ parameters:
         -
             identifier: function.alreadyNarrowedType
             path: Modules/Core/Http/Middleware/EnforceTokenAbility.php
+        # `ExecuteCustomReportAction` resolves its query's model class
+        # dynamically from `ReportFieldRegistry` (a report entity's
+        # `base_model_class`, a controlled list this module's own
+        # provider populates — never arbitrary caller input), so
+        # PHPStan/Larastan cannot statically know that resolved class
+        # uses `BelongsToSchool` and provides `forSchools()`. It is real
+        # and reachable at runtime on every entity registered with
+        # `defaultSchoolScoped = true`, which is the only case this call
+        # is ever reached for (BR-INT-01-006).
+        -
+            identifier: method.notFound
+            path: Modules/Intelligence/Domain/Actions/ExecuteCustomReportAction.php
+            message: '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::forSchools\(\)#'
+        # The aggregation SQL fragment `selectRaw()` receives is built
+        # from a `match()` over a fixed, literal function-name whitelist
+        # (sum/avg/count/min/max — no caller string ever reaches the SQL
+        # text directly) and a column name that must already be one of
+        # `$aliases` — itself only ever built from `ReportFieldRegistry`
+        # entries the running user's own permissions have already
+        # cleared. PHPStan's `literal-string` check has no way to express
+        # "safe because whitelisted and pre-validated at runtime", only
+        # "was this exact string known at compile time" — which no
+        # parameterised aggregation column can ever be, by the nature of
+        # the feature.
+        -
+            identifier: argument.type
+            path: Modules/Intelligence/Domain/Actions/ExecuteCustomReportAction.php
+            message: '#Parameter \#1 \$expression of method Illuminate\\Database\\Eloquent\\Builder.*::selectRaw\(\) expects literal-string#'

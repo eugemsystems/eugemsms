@@ -18,5 +18,6 @@
     "Wallet": true,
     "Reporting": true,
     "Compliance": true,
-    "Comms": true
+    "Comms": true,
+    "Intelligence": true
 }
