@@ -1,0 +1,26 @@
+{
+    "name": "serp/core",
+    "description": "sERP Platform & Foundation module (CORE-01 -> CORE-13)",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Core\\": "",
+            "Modules\\Core\\Database\\Factories\\": "database/factories/",
+            "Modules\\Core\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Core\\Providers\\CoreServiceProvider"
+            ]
+        }
+    }
+}

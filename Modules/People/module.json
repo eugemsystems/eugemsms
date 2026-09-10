@@ -1,0 +1,11 @@
+{
+    "name": "People",
+    "alias": "people",
+    "description": "Domain B People & Organisation (PPL-01 -> PPL-04) - Student Information System, Guardian & Family, Admissions & Enrolment CRM, Staff & HR.",
+    "keywords": ["people", "students", "guardians", "staff"],
+    "priority": 2,
+    "providers": [
+        "Modules\\People\\Providers\\PeopleServiceProvider"
+    ],
+    "files": []
+}

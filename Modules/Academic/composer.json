@@ -1,0 +1,26 @@
+{
+    "name": "serp/academic",
+    "description": "sERP Domain C Academic Core module (ACA-01, ACA-02 subset)",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Academic\\": "",
+            "Modules\\Academic\\Database\\Factories\\": "database/factories/",
+            "Modules\\Academic\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Academic\\Providers\\AcademicServiceProvider"
+            ]
+        }
+    }
+}

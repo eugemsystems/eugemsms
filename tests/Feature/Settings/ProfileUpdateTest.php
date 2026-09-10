@@ -57,7 +57,10 @@ test('user can delete their account', function () {
         ->assertHasNoErrors()
         ->assertRedirect('/');
 
-    expect($user->fresh())->toBeNull();
+    // BR-CORE-05-021: users are never hard-deleted, only deactivated —
+    // `User` now uses SoftDeletes, so the row survives with `deleted_at`
+    // set rather than disappearing outright.
+    expect($user->fresh()->trashed())->toBeTrue();
     expect(auth()->check())->toBeFalse();
 });
 

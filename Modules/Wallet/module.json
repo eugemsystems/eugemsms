@@ -1,0 +1,11 @@
+{
+    "name": "Wallet",
+    "alias": "wallet",
+    "description": "Book H3 FIN-14 - Student Wallet & Tuckshop: prepaid learner wallet, parent spending controls, point-of-sale with offline capability, term-end handling, fiscalisation and reconciliation.",
+    "keywords": ["wallet", "tuckshop", "pos"],
+    "priority": 16,
+    "providers": [
+        "Modules\\Wallet\\Providers\\WalletServiceProvider"
+    ],
+    "files": []
+}

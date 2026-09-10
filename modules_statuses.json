@@ -1,0 +1,22 @@
+{
+    "Core": true,
+    "Finance": true,
+    "People": true,
+    "Academic": true,
+    "Payroll": true,
+    "Boarding": true,
+    "Welfare": true,
+    "Stores": true,
+    "Operations": true,
+    "Transport": true,
+    "Utilities": true,
+    "Farm": true,
+    "Facilities": true,
+    "Security": true,
+    "Sport": true,
+    "Fiscal": true,
+    "Wallet": true,
+    "Reporting": true,
+    "Compliance": true,
+    "Comms": true
+}

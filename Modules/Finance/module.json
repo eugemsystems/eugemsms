@@ -1,0 +1,11 @@
+{
+    "name": "Finance",
+    "alias": "finance",
+    "description": "Domain D Financial Core (FIN-01 -> FIN-06) - Chart of Accounts, General Ledger, Multi-Currency & FX, Fee & Billing, Invoicing & Debtors, Receipting & Till Control, Gateways & Reconciliation.",
+    "keywords": ["finance", "ledger", "billing"],
+    "priority": 2,
+    "providers": [
+        "Modules\\Finance\\Providers\\FinanceServiceProvider"
+    ],
+    "files": []
+}

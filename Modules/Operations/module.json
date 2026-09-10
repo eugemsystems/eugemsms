@@ -1,0 +1,11 @@
+{
+    "name": "Operations",
+    "alias": "operations",
+    "description": "Book H2 Domain F: Operations & Estates (OPS-01 -> OPS-07) - Transport & Fleet, Maintenance & Works, Estates/Farm/Production, Utilities & Energy, Facilities & Hire, Security & Access, Sport/Houses/Co-curricular.",
+    "keywords": ["operations", "maintenance", "transport", "farm", "utilities", "facilities", "security", "sport"],
+    "priority": 8,
+    "providers": [
+        "Modules\\Operations\\Providers\\OperationsServiceProvider"
+    ],
+    "files": []
+}

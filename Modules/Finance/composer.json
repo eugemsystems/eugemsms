@@ -1,0 +1,26 @@
+{
+    "name": "serp/finance",
+    "description": "sERP Domain D Financial Core module (FIN-01 -> FIN-06)",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Finance\\": "",
+            "Modules\\Finance\\Database\\Factories\\": "database/factories/",
+            "Modules\\Finance\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Finance\\Providers\\FinanceServiceProvider"
+            ]
+        }
+    }
+}

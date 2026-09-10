@@ -7,14 +7,101 @@
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
+            <directory>Modules/Core/tests/Unit</directory>
+            <directory>Modules/Finance/tests/Unit</directory>
+            <directory>Modules/People/tests/Unit</directory>
+            <directory>Modules/Academic/tests/Unit</directory>
+            <directory>Modules/Payroll/tests/Unit</directory>
+            <directory>Modules/Boarding/tests/Unit</directory>
+            <directory>Modules/Welfare/tests/Unit</directory>
+            <directory>Modules/Stores/tests/Unit</directory>
+            <directory>Modules/Operations/tests/Unit</directory>
+            <directory>Modules/Transport/tests/Unit</directory>
+            <directory>Modules/Utilities/tests/Unit</directory>
+            <directory>Modules/Farm/tests/Unit</directory>
+            <directory>Modules/Facilities/tests/Unit</directory>
+            <directory>Modules/Security/tests/Unit</directory>
+            <directory>Modules/Sport/tests/Unit</directory>
+            <directory>Modules/Fiscal/tests/Unit</directory>
+            <directory>Modules/Wallet/tests/Unit</directory>
+            <directory>Modules/Reporting/tests/Unit</directory>
+            <directory>Modules/Compliance/tests/Unit</directory>
+            <directory>Modules/Comms/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <directory>Modules/Core/tests/Feature</directory>
+            <directory>Modules/Finance/tests/Feature</directory>
+            <directory>Modules/People/tests/Feature</directory>
+            <directory>Modules/Academic/tests/Feature</directory>
+            <directory>Modules/Payroll/tests/Feature</directory>
+            <directory>Modules/Boarding/tests/Feature</directory>
+            <directory>Modules/Welfare/tests/Feature</directory>
+            <directory>Modules/Stores/tests/Feature</directory>
+            <directory>Modules/Operations/tests/Feature</directory>
+            <directory>Modules/Transport/tests/Feature</directory>
+            <directory>Modules/Utilities/tests/Feature</directory>
+            <directory>Modules/Farm/tests/Feature</directory>
+            <directory>Modules/Facilities/tests/Feature</directory>
+            <directory>Modules/Security/tests/Feature</directory>
+            <directory>Modules/Sport/tests/Feature</directory>
+            <directory>Modules/Fiscal/tests/Feature</directory>
+            <directory>Modules/Wallet/tests/Feature</directory>
+            <directory>Modules/Reporting/tests/Feature</directory>
+            <directory>Modules/Compliance/tests/Feature</directory>
+            <directory>Modules/Comms/tests/Feature</directory>
         </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>app</directory>
+            <directory>Modules/Core/Domain</directory>
+            <directory>Modules/Core/Http</directory>
+            <directory>Modules/Core/Models</directory>
+            <directory>Modules/Core/Providers</directory>
+            <directory>Modules/Finance/Domain</directory>
+            <directory>Modules/Finance/Http</directory>
+            <directory>Modules/Finance/Models</directory>
+            <directory>Modules/Finance/Providers</directory>
+            <directory>Modules/People/Domain</directory>
+            <directory>Modules/People/Http</directory>
+            <directory>Modules/People/Models</directory>
+            <directory>Modules/People/Providers</directory>
+            <directory>Modules/Academic/Domain</directory>
+            <directory>Modules/Academic/Http</directory>
+            <directory>Modules/Academic/Models</directory>
+            <directory>Modules/Academic/Providers</directory>
+            <directory>Modules/Payroll/Domain</directory>
+            <directory>Modules/Payroll/Http</directory>
+            <directory>Modules/Payroll/Models</directory>
+            <directory>Modules/Payroll/Providers</directory>
+            <directory>Modules/Boarding/Domain</directory>
+            <directory>Modules/Boarding/Models</directory>
+            <directory>Modules/Boarding/Providers</directory>
+            <directory>Modules/Welfare/Domain</directory>
+            <directory>Modules/Welfare/Models</directory>
+            <directory>Modules/Welfare/Providers</directory>
+            <directory>Modules/Stores/Domain</directory>
+            <directory>Modules/Stores/Models</directory>
+            <directory>Modules/Stores/Providers</directory>
+            <directory>Modules/Operations/Domain</directory>
+            <directory>Modules/Operations/Models</directory>
+            <directory>Modules/Operations/Providers</directory>
+            <directory>Modules/Transport/Domain</directory>
+            <directory>Modules/Transport/Models</directory>
+            <directory>Modules/Transport/Providers</directory>
+            <directory>Modules/Utilities/Domain</directory>
+            <directory>Modules/Utilities/Models</directory>
+            <directory>Modules/Utilities/Providers</directory>
+            <directory>Modules/Farm/Domain</directory>
+            <directory>Modules/Farm/Models</directory>
+            <directory>Modules/Farm/Providers</directory>
+            <directory>Modules/Facilities/Domain</directory>
+            <directory>Modules/Facilities/Models</directory>
+            <directory>Modules/Facilities/Providers</directory>
+            <directory>Modules/Security/Domain</directory>
+            <directory>Modules/Security/Models</directory>
+            <directory>Modules/Security/Providers</directory>
         </include>
     </source>
     <php>

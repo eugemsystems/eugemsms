@@ -1,0 +1,26 @@
+{
+    "name": "serp/boarding",
+    "description": "sERP Domain E Boarding & Welfare module (BRD-01 -> BRD-05)",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Boarding\\": "",
+            "Modules\\Boarding\\Database\\Factories\\": "database/factories/",
+            "Modules\\Boarding\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Boarding\\Providers\\BoardingServiceProvider"
+            ]
+        }
+    }
+}

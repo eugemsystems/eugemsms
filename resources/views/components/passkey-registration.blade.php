@@ -66,50 +66,42 @@
     }"
 >
     <template x-if="!supported">
-        <flux:text>{{ __('Passkeys are not supported in this browser.') }}</flux:text>
+        <p class="text-body-secondary small mb-0">{{ __('Passkeys are not supported in this browser.') }}</p>
     </template>
 
     <template x-if="supported && !showForm">
-        <div>
-            <flux:button
-                variant="primary"
-                icon="plus"
-                x-on:click="showForm = true"
-            >
-                {{ __('Add passkey') }}
-            </flux:button>
-        </div>
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" x-on:click="showForm = true">
+            <i class="ri ri-add-line"></i> {{ __('Add passkey') }}
+        </button>
     </template>
 
     <template x-if="supported && showForm">
-        <div class="space-y-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-4">
-            <flux:input
-                label="{{ __('Passkey name') }}"
-                x-model="name"
-                placeholder="{{ __('e.g., MacBook Pro, iPhone') }}"
-                x-on:keydown.enter.prevent="register()"
-                x-ref="passkeyNameInput"
-                x-init="$nextTick(() => $refs.passkeyNameInput?.focus())"
-            />
-            <flux:text class="!mt-1">{{ __('Give this passkey a name to help you identify it later.') }}</flux:text>
-
-            <p x-show="error" x-text="error" x-cloak class="text-sm text-red-600 dark:text-red-400"></p>
-
-            <div class="flex gap-2">
-                <flux:button
-                    variant="primary"
-                    x-on:click="register()"
-                    x-bind:disabled="loading || !name.trim()"
+        <div class="border rounded p-3 bg-body-tertiary">
+            <div class="form-floating mb-2">
+                <input
+                    type="text"
+                    class="form-control"
+                    id="passkey-name"
+                    x-model="name"
+                    placeholder="{{ __('e.g., MacBook Pro, iPhone') }}"
+                    x-on:keydown.enter.prevent="register()"
+                    x-ref="passkeyNameInput"
+                    x-init="$nextTick(() => $refs.passkeyNameInput?.focus())"
                 >
+                <label for="passkey-name">{{ __('Passkey name') }}</label>
+            </div>
+            <p class="small text-body-secondary">{{ __('Give this passkey a name to help you identify it later.') }}</p>
+
+            <p x-show="error" x-text="error" x-cloak class="small text-danger"></p>
+
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" x-on:click="register()" x-bind:disabled="loading || !name.trim()">
                     <span x-show="!loading">{{ __('Register passkey') }}</span>
                     <span x-show="loading" x-cloak>{{ __('Registering...') }}</span>
-                </flux:button>
-                <flux:button
-                    variant="ghost"
-                    x-on:click="cancel()"
-                >
+                </button>
+                <button type="button" class="btn btn-outline-secondary" x-on:click="cancel()">
                     {{ __('Cancel') }}
-                </flux:button>
+                </button>
             </div>
         </div>
     </template>

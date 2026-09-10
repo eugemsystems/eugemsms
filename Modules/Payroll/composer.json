@@ -1,0 +1,26 @@
+{
+    "name": "serp/payroll",
+    "description": "sERP Book H3 PPL-05 Payroll & Statutory Deductions module",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Payroll\\": "",
+            "Modules\\Payroll\\Database\\Factories\\": "database/factories/",
+            "Modules\\Payroll\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Payroll\\Providers\\PayrollServiceProvider"
+            ]
+        }
+    }
+}

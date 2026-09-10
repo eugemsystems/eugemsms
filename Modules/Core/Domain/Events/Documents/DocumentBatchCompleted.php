@@ -1,0 +1,14 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Core\Domain\Events\Documents;
+
+use Modules\Core\Models\DocumentBatch;
+
+final class DocumentBatchCompleted
+{
+    public function __construct(
+        public readonly DocumentBatch $batch,
+    ) {}
+}

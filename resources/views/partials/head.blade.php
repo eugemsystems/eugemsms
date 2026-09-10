@@ -11,5 +11,17 @@
 
 @fonts
 
-@vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance
+<script>
+    (function () {
+        @if (auth()->check())
+            var stored = @js(auth()->user()->theme);
+        @else
+            var stored = localStorage.getItem('serp-theme') || 'system';
+        @endif
+        localStorage.setItem('serp-theme', stored);
+        var dark = stored === 'dark' || (stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+    })();
+</script>
+
+@vite(['resources/css/app.scss', 'resources/js/app.js'])

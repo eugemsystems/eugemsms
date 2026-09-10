@@ -1,0 +1,11 @@
+{
+    "name": "Sport",
+    "alias": "sport",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-07 Sport, Houses & Co-curricular (activities, teams, fixtures, house competitions and points, awards).",
+    "keywords": ["sport", "houses", "fixtures", "co-curricular"],
+    "priority": 14,
+    "providers": [
+        "Modules\\Sport\\Providers\\SportServiceProvider"
+    ],
+    "files": []
+}

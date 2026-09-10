@@ -1,0 +1,11 @@
+{
+    "name": "Fiscal",
+    "alias": "fiscal",
+    "description": "Book H3 FIN-13 - ZIMRA Fiscalisation (FDMS): device and certificate lifecycle, fiscal day management, receipt routing and submission, offline queue, Z-reports, audit log.",
+    "keywords": ["fiscal", "zimra", "fdms", "fiscalisation"],
+    "priority": 15,
+    "providers": [
+        "Modules\\Fiscal\\Providers\\FiscalServiceProvider"
+    ],
+    "files": []
+}

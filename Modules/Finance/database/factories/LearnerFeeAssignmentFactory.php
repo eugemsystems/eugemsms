@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Finance\Database\Factories;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\School;
+use Modules\Core\Models\Term;
+use Modules\Finance\Models\FeeStructure;
+use Modules\Finance\Models\LearnerFeeAssignment;
+use Modules\People\Models\Student;
+
+/**
+ * @extends Factory<LearnerFeeAssignment>
+ */
+class LearnerFeeAssignmentFactory extends Factory
+{
+    protected $model = LearnerFeeAssignment::class;
+
+    public function definition(): array
+    {
+        $school = School::factory();
+        $year = AcademicYear::factory()->for($school);
+
+        return [
+            'school_id' => $school,
+            'academic_year_id' => $year,
+            'term_id' => Term::factory()->for($school)->for($year, 'academicYear'),
+            'student_id' => Student::factory()->for($school),
+            'structure_id' => FeeStructure::factory()->for($school),
+            'structure_version' => 1,
+            'resolution_trace' => [],
+            'computed_at' => now(),
+            'computed_by' => User::factory(),
+            'status' => 'draft',
+        ];
+    }
+}

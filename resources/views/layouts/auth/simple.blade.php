@@ -1,29 +1,38 @@
+@props(['illustration' => 'login', 'title' => null])
+
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <div class="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-            <div class="flex w-full max-w-sm flex-col gap-2">
-                <a href="{{ route('home') }}" class="flex flex-col items-center gap-2 font-medium" wire:navigate>
-                    <span class="flex h-9 w-9 mb-1 items-center justify-center rounded-md">
-                        <x-app-logo-icon class="size-9 fill-current text-black dark:text-white" />
-                    </span>
-                    <span class="sr-only">{{ config('app.name', 'Laravel') }}</span>
-                </a>
-                <div class="flex flex-col gap-6">
-                    {{ $slot }}
+    <body>
+        <div class="position-relative">
+            <div class="authentication-wrapper authentication-basic container-p-y p-4 p-sm-0">
+                <div class="authentication-inner py-6">
+                    <div class="card p-md-7 p-1">
+                        <div class="app-brand justify-content-center mt-5">
+                            <a href="{{ route('home') }}" class="app-brand-link gap-2" wire:navigate>
+                                <x-app-logo-icon class="app-brand-logo demo" />
+                                <span class="app-brand-text demo text-heading fw-semibold">{{ config('app.name', 'Laravel') }}</span>
+                            </a>
+                        </div>
+
+                        <div class="card-body mt-1">
+                            {{ $slot }}
+                        </div>
+                    </div>
+
+                    <img
+                        alt="mask"
+                        src="{{ asset('assets/img/illustrations/auth-basic-'.$illustration.'-mask-light.png') }}"
+                        class="authentication-image d-none d-lg-block"
+                        data-light-src="{{ asset('assets/img/illustrations/auth-basic-'.$illustration.'-mask-light.png') }}"
+                        data-dark-src="{{ asset('assets/img/illustrations/auth-basic-'.$illustration.'-mask-dark.png') }}"
+                    />
                 </div>
             </div>
         </div>
 
-        @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
-            </flux:toast.group>
-        @endpersist
-
-        @fluxScripts
+        <div id="serp-toast-region" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
     </body>
 </html>

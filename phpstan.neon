@@ -9,5 +9,9 @@ parameters:
         - config/
         - database/
         - routes/
+        - Modules/
+
+    excludePaths:
+        - Modules/*/tests/*
 
     level: 7

@@ -11,6 +11,8 @@ class DeleteUserForm extends Component
 {
     use PasswordValidationRules;
 
+    public bool $confirmingDeletion = false;
+
     public string $password = '';
 
     /**

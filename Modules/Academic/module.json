@@ -1,0 +1,11 @@
+{
+    "name": "Academic",
+    "alias": "academic",
+    "description": "Domain C Academic Core (ACA-01, ACA-02 subset) - Curriculum & Subjects, Class & Subject Enrolment. Built to close the ACA-02 subject-count dependency FIN-02 (Book B) was specified against.",
+    "keywords": ["academic", "curriculum", "subjects", "enrolment"],
+    "priority": 3,
+    "providers": [
+        "Modules\\Academic\\Providers\\AcademicServiceProvider"
+    ],
+    "files": []
+}

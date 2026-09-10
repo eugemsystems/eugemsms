@@ -1,0 +1,11 @@
+{
+    "name": "Facilities",
+    "alias": "facilities",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-05 Facilities Booking & External Hire (bookable resources, internal booking with clash detection, external hire, deposits, setup/cleanup work orders).",
+    "keywords": ["facilities", "bookings", "hire", "venues"],
+    "priority": 12,
+    "providers": [
+        "Modules\\Facilities\\Providers\\FacilitiesServiceProvider"
+    ],
+    "files": []
+}

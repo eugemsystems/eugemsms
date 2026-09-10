@@ -1,0 +1,11 @@
+{
+    "name": "Compliance",
+    "alias": "compliance",
+    "description": "Book H3 CMP-01 to CMP-04 - Regulatory compliance: ZIMSEC candidate registration and results, MoPSE returns and EMIS reporting, data protection and consent, policy and document retention.",
+    "keywords": ["zimsec", "mopse", "compliance", "data-protection"],
+    "priority": 18,
+    "providers": [
+        "Modules\\Compliance\\Providers\\ComplianceServiceProvider"
+    ],
+    "files": []
+}

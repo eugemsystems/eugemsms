@@ -60,6 +60,19 @@ return [
             'report' => false,
         ],
 
+        // Book A CORE-13/BR-CORE-13-001: backups must live on "a different
+        // provider or region from the primary database" — this local path
+        // is a placeholder for that separation (same substitution CORE-10
+        // made for file storage: real infra later, real local-disk
+        // behaviour now). Point BACKUP_DISK at 's3' with its own bucket
+        // once off-site storage is provisioned.
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/backups'),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

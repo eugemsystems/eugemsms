@@ -1,0 +1,11 @@
+{
+    "name": "Utilities",
+    "alias": "utilities",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-04 Utilities & Energy Management (utility accounts/meters, prepaid token reconciliation, generators, solar, water/boreholes, load shedding).",
+    "keywords": ["utilities", "energy", "meters", "generators", "water"],
+    "priority": 10,
+    "providers": [
+        "Modules\\Utilities\\Providers\\UtilitiesServiceProvider"
+    ],
+    "files": []
+}

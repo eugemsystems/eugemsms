@@ -1,34 +1,41 @@
-<section class="mt-10 space-y-6">
-    <div class="relative mb-5">
-        <flux:heading>{{ __('Delete account') }}</flux:heading>
-        <flux:subheading>{{ __('Delete your account and all of its resources') }}</flux:subheading>
-    </div>
+<section class="mt-5 pt-4 border-top">
+    <h5 class="mb-1">{{ __('Delete account') }}</h5>
+    <p class="text-body-secondary">{{ __('Delete your account and all of its resources') }}</p>
 
-    <flux:modal.trigger name="confirm-user-deletion">
-        <flux:button variant="danger" x-data="" x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')">
-            {{ __('Delete account') }}
-        </flux:button>
-    </flux:modal.trigger>
+    <button type="button" class="btn btn-danger" wire:click="$set('confirmingDeletion', true)">
+        {{ __('Delete account') }}
+    </button>
 
-    <flux:modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable class="max-w-lg">
-        <form method="POST" wire:submit="deleteUser" class="space-y-6">
-            <div>
-                <flux:heading size="lg">{{ __('Are you sure you want to delete your account?') }}</flux:heading>
+    @if ($confirmingDeletion)
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0, 0, 0, .5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <form method="POST" wire:submit="deleteUser">
+                        <div class="modal-body p-4">
+                            <h5 class="mb-2">{{ __('Are you sure you want to delete your account?') }}</h5>
+                            <p class="text-body-secondary">
+                                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                            </p>
 
-                <flux:subheading>
-                    {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
-                </flux:subheading>
+                            <div class="input-group input-group-merge">
+                                <div class="form-floating">
+                                    <input wire:model="password" type="password" class="form-control @error('password') is-invalid @enderror" id="delete-password" placeholder="{{ __('Password') }}">
+                                    <label for="delete-password">{{ __('Password') }}</label>
+                                </div>
+                                <span class="input-group-text cursor-pointer" data-password-toggle="#delete-password"><i class="ri ri-eye-off-line"></i></span>
+                            </div>
+                            @error('password')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" wire:click="$set('confirmingDeletion', false)">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-danger">{{ __('Delete account') }}</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-
-            <flux:input wire:model="password" :label="__('Password')" type="password" viewable />
-
-            <div class="flex justify-end space-x-2 rtl:space-x-reverse">
-                <flux:modal.close>
-                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
-                </flux:modal.close>
-
-                <flux:button variant="danger" type="submit">{{ __('Delete account') }}</flux:button>
-            </div>
-        </form>
-    </flux:modal>
+        </div>
+    @endif
 </section>

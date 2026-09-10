@@ -1,0 +1,11 @@
+{
+    "name": "Security",
+    "alias": "security",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-06 Security, Gate & Access Control (contractors, patrols, occurrence book, keys, lost property, emergency muster roll).",
+    "keywords": ["security", "muster", "patrols", "occurrence-book"],
+    "priority": 13,
+    "providers": [
+        "Modules\\Security\\Providers\\SecurityServiceProvider"
+    ],
+    "files": []
+}

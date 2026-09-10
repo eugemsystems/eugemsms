@@ -1,0 +1,11 @@
+{
+    "name": "Payroll",
+    "alias": "payroll",
+    "description": "Book H3 PPL-05 - Payroll & Statutory Deductions: statutory configuration, pay grades and components, staff pay structures, loans, the payroll run lifecycle, payslips, and GL posting.",
+    "keywords": ["payroll", "statutory", "payslips"],
+    "priority": 4,
+    "providers": [
+        "Modules\\Payroll\\Providers\\PayrollServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Welfare",
+    "alias": "welfare",
+    "description": "Domain E Welfare & Pastoral (BRD-06 -> BRD-08) - Health/Clinic/Sanatorium, Discipline/Conduct/Behaviour, Counselling & Safeguarding.",
+    "keywords": ["health", "clinic", "behaviour", "discipline", "safeguarding", "counselling"],
+    "priority": 6,
+    "providers": [
+        "Modules\\Welfare\\Providers\\WelfareServiceProvider"
+    ],
+    "files": []
+}

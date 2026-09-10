@@ -1,0 +1,11 @@
+{
+    "name": "Transport",
+    "alias": "transport",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-01 Transport & Fleet Management (vehicles, drivers, routes, learner transport, trips/manifests, fuel anomaly detection, compliance, incidents).",
+    "keywords": ["transport", "fleet", "vehicles", "routes", "fuel"],
+    "priority": 9,
+    "providers": [
+        "Modules\\Transport\\Providers\\TransportServiceProvider"
+    ],
+    "files": []
+}

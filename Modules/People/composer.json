@@ -1,0 +1,26 @@
+{
+    "name": "serp/people",
+    "description": "sERP Domain B People & Organisation module (PPL-01 -> PPL-04)",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "sERP",
+            "email": "dev@serp.local"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\People\\": "",
+            "Modules\\People\\Database\\Factories\\": "database/factories/",
+            "Modules\\People\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\People\\Providers\\PeopleServiceProvider"
+            ]
+        }
+    }
+}

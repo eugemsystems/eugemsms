@@ -14,9 +14,14 @@ use Tests\TestCase;
 |
 */
 
+// Each module's tests/{Feature,Unit} directories are bound here explicitly
+// as they're added — see Modules/Core/tests for the Book A Part 1 suite.
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', '../Modules/Core/tests/Feature', '../Modules/Finance/tests/Feature', '../Modules/People/tests/Feature', '../Modules/Academic/tests/Feature', '../Modules/Payroll/tests/Feature', '../Modules/Boarding/tests/Feature', '../Modules/Welfare/tests/Feature', '../Modules/Stores/tests/Feature', '../Modules/Operations/tests/Feature', '../Modules/Transport/tests/Feature', '../Modules/Utilities/tests/Feature', '../Modules/Farm/tests/Feature', '../Modules/Facilities/tests/Feature', '../Modules/Security/tests/Feature', '../Modules/Sport/tests/Feature', '../Modules/Fiscal/tests/Feature', '../Modules/Wallet/tests/Feature', '../Modules/Reporting/tests/Feature', '../Modules/Compliance/tests/Feature', '../Modules/Comms/tests/Feature');
+
+pest()->extend(TestCase::class)
+    ->in('../Modules/Core/tests/Unit', '../Modules/Finance/tests/Unit', '../Modules/People/tests/Unit', '../Modules/Academic/tests/Unit', '../Modules/Payroll/tests/Unit', '../Modules/Boarding/tests/Unit', '../Modules/Welfare/tests/Unit', '../Modules/Stores/tests/Unit', '../Modules/Operations/tests/Unit', '../Modules/Transport/tests/Unit', '../Modules/Utilities/tests/Unit', '../Modules/Farm/tests/Unit', '../Modules/Facilities/tests/Unit', '../Modules/Security/tests/Unit', '../Modules/Sport/tests/Unit', '../Modules/Fiscal/tests/Unit', '../Modules/Wallet/tests/Unit', '../Modules/Reporting/tests/Unit', '../Modules/Compliance/tests/Unit', '../Modules/Comms/tests/Unit');
 
 /*
 |--------------------------------------------------------------------------

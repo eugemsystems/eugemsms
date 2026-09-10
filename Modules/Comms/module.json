@@ -1,0 +1,11 @@
+{
+    "name": "Comms",
+    "alias": "comms",
+    "description": "Book I COM-01 to COM-08 - Communication & Portals: messaging gateways, event-driven automation rules, parent/learner/staff portal services, calendar and notices, virtual meetings, feedback and complaints.",
+    "keywords": ["messaging", "whatsapp", "sms", "portal", "calendar", "meetings"],
+    "priority": 19,
+    "providers": [
+        "Modules\\Comms\\Providers\\CommsServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Boarding",
+    "alias": "boarding",
+    "description": "Domain E Boarding & Welfare (BRD-01 -> BRD-05) - Hostel & Bed Allocation, Roll Call & Movement, Exeat/Leave/Visitors, Catering & Kitchen, Laundry & Linen.",
+    "keywords": ["boarding", "hostel", "rollcall", "exeat", "catering", "laundry"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Boarding\\Providers\\BoardingServiceProvider"
+    ],
+    "files": []
+}

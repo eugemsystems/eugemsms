@@ -1,0 +1,11 @@
+{
+    "name": "Stores",
+    "alias": "stores",
+    "description": "Book H1 Domain D: Procurement, Stores, Assets & Budgets (FIN-08 -> FIN-11) - Inventory/Stores/Requisitions, Procurement/AP, Fixed Assets/Depreciation, Budgeting/Commitment Accounting.",
+    "keywords": ["inventory", "stores", "procurement", "assets", "budget"],
+    "priority": 7,
+    "providers": [
+        "Modules\\Stores\\Providers\\StoresServiceProvider"
+    ],
+    "files": []
+}

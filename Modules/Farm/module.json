@@ -1,0 +1,11 @@
+{
+    "name": "Farm",
+    "alias": "farm",
+    "description": "Book H2 Domain F: Operations & Estates - OPS-03 Estates, Farm & Production Units (crop cycles, harvests, livestock, production, internal transfers to kitchen at cost, farm sales).",
+    "keywords": ["farm", "crops", "livestock", "production"],
+    "priority": 11,
+    "providers": [
+        "Modules\\Farm\\Providers\\FarmServiceProvider"
+    ],
+    "files": []
+}

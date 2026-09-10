@@ -1,0 +1,11 @@
+{
+    "name": "Reporting",
+    "alias": "reporting",
+    "description": "Book H3 FIN-12 - Financial Reporting & Period Close: statement generation from the GL, point-in-time reporting, the close checklist, close pack, scheduled reports, accounting export.",
+    "keywords": ["reporting", "close", "statements"],
+    "priority": 17,
+    "providers": [
+        "Modules\\Reporting\\Providers\\ReportingServiceProvider"
+    ],
+    "files": []
+}

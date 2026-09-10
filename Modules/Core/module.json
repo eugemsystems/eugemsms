@@ -1,0 +1,11 @@
+{
+    "name": "Core",
+    "alias": "core",
+    "description": "Platform & Foundation (CORE-01 -> CORE-13) - the global technical foundations every other module depends on.",
+    "keywords": ["core", "platform", "foundation"],
+    "priority": 1,
+    "providers": [
+        "Modules\\Core\\Providers\\CoreServiceProvider"
+    ],
+    "files": []
+}

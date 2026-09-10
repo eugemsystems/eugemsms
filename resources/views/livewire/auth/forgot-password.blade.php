@@ -1,31 +1,37 @@
-<x-layouts::auth :title="__('Forgot password')">
-    <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Forgot password')" :description="__('Enter your email to receive a password reset link')" />
+<x-layouts::auth :title="__('Forgot password')" illustration="forgot-password">
+    <h4 class="mb-1">{{ __('Forgot password? 🔒') }}</h4>
+    <p class="mb-4">{{ __("Enter your email and we'll send you instructions to reset your password") }}</p>
 
-        <!-- Session Status -->
-        <x-auth-session-status class="text-center" :status="session('status')" />
+    <x-auth-session-status class="mb-4" :status="session('status')" />
 
-        <form method="POST" action="{{ route('password.email') }}" class="flex flex-col gap-6">
-            @csrf
+    <form id="formAuthentication" method="POST" action="{{ route('password.email') }}">
+        @csrf
 
-            <!-- Email Address -->
-            <flux:input
-                name="email"
-                :label="__('Email address')"
+        <div class="form-floating form-floating-outline mb-4">
+            <input
                 type="email"
+                class="form-control @error('email') is-invalid @enderror"
+                id="email"
+                name="email"
+                placeholder="{{ __('Enter your email') }}"
                 required
                 autofocus
-                placeholder="email@example.com"
-            />
-
-            <flux:button variant="primary" type="submit" class="w-full" data-test="email-password-reset-link-button">
-                {{ __('Email password reset link') }}
-            </flux:button>
-        </form>
-
-        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-400">
-            <span>{{ __('Or, return to') }}</span>
-            <flux:link :href="route('login')" wire:navigate>{{ __('log in') }}</flux:link>
+            >
+            <label for="email">{{ __('Email address') }}</label>
+            @error('email')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
         </div>
+
+        <button class="btn btn-primary d-grid w-100 mb-4" type="submit" data-test="email-password-reset-link-button">
+            {{ __('Send reset link') }}
+        </button>
+    </form>
+
+    <div class="text-center">
+        <a href="{{ route('login') }}" class="d-flex align-items-center justify-content-center" wire:navigate>
+            <i class="icon-base ri ri-arrow-left-s-line icon-20px me-1"></i>
+            {{ __('Back to login') }}
+        </a>
     </div>
 </x-layouts::auth>

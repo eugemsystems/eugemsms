@@ -1,0 +1,483 @@
+// sERP admin UI — Bootstrap 5, hand-built from TEMPLATE/html-laravel
+// (.claude/rules/livewire-admin-ui.md). No Flux, no Tailwind.
+
+// Brand palette (matches the TEMPLATE's Materialize theme so screens built
+// from its markup patterns don't need per-component colour overrides).
+$primary: #696cff;
+$secondary: #8592a3;
+$success: #71dd37;
+$info: #03c3ec;
+$warning: #ffab00;
+$danger: #ff3e1d;
+
+$font-family-sans-serif: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+$body-color: #566a7f;
+$border-radius: 0.375rem;
+$border-radius-lg: 0.5rem;
+$enable-shadows: false;
+$card-border-width: 0;
+$card-box-shadow: 0 0.1875rem 0.75rem rgba(56, 71, 109, 0.15);
+
+// TEMPLATE's type scale is smaller than Bootstrap's stock default
+// (15px body text vs Bootstrap's 16px, tighter line-height) — without this,
+// every input/button/floating-label is noticeably taller than the design
+// it's meant to match. Values below are ported as-is from
+// _bootstrap-extended/_variables.scss.
+$font-size-base: 0.9375rem;
+$line-height-base: 1.375;
+
+$input-btn-padding-y: 0.45rem;
+$input-btn-padding-x: 1.375rem;
+$input-btn-focus-width: 0.05rem;
+
+$input-padding-y: 0.8555rem;
+$input-padding-x: 1rem;
+$input-line-height: $line-height-base;
+$input-focus-border-width: 2px;
+$input-padding-y-sm: 0.629rem;
+$input-padding-y-lg: 0.9572rem;
+
+$btn-padding-y: 0.4806rem;
+$btn-padding-y-sm: 0.4415rem;
+$btn-padding-y-lg: 0.52rem;
+$btn-font-weight: 500;
+
+// Stock Bootstrap hardcodes `.form-floating`'s height/inner padding instead
+// of deriving them from $input-padding-y, so the override above doesn't
+// reach it on its own — recompute the same way TEMPLATE does.
+$form-floating-height: calc((#{$font-size-base} * #{$line-height-base}) + (#{$input-padding-y} * 2));
+$form-floating-input-padding-top: $input-padding-y * 1.5;
+$form-floating-input-padding-bottom: calc(#{$input-padding-y} * 0.5 + 1px);
+
+@import 'bootstrap/scss/bootstrap';
+@import 'remixicon/fonts/remixicon.css';
+
+body {
+    background-color: var(--bs-tertiary-bg);
+}
+
+// ---- Auth pages — ported from TEMPLATE/html-laravel page-auth.scss and
+// _components/_app-brand.scss (the theme-variable-prefixed, customizer-aware
+// parts are dropped; the visual result is kept identical). --------------------
+.authentication-wrapper {
+    display: flex;
+    inline-size: 100%;
+    min-block-size: 100vh;
+
+    .authentication-inner {
+        inline-size: 100%;
+    }
+
+    &.authentication-basic {
+        align-items: center;
+        justify-content: center;
+
+        .authentication-inner {
+            max-inline-size: 450px;
+        }
+    }
+
+    .authentication-image {
+        position: absolute;
+        z-index: -1;
+        inline-size: 100%;
+        inset-block-end: 7%;
+        inset-inline-start: 0;
+        opacity: 0.85;
+    }
+}
+
+.app-brand {
+    display: flex;
+    flex-grow: 0;
+    flex-shrink: 0;
+    align-items: center;
+    line-height: 1;
+}
+
+.app-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.app-brand-text {
+    color: var(--bs-heading-color, var(--bs-body-color));
+}
+
+// Seamless join between a form-floating field and its addon (password
+// show/hide toggle) — the visual effect of the template's fuller
+// `.input-group-merge` Bootstrap-extended rule, without the dependency.
+.input-group-merge {
+    .form-control:not(:first-child),
+    .input-group-text:not(:first-child) {
+        border-inline-start: 0;
+    }
+
+    .form-control:focus,
+    .input-group-text:focus-within {
+        box-shadow: none;
+    }
+}
+
+// Two-factor / recovery-code OTP boxes (auth-two-steps-basic.blade.php)
+.auth-input-wrapper .auth-input {
+    font-size: 1.5rem;
+    max-width: 50px;
+}
+
+// Floating labels (outline variant) — ported from TEMPLATE's
+// _bootstrap-extended/forms/_floating-labels.scss "outline" rules (the rest
+// of that file isn't needed: every field in this app pairs `.form-floating`
+// with `.form-floating-outline`, never the plain "filled" variant). Bootstrap
+// core (imported above) already implements `.form-floating`'s base mechanics
+// — the label shrinking/moving on focus or when the field isn't empty — but
+// keeps it inside the input's own padding. This augments it into the
+// template's actual look: the label sits in a notch cut into the input's
+// border instead.
+.form-floating.form-floating-outline {
+    > .form-control,
+    > .form-select {
+        &:focus,
+        &:not(:placeholder-shown) {
+            padding-block: $form-floating-padding-y;
+
+            ~ label {
+                inline-size: auto;
+                block-size: auto;
+                opacity: 1;
+                margin-block-start: 0.125rem;
+                margin-inline-start: 0.625rem;
+                padding-block: $input-border-width;
+                padding-inline: 0.375rem;
+                font-size: $font-size-sm;
+                transform: translateY(-0.8rem) translateX(calc(#{$input-border-width} * -1));
+
+                &::after {
+                    position: absolute;
+                    z-index: -1;
+                    inset-block-start: 0.5rem;
+                    inset-inline-start: 0;
+                    inline-size: 100%;
+                    block-size: 0.75rem;
+                    content: '';
+                    background-color: var(--bs-body-bg);
+                }
+            }
+        }
+    }
+
+    // The border grows by 1px on focus; hold the field's padding steady so
+    // the notch and label don't visibly jump.
+    &:focus-within > .form-control:first-child,
+    &:focus-within > .form-select:first-child {
+        padding-inline: calc(#{$form-floating-padding-x} - #{$input-border-width});
+    }
+}
+
+.divider {
+    display: block;
+    overflow: hidden;
+    margin-block: 1.25rem;
+    text-align: center;
+    white-space: nowrap;
+
+    .divider-text {
+        position: relative;
+        display: inline-block;
+        padding-inline: 0.75rem;
+        font-size: 0.8125rem;
+
+        &::before,
+        &::after {
+            position: absolute;
+            top: 50%;
+            content: '';
+            width: 100vw;
+            border-top: 1px solid var(--bs-border-color);
+        }
+
+        &::before {
+            right: 100%;
+        }
+
+        &::after {
+            left: 100%;
+        }
+    }
+}
+
+// ---- App shell (sidebar + navbar) -----------------------------------------
+:root {
+    --serp-sidebar-width: 16.25rem;
+}
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    width: var(--serp-sidebar-width);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bs-body-bg);
+    border-inline-end: 1px solid var(--bs-border-color);
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 1030;
+    transition: transform 0.2s ease-in-out;
+}
+
+.app-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1.25rem 1.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-decoration: none;
+    color: var(--bs-body-color);
+}
+
+.app-sidebar-brand svg {
+    color: $primary;
+}
+
+.app-sidebar-nav {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 0.5rem 1rem 1rem;
+}
+
+.app-sidebar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--bs-border-radius);
+    color: var(--bs-secondary-color);
+    font-size: 0.9375rem;
+}
+
+.app-sidebar-nav .nav-link i {
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.app-sidebar-nav .nav-link.active,
+.app-sidebar-nav .nav-link:hover {
+    background-color: rgba($primary, 0.12);
+    color: $primary;
+}
+
+.app-sidebar-heading {
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--bs-tertiary-color);
+    padding: 1rem 0.75rem 0.25rem;
+}
+
+.app-main {
+    flex: 1 1 auto;
+    margin-inline-start: var(--serp-sidebar-width);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.app-topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--bs-body-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.app-content {
+    flex: 1 1 auto;
+    padding: 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .app-sidebar {
+        transform: translateX(-100%);
+    }
+
+    .app-sidebar.is-open {
+        transform: translateX(0);
+    }
+
+    .app-main {
+        margin-inline-start: 0;
+    }
+
+    .app-sidebar-toggle {
+        display: inline-flex !important;
+    }
+}
+
+.app-sidebar-toggle {
+    display: none !important;
+}
+
+// ---- Misc ------------------------------------------------------------------
+[data-bs-theme='dark'] .serp-qr-code {
+    filter: invert(1) brightness(1.5);
+}
+
+// ---- Historical-view banner (Volume 1 §4.2 — hard requirement) ------------
+.serp-historical-banner {
+    background-color: rgba($warning, 0.15);
+    border-bottom: 1px solid rgba($warning, 0.4);
+    color: #8a5300;
+    padding: 0.5rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+// ---- Installer wizard (CORE-01) — numbered stepper, ported in spirit from
+// the TEMPLATE's `.bs-stepper.wizard-numbered` (auth-register-multisteps),
+// server-rendered per step rather than driven by bs-stepper.js. ------------
+.serp-installer {
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.serp-installer-inner {
+    width: 100%;
+    max-width: 68rem;
+    margin-inline: auto;
+}
+
+// Mobile-first: a horizontal, scrollable strip (stepper on top, card below).
+// From `md` up there's room for a permanent left-hand rail, so `.serp-wizard`
+// switches to a two-column layout — see the `media-breakpoint-up(md)` block.
+.serp-wizard {
+    display: flex;
+    flex-direction: column;
+}
+
+.serp-stepper-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+
+.serp-step {
+    display: flex;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.serp-step-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 2px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    font-size: 0.875rem;
+    background-color: var(--bs-body-bg);
+}
+
+.serp-step-label {
+    display: none;
+    margin-inline-start: 0.6rem;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+}
+
+.serp-step-line {
+    flex: 1 1 auto;
+    height: 2px;
+    background-color: var(--bs-border-color);
+    margin-inline: 0.5rem;
+    min-width: 1rem;
+}
+
+// From `md` up, the rail becomes a permanent vertical column beside the step
+// content — there's no longer a horizontal-space constraint, so labels are
+// always shown and the connecting line runs vertically between circles.
+@include media-breakpoint-up(md) {
+    .serp-wizard {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 2.5rem;
+    }
+
+    .serp-stepper-header {
+        flex: 0 0 16rem;
+        width: 16rem;
+        flex-direction: column;
+        align-items: stretch;
+        overflow-x: visible;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .serp-step {
+        flex: 0 0 auto;
+        align-items: flex-start;
+    }
+
+    .serp-step-label {
+        display: block;
+        white-space: normal;
+        margin-block-start: 0.4rem;
+    }
+
+    .serp-step-line {
+        flex: 0 0 auto;
+        width: 2px;
+        height: 1.5rem;
+        min-width: 0;
+        margin-inline: 0;
+        margin-inline-start: 1.0625rem;
+        margin-block: 0.25rem;
+    }
+
+    .serp-wizard-pane {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+}
+
+.serp-step.is-done .serp-step-circle {
+    background-color: $primary;
+    border-color: $primary;
+    color: #fff;
+}
+
+.serp-step.is-done .serp-step-label,
+.serp-step.is-active .serp-step-label {
+    color: var(--bs-body-color);
+}
+
+.serp-step.is-active .serp-step-circle {
+    border-color: $primary;
+    color: $primary;
+}
+
+.serp-step.is-done .serp-step-line {
+    background-color: $primary;
+}
