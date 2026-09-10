@@ -28,10 +28,14 @@ use Modules\Comms\Domain\Support\FakeWhatsAppGatewayDriver;
 use Modules\Comms\Models\AutomationRule;
 use Modules\Comms\Models\CalendarEvent;
 use Modules\Comms\Models\CalendarFeedToken;
+use Modules\Comms\Models\Complaint;
+use Modules\Comms\Models\ComplaintCategory;
+use Modules\Comms\Models\ComplaintUpdate;
 use Modules\Comms\Models\ConsultationBooking;
 use Modules\Comms\Models\ConsultationWindow;
 use Modules\Comms\Models\EventAttendee;
 use Modules\Comms\Models\EventRegistration;
+use Modules\Comms\Models\ExitInterview;
 use Modules\Comms\Models\GatewayCostReconciliation;
 use Modules\Comms\Models\MeetingAttendance;
 use Modules\Comms\Models\MeetingProvider;
@@ -46,6 +50,8 @@ use Modules\Comms\Models\ScanRun;
 use Modules\Comms\Models\ScheduledMeeting;
 use Modules\Comms\Models\SchoolWidgetSetting;
 use Modules\Comms\Models\SenderId;
+use Modules\Comms\Models\Survey;
+use Modules\Comms\Models\SurveyResponse;
 use Modules\Comms\Models\WhatsAppBusinessAccount;
 use Modules\Comms\Models\WhatsAppTemplate;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
@@ -112,6 +118,7 @@ class CommsServiceProvider extends ModuleServiceProvider
         $this->registerCom06NotificationKeys();
         $this->registerMeetingProviderDrivers();
         $this->registerCom07NotificationKeys();
+        $this->registerCom08NotificationKeys();
     }
 
     /**
@@ -174,6 +181,18 @@ class CommsServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(ConsultationBooking::class, fn (School $school): ConsultationBooking => ConsultationBooking::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(MeetingAttendance::class, fn (School $school): MeetingAttendance => MeetingAttendance::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Survey::class, fn (School $school): Survey => Survey::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(SurveyResponse::class, fn (School $school): SurveyResponse => SurveyResponse::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ComplaintCategory::class, fn (School $school): ComplaintCategory => ComplaintCategory::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Complaint::class, fn (School $school): Complaint => Complaint::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ComplaintUpdate::class, fn (School $school): ComplaintUpdate => ComplaintUpdate::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(ExitInterview::class, fn (School $school): ExitInterview => ExitInterview::factory()->create(['school_id' => $school->id]));
     }
 
     /**
@@ -500,6 +519,28 @@ class CommsServiceProvider extends ModuleServiceProvider
     }
 
     /**
+     * Book I COM-08 §3/§9 — the real notification keys this module
+     * owns, mirroring COM-06/COM-07's own registration methods.
+     */
+    private function registerCom08NotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.complaint_sla_approaching',
+            variables: ['complaint.number'],
+            defaultChannels: ['email'],
+            defaultAudience: 'staff',
+        ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.complaint_sla_breached',
+            variables: ['complaint.number'],
+            defaultChannels: ['email'],
+            defaultAudience: 'staff',
+            isUrgent: true,
+        ));
+    }
+
+    /**
      * Book I COM-01 §6. `sms_normalise_before_send` stays `true`
      * unconditionally in this pass — `FakeSmsGatewayDriver` always
      * normalises, matching what "(locked)" means for this setting.
@@ -524,6 +565,7 @@ class CommsServiceProvider extends ModuleServiceProvider
             ['meetings.waiting_room_default_for_learners', 'bool', '1', 'Whether a learner-facing meeting starts with its waiting room enabled (locked true).'],
             ['attendance.online_minimum_attendance_percent', 'int', '70', 'Minimum percentage of an online lesson a participant must attend to be marked present, not present-but-flagged.'],
             ['meetings.recording_retention_days', 'int', '90', 'Days a meeting recording is retained before its URL is purged.'],
+            ['complaints.sla_warning_hours_before', 'int', '12', 'Hours before a complaint\'s SLA due date that an "approaching" alert may fire.'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
