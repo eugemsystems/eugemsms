@@ -18,6 +18,17 @@ use Modules\Core\Models\SchoolModule;
  * this only ever flips `is_enabled` on the entitlement row.
  * BR-CORE-02-013: a module cannot be enabled while any of its declared
  * dependencies is disabled for the same school (`config('core.module_dependencies')`).
+ *
+ * `$data->schoolId` is an explicit target, not the ambient ID
+ * `BelongsToSchool`'s global scope would filter by — every `SchoolModule`
+ * query here uses `withoutGlobalScopes()` with the school id spelled out
+ * in its own `where()` instead, the same "query explicitly, don't rely
+ * on ambient context" fix `SwitchActiveSchoolAction` already applies for
+ * exactly this reason. Without it, a caller with no ambient
+ * `SchoolContext` at all (Book J SAA-01's cross-school subscription
+ * sync, run from no single school's request) would see `SchoolScope`
+ * silently filter every read to zero rows and every `updateOrCreate` to
+ * a doomed duplicate INSERT.
  */
 final class ToggleSchoolModuleAction extends Action
 {
@@ -30,7 +41,7 @@ final class ToggleSchoolModuleAction extends Action
         }
 
         $this->transaction(function () use ($school, $data): void {
-            SchoolModule::updateOrCreate(
+            SchoolModule::withoutGlobalScopes()->updateOrCreate(
                 ['school_id' => $school->id, 'module_code' => $data->moduleCode],
                 [
                     'is_enabled' => $data->enable,
@@ -56,7 +67,7 @@ final class ToggleSchoolModuleAction extends Action
             return;
         }
 
-        $enabled = SchoolModule::query()
+        $enabled = SchoolModule::withoutGlobalScopes()
             ->where('school_id', $school->id)
             ->where('is_enabled', true)
             ->pluck('module_code')

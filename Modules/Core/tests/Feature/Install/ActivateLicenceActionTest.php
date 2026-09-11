@@ -28,6 +28,11 @@ it('activates when the licence server confirms the key is valid', function (): v
         {
             return new LicenceServerResponse(reachable: true, valid: true, expiresAt: now()->addYear());
         }
+
+        public function validate(string $licenceKey, string $installationUuid): LicenceServerResponse
+        {
+            return $this->activate($licenceKey, $installationUuid);
+        }
     });
 
     $result = app(ActivateLicenceAction::class)->execute(new LicenceKeyData(key: 'SERP-VALID-KEY'));
@@ -42,6 +47,11 @@ it('reports an invalid key as invalid, not grace', function (): void {
         public function activate(string $licenceKey, string $installationUuid): LicenceServerResponse
         {
             return new LicenceServerResponse(reachable: true, valid: false, message: 'Unknown key.');
+        }
+
+        public function validate(string $licenceKey, string $installationUuid): LicenceServerResponse
+        {
+            return $this->activate($licenceKey, $installationUuid);
         }
     });
 

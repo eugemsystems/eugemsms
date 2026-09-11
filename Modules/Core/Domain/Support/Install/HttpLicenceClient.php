@@ -14,6 +14,16 @@ final class HttpLicenceClient implements LicenceClient
 {
     public function activate(string $licenceKey, string $installationUuid): LicenceServerResponse
     {
+        return $this->call('activate', $licenceKey, $installationUuid);
+    }
+
+    public function validate(string $licenceKey, string $installationUuid): LicenceServerResponse
+    {
+        return $this->call('validate', $licenceKey, $installationUuid);
+    }
+
+    private function call(string $endpoint, string $licenceKey, string $installationUuid): LicenceServerResponse
+    {
         $url = config('services.serp_licence.url');
 
         if (! is_string($url) || $url === '') {
@@ -21,7 +31,7 @@ final class HttpLicenceClient implements LicenceClient
         }
 
         try {
-            $response = Http::timeout(5)->post($url.'/activate', [
+            $response = Http::timeout(5)->post($url.'/'.$endpoint, [
                 'licence_key' => $licenceKey,
                 'installation_uuid' => $installationUuid,
             ]);

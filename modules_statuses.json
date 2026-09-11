@@ -19,5 +19,6 @@
     "Reporting": true,
     "Compliance": true,
     "Comms": true,
-    "Intelligence": true
+    "Intelligence": true,
+    "Saas": true
 }

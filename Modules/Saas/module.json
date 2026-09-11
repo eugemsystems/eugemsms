@@ -1,0 +1,11 @@
+{
+    "name": "Saas",
+    "alias": "saas",
+    "description": "Book J SAA-01 - Licensing, Subscription & Entitlement: plan/module-bundle definitions, the subscription lifecycle, usage metering, the vendor's own tenant billing ledger, graceful degradation on non-payment, upgrade/downgrade proration, and on-premise licence validation.",
+    "keywords": ["subscription", "billing", "licensing", "entitlement", "vendor"],
+    "priority": 21,
+    "providers": [
+        "Modules\\Saas\\Providers\\SaasServiceProvider"
+    ],
+    "files": []
+}
