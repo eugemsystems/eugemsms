@@ -75,6 +75,7 @@ use Modules\Core\Http\Middleware\EnforceTokenAbility;
 use Modules\Core\Http\Middleware\EnsureModuleEnabled;
 use Modules\Core\Http\Middleware\EnsureNotInstalled;
 use Modules\Core\Http\Middleware\EnsureSubscriptionActive;
+use Modules\Core\Http\Middleware\EnsureVendorGuard;
 use Modules\Core\Http\Middleware\RecordActivity;
 use Modules\Core\Http\Middleware\ResolveTenant;
 use Modules\Core\Http\Middleware\SetSchoolContext;
@@ -579,6 +580,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         $router->aliasMiddleware('serp.module-enabled', EnsureModuleEnabled::class);
         $router->aliasMiddleware('serp.token-ability', EnforceTokenAbility::class);
         $router->aliasMiddleware('serp.record-activity', RecordActivity::class);
+        $router->aliasMiddleware('serp.vendor-guard', EnsureVendorGuard::class);
 
         // `serp.module-enabled` takes the module code as a route-declared
         // parameter (Book A Part 1.10, step 6) and so is never a bare
@@ -600,6 +602,17 @@ class CoreServiceProvider extends ModuleServiceProvider
             'serp.school-context',
             'serp.session-context',
             'serp.token-ability',
+            'serp.record-activity',
+        ]);
+
+        // Book J SAA-02 §3 ⭐/§0.2 — deliberately NOT composed with
+        // `serp.resolve-tenant`/`serp.subscription-active`/
+        // `serp.school-context`: the vendor console is cross-tenant,
+        // never scoped to any one tenant's context, and a THIRD guard
+        // entirely separate from `serp.web`/`serp.api`.
+        $router->middlewareGroup('serp.vendor', [
+            'auth',
+            'serp.vendor-guard',
             'serp.record-activity',
         ]);
     }

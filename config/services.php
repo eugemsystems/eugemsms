@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Book J SAA-02 §3, BR-SAA-02-001. Modules\Core\Http\Middleware\EnsureVendorGuard
+    // enforces this list of exact IP addresses once it's non-empty — empty
+    // (the default) means this environment hasn't configured one yet.
+    'vendor' => [
+        'ip_allowlist' => array_filter(explode(',', (string) env('VENDOR_IP_ALLOWLIST', ''))),
+    ],
+
 ];
