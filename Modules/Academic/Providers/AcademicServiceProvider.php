@@ -35,6 +35,7 @@ use Modules\Academic\Models\CommentBank;
 use Modules\Academic\Models\ContentItem;
 use Modules\Academic\Models\CourseSpace;
 use Modules\Academic\Models\CurriculumFramework;
+use Modules\Academic\Models\DepartmentMeeting;
 use Modules\Academic\Models\DiscussionPost;
 use Modules\Academic\Models\DiscussionThread;
 use Modules\Academic\Models\ExaminationCandidate;
@@ -50,6 +51,8 @@ use Modules\Academic\Models\LearnerProject;
 use Modules\Academic\Models\LearnerProjectMilestone;
 use Modules\Academic\Models\LearnerSubjectEnrolment;
 use Modules\Academic\Models\LegacyCalaRecord;
+use Modules\Academic\Models\LessonObservation;
+use Modules\Academic\Models\LessonPlan;
 use Modules\Academic\Models\LessonSubstitution;
 use Modules\Academic\Models\LevelSubjectOffering;
 use Modules\Academic\Models\LibraryCopy;
@@ -57,6 +60,7 @@ use Modules\Academic\Models\LibraryItem;
 use Modules\Academic\Models\LibraryStockTake;
 use Modules\Academic\Models\Loan;
 use Modules\Academic\Models\MalpracticeIncident;
+use Modules\Academic\Models\ObservationRubric;
 use Modules\Academic\Models\Pathway;
 use Modules\Academic\Models\PeriodSlot;
 use Modules\Academic\Models\PeriodStructure;
@@ -67,6 +71,7 @@ use Modules\Academic\Models\ProjectMilestone;
 use Modules\Academic\Models\ProjectRubric;
 use Modules\Academic\Models\QuestionBankItem;
 use Modules\Academic\Models\ReportCardRun;
+use Modules\Academic\Models\SchemeOfWork;
 use Modules\Academic\Models\ScriptBatch;
 use Modules\Academic\Models\ScriptCustodyLogEntry;
 use Modules\Academic\Models\SpecialArrangement;
@@ -77,6 +82,7 @@ use Modules\Academic\Models\SubjectPrerequisite;
 use Modules\Academic\Models\SubjectSelectionRule;
 use Modules\Academic\Models\SubjectSelectionSubmission;
 use Modules\Academic\Models\Syllabus;
+use Modules\Academic\Models\SyllabusCoverageRecord;
 use Modules\Academic\Models\TeachingGroup;
 use Modules\Academic\Models\TeachingGroupMember;
 use Modules\Academic\Models\TermResult;
@@ -97,6 +103,7 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\Term;
 use Modules\People\Domain\Events\LeaveApproved;
+use Modules\People\Models\Department;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 use Nwidart\Modules\Support\ModuleServiceProvider;
@@ -1124,6 +1131,60 @@ class AcademicServiceProvider extends ModuleServiceProvider
         ]));
 
         TenantModelRegistry::register(LibraryStockTake::class, fn (School $school): LibraryStockTake => LibraryStockTake::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(SchemeOfWork::class, fn (School $school): SchemeOfWork => $this->schemeOfWorkFor($school));
+
+        TenantModelRegistry::register(LessonPlan::class, function (School $school): LessonPlan {
+            $teacher = Staff::factory()->for($school)->create();
+
+            return LessonPlan::factory()->create(['school_id' => $school->id, 'teacher_staff_id' => $teacher->id]);
+        });
+
+        TenantModelRegistry::register(SyllabusCoverageRecord::class, function (School $school): SyllabusCoverageRecord {
+            $scheme = $this->schemeOfWorkFor($school);
+
+            return SyllabusCoverageRecord::factory()->create(['school_id' => $school->id, 'scheme_of_work_id' => $scheme->id]);
+        });
+
+        TenantModelRegistry::register(ObservationRubric::class, fn (School $school): ObservationRubric => ObservationRubric::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(LessonObservation::class, function (School $school): LessonObservation {
+            [, $term] = $this->studentAndTerm($school);
+            $rubric = ObservationRubric::factory()->create(['school_id' => $school->id]);
+            $observed = Staff::factory()->for($school)->create();
+            $observer = Staff::factory()->for($school)->create();
+
+            return LessonObservation::factory()->create([
+                'school_id' => $school->id, 'term_id' => $term->id, 'observed_staff_id' => $observed->id,
+                'observer_staff_id' => $observer->id, 'rubric_id' => $rubric->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(DepartmentMeeting::class, function (School $school): DepartmentMeeting {
+            $department = Department::factory()->for($school)->create();
+            $chair = Staff::factory()->for($school)->create();
+
+            return DepartmentMeeting::factory()->create(['school_id' => $school->id, 'department_id' => $department->id, 'chaired_by' => $chair->id]);
+        });
+    }
+
+    /**
+     * Book K ACA-11. Every FK derived explicitly from the same
+     * `$school`/`$term`/`$year` triple — see `courseSpaceFor()`'s own
+     * docblock for why a bare nested-factory default isn't reused here.
+     */
+    private function schemeOfWorkFor(School $school): SchemeOfWork
+    {
+        [, $term, $year] = $this->studentAndTerm($school);
+        $framework = CurriculumFramework::factory()->for($school)->create();
+        $subject = Subject::factory()->for($school)->create(['framework_id' => $framework->id]);
+        $gradeLevel = GradeLevel::factory()->for($school)->create();
+        $teacher = Staff::factory()->for($school)->create();
+
+        return SchemeOfWork::factory()->create([
+            'school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id,
+            'subject_id' => $subject->id, 'grade_level_id' => $gradeLevel->id, 'teacher_staff_id' => $teacher->id,
+        ]);
     }
 
     /**

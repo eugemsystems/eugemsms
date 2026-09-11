@@ -24,22 +24,29 @@ class TimetableSlotFactory extends Factory
 
     public function definition(): array
     {
-        $school = School::factory();
-        $year = AcademicYear::factory()->for($school);
-        $term = Term::factory()->for($school)->for($year, 'academicYear');
-        $structure = PeriodStructure::factory()->for($school)->state(['academic_year_id' => $year]);
-        $periodSlot = PeriodSlot::factory()->for($school)->state(['structure_id' => $structure]);
+        // $term is created eagerly, then referenced by id in two places
+        // (the timetable and this slot itself) — a lazy Factory
+        // instance referenced twice in one definition() is resolved
+        // independently each time, not deduped, which previously
+        // created two different `terms` rows for the same
+        // (school_id, academic_year_id, number) and tripped its own
+        // unique constraint.
+        $school = School::factory()->create();
+        $year = AcademicYear::factory()->for($school)->create();
+        $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
+        $structure = PeriodStructure::factory()->for($school)->create(['academic_year_id' => $year->id]);
+        $periodSlot = PeriodSlot::factory()->for($school)->create(['structure_id' => $structure->id]);
 
         return [
-            'school_id' => $school,
-            'timetable_id' => Timetable::factory()->state([
-                'school_id' => $school,
-                'academic_year_id' => $year,
-                'term_id' => $term,
-                'structure_id' => $structure,
-            ]),
-            'term_id' => $term,
-            'period_slot_id' => $periodSlot,
+            'school_id' => $school->id,
+            'timetable_id' => Timetable::factory()->create([
+                'school_id' => $school->id,
+                'academic_year_id' => $year->id,
+                'term_id' => $term->id,
+                'structure_id' => $structure->id,
+            ])->id,
+            'term_id' => $term->id,
+            'period_slot_id' => $periodSlot->id,
             'cycle_day' => 1,
             'period_number' => 1,
             'subject_id' => Subject::factory()->for($school),
