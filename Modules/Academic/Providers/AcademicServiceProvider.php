@@ -24,6 +24,9 @@ use Modules\Academic\Models\AttendanceMarkingCompliance;
 use Modules\Academic\Models\AttendanceReasonCode;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\AttendanceSession;
+use Modules\Academic\Models\CbtCandidateAttempt;
+use Modules\Academic\Models\CbtResponse;
+use Modules\Academic\Models\CbtTest;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\CommentBank;
 use Modules\Academic\Models\ContentItem;
@@ -55,6 +58,7 @@ use Modules\Academic\Models\ProjectEvidence;
 use Modules\Academic\Models\ProjectMarkVersion;
 use Modules\Academic\Models\ProjectMilestone;
 use Modules\Academic\Models\ProjectRubric;
+use Modules\Academic\Models\QuestionBankItem;
 use Modules\Academic\Models\ReportCardRun;
 use Modules\Academic\Models\ScriptBatch;
 use Modules\Academic\Models\ScriptCustodyLogEntry;
@@ -306,6 +310,9 @@ class AcademicServiceProvider extends ModuleServiceProvider
             ['exams.paper_max_downloads_per_user', 'int', '3', 'Downloads of a released paper per user before a security event is raised.'],
             ['exams.exclude_subject_teacher_from_invigilation', 'bool', '1', 'Whether a teacher of the examined subject is excluded from invigilating that paper by default (BR-ACA-07-010).'],
             ['academic.lms_similarity_threshold_percent', 'int', '70', 'Word-shingle similarity percentage above which two assignment submissions in the same class are flagged for teacher review (BR-ACA-08-006).'],
+            ['cbt.autosave_interval_seconds', 'int', '15', 'Maximum seconds between client autosaves during a CBT attempt (BR-ACA-09-001).'],
+            ['cbt.default_max_tab_switches', 'int', '3', 'Default tab-switch limit before a CBT attempt is flagged for review when a test does not set its own.'],
+            ['cbt.auto_submit_on_time_expiry', 'bool', '1', 'Whether a CBT attempt auto-submits when its time limit is reached (locked — always true in this pass).'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
@@ -1043,6 +1050,30 @@ class AcademicServiceProvider extends ModuleServiceProvider
 
             return DiscussionPost::factory()->create(['school_id' => $school->id, 'thread_id' => $thread->id, 'posted_by_id' => User::factory()]);
         });
+
+        TenantModelRegistry::register(QuestionBankItem::class, function (School $school): QuestionBankItem {
+            $subject = Subject::factory()->for($school)->create(['framework_id' => CurriculumFramework::factory()->for($school)->create()->id]);
+
+            return QuestionBankItem::factory()->create(['school_id' => $school->id, 'subject_id' => $subject->id, 'created_by' => User::factory()]);
+        });
+
+        TenantModelRegistry::register(CbtTest::class, fn (School $school): CbtTest => $this->cbtTestFor($school));
+
+        TenantModelRegistry::register(CbtCandidateAttempt::class, function (School $school): CbtCandidateAttempt {
+            [$student] = $this->studentAndTerm($school);
+            $test = $this->cbtTestFor($school);
+
+            return CbtCandidateAttempt::factory()->create(['school_id' => $school->id, 'test_id' => $test->id, 'student_id' => $student->id]);
+        });
+
+        TenantModelRegistry::register(CbtResponse::class, function (School $school): CbtResponse {
+            [$student] = $this->studentAndTerm($school);
+            $test = $this->cbtTestFor($school);
+            $attempt = CbtCandidateAttempt::factory()->create(['school_id' => $school->id, 'test_id' => $test->id, 'student_id' => $student->id]);
+            $question = QuestionBankItem::factory()->create(['school_id' => $school->id, 'subject_id' => $test->subject_id, 'created_by' => User::factory()]);
+
+            return CbtResponse::factory()->create(['school_id' => $school->id, 'attempt_id' => $attempt->id, 'question_id' => $question->id]);
+        });
     }
 
     /**
@@ -1079,5 +1110,18 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id,
             'subject_id' => $subject->id, 'teaching_group_id' => $group->id,
         ]);
+    }
+
+    /**
+     * Book K ACA-09. Every FK derived explicitly from the same
+     * `$school`/`$term` pair — see `courseSpaceFor()`'s own docblock
+     * for why a bare nested-factory default isn't reused here.
+     */
+    private function cbtTestFor(School $school): CbtTest
+    {
+        [, $term] = $this->studentAndTerm($school);
+        $subject = Subject::factory()->for($school)->create(['framework_id' => CurriculumFramework::factory()->for($school)->create()->id]);
+
+        return CbtTest::factory()->create(['school_id' => $school->id, 'term_id' => $term->id, 'subject_id' => $subject->id]);
     }
 }

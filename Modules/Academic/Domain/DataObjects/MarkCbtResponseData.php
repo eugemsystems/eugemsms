@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Academic\Domain\DataObjects;
+
+final readonly class MarkCbtResponseData
+{
+    public function __construct(
+        public int $responseId,
+        public float $markAwarded,
+        public int $markedByUserId,
+        public ?string $feedback = null,
+    ) {}
+}
