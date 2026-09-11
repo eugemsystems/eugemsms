@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\People\Providers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Modules\Academic\Models\Subject;
+use Modules\Comms\Models\CalendarEvent;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -15,8 +17,19 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
+use Modules\Finance\Models\Account;
+use Modules\Finance\Models\DiscountScheme;
+use Modules\People\Domain\Events\LearnerStatusChanged;
+use Modules\People\Domain\Listeners\CreateAlumniRecordOnGraduationListener;
+use Modules\People\Models\AlumniCareerUpdate;
+use Modules\People\Models\AlumniEvent;
+use Modules\People\Models\AlumniHouseGroup;
+use Modules\People\Models\Alumnus;
 use Modules\People\Models\Application;
+use Modules\People\Models\BursaryEndowment;
+use Modules\People\Models\CapitalCampaign;
 use Modules\People\Models\Department;
+use Modules\People\Models\Donation;
 use Modules\People\Models\DutyAssignment;
 use Modules\People\Models\DutyRoster;
 use Modules\People\Models\EstablishmentPost;
@@ -26,6 +39,7 @@ use Modules\People\Models\Intake;
 use Modules\People\Models\LeaveBalance;
 use Modules\People\Models\LeaveRequest;
 use Modules\People\Models\LeaveType;
+use Modules\People\Models\Pledge;
 use Modules\People\Models\Staff;
 use Modules\People\Models\StaffAppraisal;
 use Modules\People\Models\StaffContract;
@@ -58,6 +72,15 @@ class PeopleServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerEventListeners();
+    }
+
+    /**
+     * Book K PPL-06 §3 ⭐/BR-PPL-06-001.
+     */
+    private function registerEventListeners(): void
+    {
+        Event::listen(LearnerStatusChanged::class, CreateAlumniRecordOnGraduationListener::class);
     }
 
     /**
@@ -391,5 +414,61 @@ class PeopleServiceProvider extends ModuleServiceProvider
         });
 
         TenantModelRegistry::register(StudentPriorResult::class, fn (School $school): StudentPriorResult => StudentPriorResult::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Alumnus::class, fn (School $school): Alumnus => $this->alumnusFor($school));
+
+        TenantModelRegistry::register(AlumniHouseGroup::class, fn (School $school): AlumniHouseGroup => AlumniHouseGroup::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(AlumniCareerUpdate::class, function (School $school): AlumniCareerUpdate {
+            $alumnus = $this->alumnusFor($school);
+
+            return AlumniCareerUpdate::factory()->create(['school_id' => $school->id, 'alumnus_id' => $alumnus->id]);
+        });
+
+        TenantModelRegistry::register(CapitalCampaign::class, function (School $school): CapitalCampaign {
+            $account = Account::factory()->for($school)->income()->create();
+
+            return CapitalCampaign::factory()->create(['school_id' => $school->id, 'income_account_id' => $account->id]);
+        });
+
+        TenantModelRegistry::register(BursaryEndowment::class, function (School $school): BursaryEndowment {
+            $scheme = DiscountScheme::factory()->for($school)->create();
+
+            return BursaryEndowment::factory()->create(['school_id' => $school->id, 'funds_scheme_id' => $scheme->id]);
+        });
+
+        TenantModelRegistry::register(Pledge::class, fn (School $school): Pledge => Pledge::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Donation::class, function (School $school): Donation {
+            $year = AcademicYear::factory()->for($school)->create();
+            $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
+
+            return Donation::factory()->create(['school_id' => $school->id, 'term_id' => $term->id]);
+        });
+
+        TenantModelRegistry::register(AlumniEvent::class, function (School $school): AlumniEvent {
+            $year = AcademicYear::factory()->for($school)->create();
+            $calendarEvent = CalendarEvent::factory()->create(['school_id' => $school->id, 'academic_year_id' => $year->id]);
+
+            return AlumniEvent::factory()->create(['school_id' => $school->id, 'calendar_event_id' => $calendarEvent->id]);
+        });
+    }
+
+    /**
+     * Book K PPL-06. Every FK derived explicitly from the same
+     * `$school` — a student's `grade_level_id` must match the
+     * alumnus's own `final_grade_level_id` override.
+     */
+    private function alumnusFor(School $school): Alumnus
+    {
+        $section = SchoolSection::factory()->for($school)->create();
+        $gradeLevel = GradeLevel::factory()->for($school)->for($section, 'section')->create();
+        $student = Student::factory()->for($school)->create([
+            'section_id' => $section->id, 'grade_level_id' => $gradeLevel->id,
+        ]);
+
+        return Alumnus::factory()->create([
+            'school_id' => $school->id, 'student_id' => $student->id, 'final_grade_level_id' => $gradeLevel->id,
+        ]);
     }
 }
