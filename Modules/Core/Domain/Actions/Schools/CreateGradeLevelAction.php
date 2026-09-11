@@ -14,7 +14,12 @@ use Modules\Core\Models\GradeLevel;
  * must name a section that already exists for this school — a school
  * must have at least one section before any grade level can be created.
  * BR-CORE-02-003: `ordinal` is unique per school and defines the
- * promotion sequence.
+ * promotion sequence. Range widened from the spec's original 0..13 to
+ * 0..19 (school-owner-confirmed 2026-09-11): Zimbabwe's real ECD A/B +
+ * Grade 1-7 + Form 1-6 (Lower/Upper Six) spans more distinct levels
+ * than 14 — the original range was a straightforward undercount, not a
+ * deliberate ceiling. `docs/specification/02-book-a-platform-foundation.md`
+ * updated to match.
  */
 final class CreateGradeLevelAction extends Action
 {
@@ -35,7 +40,7 @@ final class CreateGradeLevelAction extends Action
                 ],
                 'name' => ['required', 'string', 'max:60'],
                 'ordinal' => [
-                    'required', 'integer', 'min:0', 'max:13',
+                    'required', 'integer', 'min:0', 'max:19',
                     'unique:grade_levels,ordinal,NULL,id,school_id,'.$data->schoolId,
                 ],
             ],

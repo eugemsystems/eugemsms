@@ -141,7 +141,7 @@
                             </div>
                             <div class="form-floating form-floating-outline">
                                 <input type="number" class="form-control @error('gradeLevelOrdinal') is-invalid @enderror" id="gradeLevelOrdinal" wire:model="gradeLevelOrdinal" placeholder=" ">
-                                <label for="gradeLevelOrdinal">{{ __('Ordinal (promotion order, 0-13)') }}</label>
+                                <label for="gradeLevelOrdinal">{{ __('Ordinal (promotion order, 0-19)') }}</label>
                                 @error('gradeLevelOrdinal') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>

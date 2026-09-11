@@ -11,7 +11,9 @@ use Modules\Core\Models\GradeLevel;
 
 /**
  * ACT-UpdateGradeLevel (Book A CORE-02 §5, admin UI follow-up).
- * BR-CORE-02-003: `ordinal` stays unique per school.
+ * BR-CORE-02-003: `ordinal` stays unique per school, range 0..19 — see
+ * `CreateGradeLevelAction`'s own docblock for why this was widened from
+ * the spec's original 0..13.
  */
 final class UpdateGradeLevelAction extends Action
 {
@@ -35,7 +37,7 @@ final class UpdateGradeLevelAction extends Action
                 ],
                 'name' => ['required', 'string', 'max:60'],
                 'ordinal' => [
-                    'required', 'integer', 'min:0', 'max:13',
+                    'required', 'integer', 'min:0', 'max:19',
                     'unique:grade_levels,ordinal,'.$gradeLevel->id.',id,school_id,'.$data->schoolId,
                 ],
             ],

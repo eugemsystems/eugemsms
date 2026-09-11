@@ -669,7 +669,7 @@ school_id             BIGINT       FK  INDEX
 section_id            BIGINT       FK → school_sections.id
 code                  VARCHAR(20)  NOT NULL   -- 'ECDA','G1'..'G7','F1'..'F6'
 name                  VARCHAR(60)  NOT NULL   -- 'Form 3'
-ordinal               SMALLINT     NOT NULL   -- 0..13, drives promotion sequence
+ordinal               SMALLINT     NOT NULL   -- 0..19, drives promotion sequence (widened from 0..13, school-owner-confirmed 2026-09-11: ECD A/B + Grade 1-7 + Form 1-6 spans more levels than 14)
 is_exam_level         TINYINT(1)   NOT NULL DEFAULT 0   -- G7, F4, F6
 is_entry_level        TINYINT(1)   NOT NULL DEFAULT 0
 is_exit_level         TINYINT(1)   NOT NULL DEFAULT 0
