@@ -14,7 +14,10 @@ use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Domain\Contracts\CurrencyConverter;
+use Modules\Finance\Domain\Contracts\DiscountResolver;
+use Modules\Finance\Domain\Listeners\EndAwardsOnLearnerWithdrawnListener;
 use Modules\Finance\Domain\Listeners\RaiseMidTermSubjectChangeBillingListener;
+use Modules\Finance\Domain\Support\AwardDiscountResolver;
 use Modules\Finance\Domain\Support\CloseChecks\AllTillSessionsClosedCheck;
 use Modules\Finance\Domain\Support\CloseChecks\NoDraftInvoicesCheck;
 use Modules\Finance\Domain\Support\CloseChecks\SuspenseBalanceCheck;
@@ -24,12 +27,16 @@ use Modules\Finance\Domain\Support\PaymentGatewayDriverRegistry;
 use Modules\Finance\Domain\Support\RateResolvingCurrencyConverter;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\AdHocCharge;
+use Modules\Finance\Models\AwardDiscountCommitment;
+use Modules\Finance\Models\AwardUtilisation;
 use Modules\Finance\Models\BankAccount;
 use Modules\Finance\Models\BankStatement;
 use Modules\Finance\Models\BankStatementLine;
 use Modules\Finance\Models\BillingRun;
 use Modules\Finance\Models\CostCentre;
 use Modules\Finance\Models\CreditNote;
+use Modules\Finance\Models\DiscountAward;
+use Modules\Finance\Models\DiscountScheme;
 use Modules\Finance\Models\ExchangeRate;
 use Modules\Finance\Models\ExchangeRateSource;
 use Modules\Finance\Models\FeeComponent;
@@ -49,10 +56,13 @@ use Modules\Finance\Models\Receipt;
 use Modules\Finance\Models\ReceiptAllocation;
 use Modules\Finance\Models\ReceiptTender;
 use Modules\Finance\Models\ReconciliationRun;
+use Modules\Finance\Models\SchemeBudgetEnvelope;
+use Modules\Finance\Models\ScholarshipApplication;
 use Modules\Finance\Models\SchoolCurrency;
 use Modules\Finance\Models\SuspenseItem;
 use Modules\Finance\Models\Till;
 use Modules\Finance\Models\TillSession;
+use Modules\People\Domain\Events\LearnerWithdrawn;
 use Modules\People\Models\Student;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
@@ -67,6 +77,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
         parent::register();
 
         $this->app->bind(CurrencyConverter::class, RateResolvingCurrencyConverter::class);
+        $this->app->bind(DiscountResolver::class, AwardDiscountResolver::class);
 
         $this->app->singleton(PaymentGatewayDriverRegistry::class, function (): PaymentGatewayDriverRegistry {
             $registry = new PaymentGatewayDriverRegistry;
@@ -108,6 +119,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
     {
         Event::listen(SubjectEnrolmentAdded::class, [RaiseMidTermSubjectChangeBillingListener::class, 'handleAdded']);
         Event::listen(SubjectEnrolmentDropped::class, [RaiseMidTermSubjectChangeBillingListener::class, 'handleDropped']);
+        Event::listen(LearnerWithdrawn::class, EndAwardsOnLearnerWithdrawnListener::class);
     }
 
     /**
@@ -156,6 +168,9 @@ class FinanceServiceProvider extends ModuleServiceProvider
             ['finance.block_period_close_on_reconciliation_exceptions', 'bool', '1', 'Whether an unresolved reconciliation exception blocks financial period close.'],
             ['finance.gateway_fee_borne_by', 'string', 'school', 'Who bears the gateway fee: school or payer.'],
             ['finance.min_online_payment_minor', 'int', '100', 'Minimum amount accepted for an online gateway payment.'],
+            ['finance.award_approval_threshold_minor', 'int', '0', 'Fixed-amount award value above which CORE-07 approval is required. 0 means all fixed-amount awards need approval (Book K FIN-07 BR-FIN-07-008).'],
+            ['finance.staff_child_discount_notice_days', 'int', '30', 'Days a staff-child discount survives past the staff member\'s exited_on date (Book K FIN-07 BR-FIN-07-004).'],
+            ['finance.condition_review_trigger', 'string', 'on_results_publication', 'When a conditional award\'s condition is (re)checked (Book K FIN-07 BR-FIN-07-011).'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
@@ -524,5 +539,73 @@ class FinanceServiceProvider extends ModuleServiceProvider
         // can even be resolved), so it has no tenancy boundary for the
         // isolation generator to test — same reasoning as
         // `FeeStructureRule`/`CreditNoteLine`.
+
+        TenantModelRegistry::register(
+            DiscountScheme::class,
+            fn (School $school): DiscountScheme => DiscountScheme::factory()->for($school)->create(),
+        );
+
+        TenantModelRegistry::register(
+            SchemeBudgetEnvelope::class,
+            fn (School $school): SchemeBudgetEnvelope => SchemeBudgetEnvelope::factory()->create([
+                'school_id' => $school->id,
+                'scheme_id' => DiscountScheme::factory()->for($school)->create()->id,
+            ]),
+        );
+
+        TenantModelRegistry::register(
+            ScholarshipApplication::class,
+            fn (School $school): ScholarshipApplication => ScholarshipApplication::factory()->create([
+                'school_id' => $school->id,
+                'scheme_id' => DiscountScheme::factory()->for($school)->schemeType('application_based')->create()->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+            ]),
+        );
+
+        TenantModelRegistry::register(
+            DiscountAward::class,
+            fn (School $school): DiscountAward => DiscountAward::factory()->create([
+                'school_id' => $school->id,
+                'scheme_id' => DiscountScheme::factory()->for($school)->create()->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+            ]),
+        );
+
+        TenantModelRegistry::register(AwardUtilisation::class, function (School $school): AwardUtilisation {
+            $year = AcademicYear::factory()->for($school)->create();
+            $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
+            $scheme = DiscountScheme::factory()->for($school)->create();
+            $student = Student::factory()->for($school)->create();
+            $award = DiscountAward::factory()->create(['school_id' => $school->id, 'scheme_id' => $scheme->id, 'student_id' => $student->id]);
+            $component = FeeComponent::factory()->for($school)->create();
+            $journal = Journal::factory()->create(['school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id]);
+            $assignment = LearnerFeeAssignment::factory()->create(['school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id, 'student_id' => $student->id]);
+            $feeLine = LearnerFeeLine::factory()->create(['school_id' => $school->id, 'assignment_id' => $assignment->id, 'component_id' => $component->id]);
+
+            return AwardUtilisation::factory()->create([
+                'school_id' => $school->id,
+                'award_id' => $award->id,
+                'term_id' => $term->id,
+                'component_id' => $component->id,
+                'fee_line_id' => $feeLine->id,
+                'journal_id' => $journal->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(AwardDiscountCommitment::class, function (School $school): AwardDiscountCommitment {
+            $scheme = DiscountScheme::factory()->for($school)->create();
+            $student = Student::factory()->for($school)->create();
+            $award = DiscountAward::factory()->create(['school_id' => $school->id, 'scheme_id' => $scheme->id, 'student_id' => $student->id]);
+            $component = FeeComponent::factory()->for($school)->create();
+            $assignment = LearnerFeeAssignment::factory()->create(['school_id' => $school->id, 'student_id' => $student->id]);
+            $feeLine = LearnerFeeLine::factory()->create(['school_id' => $school->id, 'assignment_id' => $assignment->id, 'component_id' => $component->id]);
+
+            return AwardDiscountCommitment::factory()->create([
+                'school_id' => $school->id,
+                'fee_line_id' => $feeLine->id,
+                'award_id' => $award->id,
+                'scheme_id' => $scheme->id,
+            ]);
+        });
     }
 }

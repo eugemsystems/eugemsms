@@ -129,7 +129,14 @@ final class LiabilityResolver
         return $remaining;
     }
 
-    private function defaultResponsible(Student $student): int
+    /**
+     * Public so `Modules\Finance\Domain\Actions\IssueInvoicesForAssignmentAction`
+     * (Book K FIN-07) can attribute a fully-discounted (net-zero) fee
+     * line — one `resolve()` itself never produces a share for, since
+     * `$remaining` starts at 0 — to the same guardian a non-zero line
+     * would have fallen through to.
+     */
+    public function defaultResponsible(Student $student): int
     {
         $guardianId = StudentGuardian::query()
             ->where('student_id', $student->id)

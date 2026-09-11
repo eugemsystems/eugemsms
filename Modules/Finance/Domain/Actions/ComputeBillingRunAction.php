@@ -8,15 +8,19 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Modules\Academic\Domain\Support\TermProrationCalculator;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Domain\Support\Currency;
+use Modules\Core\Domain\Support\Money;
 use Modules\Core\Domain\Support\Settings\ScopeChain;
 use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Core\Models\Term;
+use Modules\Finance\Domain\Contracts\DiscountResolver;
 use Modules\Finance\Domain\DataObjects\ComputeBillingRunData;
 use Modules\Finance\Domain\Events\BillingRunComputed;
 use Modules\Finance\Domain\Events\LearnerFeeAssigned;
 use Modules\Finance\Domain\Exceptions\UnsupportedBillingBasisException;
 use Modules\Finance\Domain\Support\FeeLineCalculator;
 use Modules\Finance\Domain\Support\FeeStructureResolver;
+use Modules\Finance\Models\AwardDiscountCommitment;
 use Modules\Finance\Models\BillingRun;
 use Modules\Finance\Models\LearnerFeeAssignment;
 use Modules\Finance\Models\LearnerFeeLine;
@@ -24,8 +28,9 @@ use Modules\People\Models\Student;
 use Modules\People\Models\StudentEnrolment;
 
 /**
- * ACT-ComputeBillingRun (Book B FIN-02 §3, steps 1-10 ⭐). Resolves a
- * structure and computes every line for every learner in scope, then
+ * ACT-ComputeBillingRun (Book B FIN-02 §3, steps 1-10 ⭐ / Book K
+ * FIN-07 §3 ⭐, the "DISCOUNTS (FIN-07 hook)" step, now wired). Resolves
+ * a structure and computes every line for every learner in scope, then
  * stops at `preview` — nothing is invoiced, no journal posted
  * (AC-FIN-02-006). Ad hoc charges are deliberately NOT pulled into the
  * run here (spec step 5): bundling them into an assignment that can be
@@ -34,6 +39,15 @@ use Modules\People\Models\StudentEnrolment;
  * registered as a setting but not wired — `FeeLineCalculator`'s
  * one-off history check is always school-wide (the default), matching
  * BR-FIN-02-007's "full charging history across all terms and years".
+ *
+ * `gross_minor` is never touched by the discount step (BR-FIN-07-001
+ * ⭐) — `DiscountResolver` only ever informs `discount_minor`, and
+ * `net_minor = gross_minor − discount_minor` is computed fresh here,
+ * replacing `FeeLineCalculator`'s own pre-discount net. Each accepted
+ * `DiscountApplication` also writes an `AwardDiscountCommitment` row
+ * so `IssueInvoicesForAssignmentAction` can later reconstruct exactly
+ * which award(s) funded this already-fixed discount when it posts the
+ * real journal — see that row's own migration docblock.
  */
 final class ComputeBillingRunAction extends Action
 {
@@ -42,6 +56,7 @@ final class ComputeBillingRunAction extends Action
         private readonly FeeLineCalculator $calculator,
         private readonly TermProrationCalculator $proration,
         private readonly SettingResolver $settings,
+        private readonly DiscountResolver $discountResolver,
     ) {}
 
     public function execute(ComputeBillingRunData $data): BillingRun
@@ -126,7 +141,14 @@ final class ComputeBillingRunAction extends Action
                         continue;
                     }
 
-                    LearnerFeeLine::create([
+                    $currency = Currency::from($item->currency);
+                    $gross = Money::of($lineResult->grossMinor, $currency);
+                    $applications = $this->discountResolver->discountsFor($student, $item->component, $gross, $term);
+                    $accepted = $applications->reject(fn ($a) => $a->isBlocked);
+                    $discountMinor = (int) $accepted->sum(fn ($a) => $a->discountAmount->minor);
+                    $netMinor = $lineResult->grossMinor - $discountMinor;
+
+                    $line = LearnerFeeLine::create([
                         'school_id' => $data->schoolId,
                         'assignment_id' => $assignment->id,
                         'component_id' => $item->component_id,
@@ -136,17 +158,33 @@ final class ComputeBillingRunAction extends Action
                         'unit_rate_minor' => $lineResult->unitRateMinor,
                         'gross_minor' => $lineResult->grossMinor,
                         'proration_factor' => $lineResult->prorationFactor,
-                        'discount_minor' => 0,
-                        'net_minor' => $lineResult->netMinor,
+                        'discount_minor' => $discountMinor,
+                        'net_minor' => $netMinor,
                         'currency' => $item->currency,
                         'calculation_note' => $lineResult->calculationNote,
                         'source_reference' => $lineResult->sourceReference,
                     ]);
 
-                    $netTotal += $lineResult->netMinor;
+                    foreach ($accepted as $application) {
+                        if ($application->discountAmount->isZero()) {
+                            continue;
+                        }
+
+                        AwardDiscountCommitment::create([
+                            'school_id' => $data->schoolId,
+                            'fee_line_id' => $line->id,
+                            'award_id' => $application->award->id,
+                            'scheme_id' => $application->award->scheme_id,
+                            'discount_minor' => $application->discountAmount->minor,
+                            'currency' => $item->currency,
+                        ]);
+                    }
+
+                    $netTotal += $netMinor;
                     $currencyTotals[$item->currency] ??= ['gross_minor' => 0, 'discount_minor' => 0, 'net_minor' => 0];
                     $currencyTotals[$item->currency]['gross_minor'] += $lineResult->grossMinor;
-                    $currencyTotals[$item->currency]['net_minor'] += $lineResult->netMinor;
+                    $currencyTotals[$item->currency]['discount_minor'] += $discountMinor;
+                    $currencyTotals[$item->currency]['net_minor'] += $netMinor;
                 }
 
                 $computedCount++;
@@ -163,7 +201,7 @@ final class ComputeBillingRunAction extends Action
                 'computed_count' => $computedCount,
                 'exception_count' => count($exceptions),
                 'total_gross_minor' => array_sum(array_column($currencyTotals, 'gross_minor')),
-                'total_discount_minor' => 0,
+                'total_discount_minor' => array_sum(array_column($currencyTotals, 'discount_minor')),
                 'total_net_minor' => array_sum(array_column($currencyTotals, 'net_minor')),
                 'currency_totals' => $currencyTotals,
                 'variance_report' => $variance,
