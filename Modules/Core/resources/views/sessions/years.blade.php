@@ -33,7 +33,6 @@
         :column-filters="$columnFilters"
         :hidden-columns="$hiddenColumns"
         :per-page-options="$this->perPageOptions()"
-        :with-actions="false"
         class="mb-4"
     >
         @forelse ($years as $year)
@@ -60,10 +59,28 @@
                 @if ($this->columnVisible('financial_state'))
                     <td><span class="badge text-bg-light text-capitalize">{{ str_replace('_', ' ', $year->financial_state->value) }}</span></td>
                 @endif
+                <td class="text-end">
+                    <div class="d-flex justify-content-end gap-1">
+                        @unless ($year->is_current)
+                            <button type="button" class="btn btn-icon btn-sm btn-outline-success" wire:click.stop="setCurrentYear({{ $year->id }})" wire:confirm="{{ __('Set :name as the current academic year?', ['name' => $year->name]) }}" title="{{ __('Set as current') }}" aria-label="{{ __('Set as current') }}">
+                                <i class="icon-base ri ri-star-line icon-22px"></i>
+                            </button>
+                        @endunless
+                        <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click.stop="selectYear({{ $year->id }})" title="{{ __('View terms') }}" aria-label="{{ __('View terms') }}">
+                            <i class="icon-base ri ri-arrow-right-line icon-22px"></i>
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click.stop="openEditYearModal({{ $year->id }})" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}">
+                            <i class="icon-base ri ri-edit-line icon-22px"></i>
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm btn-outline-danger" wire:click.stop="deleteYear({{ $year->id }})" wire:confirm="{{ __('Permanently delete :name? This also deletes its terms and cannot be undone.', ['name' => $year->name]) }}" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}">
+                            <i class="icon-base ri ri-delete-bin-line icon-22px"></i>
+                        </button>
+                    </div>
+                </td>
             </tr>
         @empty
             <tr>
-                <td colspan="6" class="text-center text-body-secondary py-4">
+                <td colspan="7" class="text-center text-body-secondary py-4">
                     {{ __('No academic years yet.') }}
                 </td>
             </tr>
@@ -107,6 +124,12 @@
                                         <a href="{{ route('sessions.terms.show', [$school, $term]) }}" class="btn btn-icon btn-sm btn-outline-primary" wire:navigate title="{{ __('Manage') }}" aria-label="{{ __('Manage') }}">
                                             <i class="icon-base ri ri-arrow-right-line icon-22px"></i>
                                         </a>
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="openEditTermModal({{ $term->id }})" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}">
+                                            <i class="icon-base ri ri-edit-line icon-22px"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-danger" wire:click="deleteTerm({{ $term->id }})" wire:confirm="{{ __('Permanently delete :name? This cannot be undone.', ['name' => $term->name]) }}" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}">
+                                            <i class="icon-base ri ri-delete-bin-line icon-22px"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -173,6 +196,117 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" wire:click="$set('showTermModal', false)">{{ __('Cancel') }}</button>
                             <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Create') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showEditYearModal)
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0, 0, 0, .5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form wire:submit="updateYear">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ __('Edit academic year') }}</h5>
+                            <button type="button" class="btn-close" wire:click="$set('showEditYearModal', false)" aria-label="{{ __('Close') }}"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-floating form-floating-outline mb-3">
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="edit-year-name" wire:model="editYearName" placeholder=" ">
+                                <label for="edit-year-name">{{ __('Name') }}</label>
+                                @error('name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="date" class="form-control @error('starts_on') is-invalid @enderror" id="edit-year-starts-on" wire:model="editYearStartsOn" placeholder=" ">
+                                        <label for="edit-year-starts-on">{{ __('Starts on') }}</label>
+                                        @error('starts_on')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="date" class="form-control @error('ends_on') is-invalid @enderror" id="edit-year-ends-on" wire:model="editYearEndsOn" placeholder=" ">
+                                        <label for="edit-year-ends-on">{{ __('Ends on') }}</label>
+                                        @error('ends_on')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="edit-year-is-current" wire:model="editYearIsCurrent">
+                                <label class="form-check-label" for="edit-year-is-current">{{ __('This is the current academic year') }}</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" wire:click="$set('showEditYearModal', false)">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Save') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showEditTermModal)
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0, 0, 0, .5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form wire:submit="updateTerm">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ __('Edit term') }}</h5>
+                            <button type="button" class="btn-close" wire:click="$set('showEditTermModal', false)" aria-label="{{ __('Close') }}"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-floating form-floating-outline mb-3">
+                                <input type="number" min="1" max="127" class="form-control @error('number') is-invalid @enderror" id="edit-term-number" wire:model="editTermNumber" placeholder=" ">
+                                <label for="edit-term-number">{{ __('Term number') }}</label>
+                                @error('number')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="form-floating form-floating-outline mb-3">
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="edit-term-name" wire:model="editTermName" placeholder=" ">
+                                <label for="edit-term-name">{{ __('Name') }}</label>
+                                @error('name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="date" class="form-control @error('starts_on') is-invalid @enderror" id="edit-term-starts-on" wire:model="editTermStartsOn" placeholder=" ">
+                                        <label for="edit-term-starts-on">{{ __('Starts on') }}</label>
+                                        @error('starts_on')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="date" class="form-control @error('ends_on') is-invalid @enderror" id="edit-term-ends-on" wire:model="editTermEndsOn" placeholder=" ">
+                                        <label for="edit-term-ends-on">{{ __('Ends on') }}</label>
+                                        @error('ends_on')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" wire:click="$set('showEditTermModal', false)">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Save') }}</button>
                         </div>
                     </form>
                 </div>

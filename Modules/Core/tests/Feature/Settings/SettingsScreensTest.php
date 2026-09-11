@@ -6,7 +6,6 @@ use Modules\Core\Livewire\CustomFields\Builder as CustomFieldsBuilder;
 use Modules\Core\Livewire\CustomFields\Index as CustomFieldsIndex;
 use Modules\Core\Livewire\FeatureFlags\Index as FeatureFlagsIndex;
 use Modules\Core\Livewire\Profiles\Index as ProfilesIndex;
-use Modules\Core\Livewire\Settings\Edit as SettingsEdit;
 use Modules\Core\Livewire\Settings\History as SettingsHistory;
 use Modules\Core\Livewire\Settings\Index as SettingsIndex;
 use Modules\Core\Models\ConfigurationProfile;
@@ -24,60 +23,109 @@ function assignedSchoolForSettings(User $user): School
     return $school;
 }
 
-it('lists setting definitions with their resolved value for the school', function (): void {
+it('lists setting definitions with their resolved value for the school, grouped under their module tab', function (): void {
     $user = User::factory()->create();
     $school = assignedSchoolForSettings($user);
-    SettingDefinition::factory()->create(['key' => 'core.demo_flag', 'label' => 'Demo flag', 'data_type' => 'bool', 'default_value' => '0', 'lowest_scope' => 'school']);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.demo_flag', 'label' => 'Demo flag', 'data_type' => 'bool', 'default_value' => '0', 'lowest_scope' => 'school']);
 
     // The real app already ships dozens of registered SettingDefinition
-    // rows (synced from other modules' own migrations), so the new row
-    // isn't guaranteed to land on the DataTable's first page — search
-    // for it, exactly as an admin would.
+    // rows (synced from other modules' own migrations) across several
+    // module tabs — the new row only appears once its own module tab is
+    // active, exactly as an admin would need to click to it.
     Livewire::actingAs($user)
         ->test(SettingsIndex::class, ['school' => $school])
-        ->set('search', 'core.demo_flag')
+        ->set('activeModule', $definition->module_code)
         ->assertSee('core.demo_flag')
         ->assertSee('Demo flag');
 });
 
-it('sets and resets a school-scoped setting value', function (): void {
+it('shows only the active module tab\'s settings, and switches tabs without mixing modules', function (): void {
     $user = User::factory()->create();
     $school = assignedSchoolForSettings($user);
-    SettingDefinition::factory()->create(['key' => 'core.max_students', 'data_type' => 'int', 'default_value' => '30', 'lowest_scope' => 'school']);
+    SettingDefinition::factory()->create(['key' => 'moda.setting_one', 'module_code' => 'MODA', 'label' => 'Module A Setting']);
+    SettingDefinition::factory()->create(['key' => 'modb.setting_one', 'module_code' => 'MODB', 'label' => 'Module B Setting']);
 
     $component = Livewire::actingAs($user)
-        ->test(SettingsEdit::class, ['school' => $school, 'key' => 'core.max_students'])
-        ->assertSet('schoolScopeAllowed', true)
-        ->set('value', '45')
-        ->call('save')
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', 'MODA')
+        ->assertSee('Module A Setting')
+        ->assertDontSee('Module B Setting');
+
+    $component->set('activeModule', 'MODB')
+        ->assertSee('Module B Setting')
+        ->assertDontSee('Module A Setting');
+});
+
+it('sets and resets a school-scoped setting value inline via saveField/resetToInherited', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSettings($user);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.max_students', 'data_type' => 'int', 'default_value' => '30', 'lowest_scope' => 'school']);
+
+    $component = Livewire::actingAs($user)
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', $definition->module_code)
+        ->set("values.{$definition->id}", '45')
+        ->call('saveField', $definition->id)
         ->assertHasNoErrors();
 
     expect(SettingValue::where('setting_key', 'core.max_students')->where('scope_id', $school->id)->first()?->value)->toBe('45');
 
-    $component->call('resetToInherited')->assertSet('hasOverride', false);
+    $component->call('resetToInherited', $definition->id);
 
     expect(SettingValue::where('setting_key', 'core.max_students')->where('scope_id', $school->id)->exists())->toBeFalse();
+});
+
+it('does not persist a deferred (text/select/etc.) setting until its explicit save is called', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSettings($user);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.pending_text', 'data_type' => 'string', 'lowest_scope' => 'school']);
+
+    Livewire::actingAs($user)
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', $definition->module_code)
+        ->set("values.{$definition->id}", 'not saved yet');
+
+    expect(SettingValue::where('setting_key', 'core.pending_text')->exists())->toBeFalse();
+});
+
+it('saves a bool setting immediately when its switch is toggled, with no separate save call', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSettings($user);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.demo_toggle', 'data_type' => 'bool', 'default_value' => '0', 'lowest_scope' => 'school']);
+
+    Livewire::actingAs($user)
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', $definition->module_code)
+        ->call('saveBool', $definition->id)
+        ->assertHasNoErrors();
+
+    expect(SettingValue::where('setting_key', 'core.demo_toggle')->where('scope_id', $school->id)->first()?->value)->toBe('1');
 });
 
 it('refuses to edit a setting whose lowest scope is narrower than school', function (): void {
     $user = User::factory()->create();
     $school = assignedSchoolForSettings($user);
-    SettingDefinition::factory()->create(['key' => 'core.per_user_thing', 'lowest_scope' => 'user']);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.per_user_thing', 'lowest_scope' => 'user']);
 
     Livewire::actingAs($user)
-        ->test(SettingsEdit::class, ['school' => $school, 'key' => 'core.per_user_thing'])
-        ->assertSet('schoolScopeAllowed', false);
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', $definition->module_code)
+        ->set("values.{$definition->id}", 'nope')
+        ->call('saveField', $definition->id);
+
+    expect(SettingValue::where('setting_key', 'core.per_user_thing')->exists())->toBeFalse();
 });
 
 it('logs a setting change and shows it in the history screen', function (): void {
     $user = User::factory()->create();
     $school = assignedSchoolForSettings($user);
-    SettingDefinition::factory()->create(['key' => 'core.logged_setting', 'lowest_scope' => 'school']);
+    $definition = SettingDefinition::factory()->create(['key' => 'core.logged_setting', 'lowest_scope' => 'school']);
 
     Livewire::actingAs($user)
-        ->test(SettingsEdit::class, ['school' => $school, 'key' => 'core.logged_setting'])
-        ->set('value', 'new value')
-        ->call('save');
+        ->test(SettingsIndex::class, ['school' => $school])
+        ->set('activeModule', $definition->module_code)
+        ->set("values.{$definition->id}", 'new value')
+        ->call('saveField', $definition->id);
 
     Livewire::actingAs($user)
         ->test(SettingsHistory::class, ['school' => $school])

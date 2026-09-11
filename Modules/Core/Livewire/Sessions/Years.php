@@ -12,7 +12,15 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Core\Domain\Actions\Sessions\CreateTermAction;
+use Modules\Core\Domain\Actions\Sessions\DeleteAcademicYearAction;
+use Modules\Core\Domain\Actions\Sessions\DeleteTermAction;
+use Modules\Core\Domain\Actions\Sessions\UpdateAcademicYearAction;
+use Modules\Core\Domain\Actions\Sessions\UpdateTermAction;
 use Modules\Core\Domain\DataObjects\Sessions\CreateTermData;
+use Modules\Core\Domain\DataObjects\Sessions\DeleteAcademicYearData;
+use Modules\Core\Domain\DataObjects\Sessions\DeleteTermData;
+use Modules\Core\Domain\DataObjects\Sessions\UpdateAcademicYearData;
+use Modules\Core\Domain\DataObjects\Sessions\UpdateTermData;
 use Modules\Core\Domain\Exceptions\DomainException;
 use Modules\Core\Domain\Support\PeriodState;
 use Modules\Core\Livewire\Concerns\InteractsWithDataTable;
@@ -50,6 +58,30 @@ final class Years extends Component
     public string $termStartsOn = '';
 
     public string $termEndsOn = '';
+
+    public bool $showEditYearModal = false;
+
+    public ?int $editingYearId = null;
+
+    public string $editYearName = '';
+
+    public string $editYearStartsOn = '';
+
+    public string $editYearEndsOn = '';
+
+    public bool $editYearIsCurrent = false;
+
+    public bool $showEditTermModal = false;
+
+    public ?int $editingTermId = null;
+
+    public int $editTermNumber = 1;
+
+    public string $editTermName = '';
+
+    public string $editTermStartsOn = '';
+
+    public string $editTermEndsOn = '';
 
     public function mount(School $school): void
     {
@@ -97,6 +129,176 @@ final class Years extends Component
         $this->termNumber = 1;
 
         $this->toast(__('Term created.'));
+    }
+
+    public function openEditYearModal(int $yearId): void
+    {
+        $year = AcademicYear::withoutGlobalScopes()
+            ->where('id', $yearId)
+            ->where('school_id', $this->school->id)
+            ->first();
+
+        if ($year === null) {
+            return;
+        }
+
+        $this->editingYearId = $year->id;
+        $this->editYearName = $year->name;
+        $this->editYearStartsOn = $year->starts_on->toDateString();
+        $this->editYearEndsOn = $year->ends_on->toDateString();
+        $this->editYearIsCurrent = $year->is_current;
+        $this->showEditYearModal = true;
+    }
+
+    public function updateYear(): void
+    {
+        if ($this->editingYearId === null) {
+            return;
+        }
+
+        try {
+            app(UpdateAcademicYearAction::class)->execute(new UpdateAcademicYearData(
+                yearId: $this->editingYearId,
+                schoolId: $this->school->id,
+                name: $this->editYearName,
+                startsOn: Carbon::parse($this->editYearStartsOn),
+                endsOn: Carbon::parse($this->editYearEndsOn),
+                isCurrent: $this->editYearIsCurrent,
+                actingUserId: (int) Auth::id(),
+            ));
+        } catch (DomainException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->reset(['editingYearId', 'editYearName', 'editYearStartsOn', 'editYearEndsOn', 'editYearIsCurrent', 'showEditYearModal']);
+
+        $this->toast(__('Academic year updated.'));
+    }
+
+    public function setCurrentYear(int $yearId): void
+    {
+        $year = AcademicYear::withoutGlobalScopes()
+            ->where('id', $yearId)
+            ->where('school_id', $this->school->id)
+            ->first();
+
+        if ($year === null || $year->is_current) {
+            return;
+        }
+
+        try {
+            app(UpdateAcademicYearAction::class)->execute(new UpdateAcademicYearData(
+                yearId: $year->id,
+                schoolId: $this->school->id,
+                name: $year->name,
+                startsOn: $year->starts_on,
+                endsOn: $year->ends_on,
+                isCurrent: true,
+                actingUserId: (int) Auth::id(),
+            ));
+        } catch (DomainException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->toast(__('Current academic year updated.'));
+    }
+
+    public function deleteYear(int $yearId): void
+    {
+        try {
+            app(DeleteAcademicYearAction::class)->execute(new DeleteAcademicYearData(
+                yearId: $yearId,
+                schoolId: $this->school->id,
+            ));
+        } catch (DomainException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return;
+        }
+
+        if ($this->selectedYearId === $yearId) {
+            $this->selectedYearId = null;
+        }
+
+        $this->toast(__('Academic year deleted.'));
+    }
+
+    public function openEditTermModal(int $termId): void
+    {
+        if ($this->selectedYearId === null) {
+            return;
+        }
+
+        $term = Term::withoutGlobalScopes()
+            ->where('id', $termId)
+            ->where('school_id', $this->school->id)
+            ->where('academic_year_id', $this->selectedYearId)
+            ->first();
+
+        if ($term === null) {
+            return;
+        }
+
+        $this->editingTermId = $term->id;
+        $this->editTermNumber = $term->number;
+        $this->editTermName = $term->name;
+        $this->editTermStartsOn = $term->starts_on->toDateString();
+        $this->editTermEndsOn = $term->ends_on->toDateString();
+        $this->showEditTermModal = true;
+    }
+
+    public function updateTerm(): void
+    {
+        if ($this->editingTermId === null || $this->selectedYearId === null) {
+            return;
+        }
+
+        try {
+            app(UpdateTermAction::class)->execute(new UpdateTermData(
+                termId: $this->editingTermId,
+                schoolId: $this->school->id,
+                academicYearId: $this->selectedYearId,
+                number: $this->editTermNumber,
+                name: $this->editTermName,
+                startsOn: Carbon::parse($this->editTermStartsOn),
+                endsOn: Carbon::parse($this->editTermEndsOn),
+                actingUserId: (int) Auth::id(),
+            ));
+        } catch (DomainException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->reset(['editingTermId', 'editTermNumber', 'editTermName', 'editTermStartsOn', 'editTermEndsOn', 'showEditTermModal']);
+        $this->editTermNumber = 1;
+
+        $this->toast(__('Term updated.'));
+    }
+
+    public function deleteTerm(int $termId): void
+    {
+        if ($this->selectedYearId === null) {
+            return;
+        }
+
+        try {
+            app(DeleteTermAction::class)->execute(new DeleteTermData(
+                termId: $termId,
+                schoolId: $this->school->id,
+                academicYearId: $this->selectedYearId,
+            ));
+        } catch (DomainException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->toast(__('Term deleted.'));
     }
 
     public function render(): View

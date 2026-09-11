@@ -7,6 +7,7 @@ namespace Modules\Core\Livewire\Sessions\Concerns;
 use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Models\School;
 use Modules\Core\Models\UserSessionPreference;
+use ReflectionProperty;
 
 /**
  * Resolves and sets `SessionContext` the same way `SetSessionContext`
@@ -20,6 +21,9 @@ use Modules\Core\Models\UserSessionPreference;
  * very screens (`Years`, `YearWizard`) exist to create that first year,
  * and populating this is a courtesy for the historical-view banner, not
  * a hard requirement to render the page.
+ *
+ * @property School $school Provided by `InteractsWithSchool`, always
+ *                          used alongside this trait in practice.
  */
 trait InteractsWithSession
 {
@@ -47,5 +51,27 @@ trait InteractsWithSession
         $term = $preferredTerm ?? $year->currentTerm();
 
         SessionContext::set($year, $term);
+    }
+
+    /**
+     * Same staleness problem as `InteractsWithSchool::bootInteractsWithSchool()`
+     * (read that method's docblock first): `SessionContext` is set once,
+     * in `mount()`, and — absent an automatic context-resolution
+     * middleware for these screens — nothing re-establishes it for the
+     * follow-up requests every `wire:click`/`wire:model` round trip
+     * makes. Re-derived here each request from `$this->school`, which
+     * `InteractsWithSchool::bootInteractsWithSchool()` keeps current the
+     * same way. Guarded via `ReflectionProperty::isInitialized()` for
+     * the same reason that method is: on the very first request this
+     * runs before `mount()` has assigned `$this->school`, and PHPStan
+     * flags a plain `isset()` on a non-nullable typed property as
+     * always-true even though it correctly reports `false` at runtime
+     * for an uninitialized one.
+     */
+    public function bootInteractsWithSession(): void
+    {
+        if ((new ReflectionProperty($this, 'school'))->isInitialized($this)) {
+            $this->loadSessionContext($this->school);
+        }
     }
 }

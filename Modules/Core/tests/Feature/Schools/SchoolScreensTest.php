@@ -1,7 +1,13 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\Livewire;
+use Modules\Core\Domain\Actions\Sessions\UpdateAcademicYearAction;
+use Modules\Core\Domain\DataObjects\Sessions\UpdateAcademicYearData;
+use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Livewire\Houses\Index as HousesIndex;
 use Modules\Core\Livewire\ModuleEntitlement\Index as ModuleEntitlementIndex;
 use Modules\Core\Livewire\Schools\Branding;
@@ -12,6 +18,7 @@ use Modules\Core\Livewire\Schools\Users;
 use Modules\Core\Livewire\Structure\Manager;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\GradeLevel;
+use Modules\Core\Models\House;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Tenant;
@@ -86,6 +93,35 @@ it('updates branding colours', function (): void {
     expect($school->fresh()->primary_colour)->toBe('#123456');
 });
 
+it('uploads and persists the school logo, crest, and letterhead with a live preview', function (): void {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+
+    $component = Livewire::actingAs($user)
+        ->test(Branding::class, ['school' => $school])
+        ->set('logo', UploadedFile::fake()->image('logo.png'))
+        ->set('crest', UploadedFile::fake()->image('crest.png'))
+        ->set('letterhead', UploadedFile::fake()->image('letterhead.png'));
+
+    expect($component->get('logo'))->toBeInstanceOf(TemporaryUploadedFile::class);
+
+    $component->call('save')->assertHasNoErrors();
+
+    $fresh = $school->fresh();
+
+    expect($fresh->logo_path)->not->toBeNull()
+        ->and($fresh->crest_path)->not->toBeNull()
+        ->and($fresh->letterhead_path)->not->toBeNull();
+
+    Storage::disk('public')->assertExists($fresh->logo_path);
+    Storage::disk('public')->assertExists($fresh->crest_path);
+    Storage::disk('public')->assertExists($fresh->letterhead_path);
+
+    expect($component->get('logo'))->toBeNull();
+});
+
 it('assigns an existing user by email and reports one that does not exist', function (): void {
     $admin = User::factory()->create();
     $school = assignedSchoolFor($admin);
@@ -136,6 +172,90 @@ it('creates a house', function (): void {
         ->call('create')
         ->assertHasNoErrors()
         ->assertSee('Chitepo');
+});
+
+it('still shows a newly created house after SchoolContext resets between requests', function (): void {
+    // Regression test for the real "new house doesn't display until a
+    // refresh" bug — see the identical note in SessionScreensTest's
+    // SchoolContext-reset test. Houses\Index::render() queries
+    // House::query()->where('school_id', ...), which still carries
+    // BelongsToSchool's own global scope; without
+    // InteractsWithSchool::bootInteractsWithSchool() re-establishing
+    // SchoolContext on every request, that scope silently returns zero
+    // rows for any request after the initial page load.
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+
+    $component = Livewire::actingAs($user)->test(HousesIndex::class, ['school' => $school]);
+
+    SchoolContext::clear();
+
+    $component->set('code', 'CHI')->set('name', 'Chitepo')->call('create')
+        ->assertHasNoErrors()
+        ->assertSee('Chitepo');
+
+    expect(House::withoutGlobalScopes()->where('school_id', $school->id)->where('code', 'CHI')->exists())->toBeTrue();
+});
+
+it('still shows a newly created section after SchoolContext resets between requests', function (): void {
+    // Same class of bug as the Houses regression test above, this time
+    // via Manager::render()'s $this->school->sections() relation query.
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+
+    $component = Livewire::actingAs($user)->test(Manager::class, ['school' => $school]);
+
+    SchoolContext::clear();
+
+    $component->set('sectionCode', 'JUN')->set('sectionName', 'Junior')->set('sectionType', 'primary')
+        ->call('createSection')
+        ->assertHasNoErrors()
+        ->assertSee('Junior');
+});
+
+it('allows creating a class once a year is set as current via the Years screen (not just a factory state)', function (): void {
+    // Regression test for the real "no current academic year" bug on
+    // Academic Structure: no Action ever flipped is_current to true
+    // before UpdateAcademicYearAction was added — School::currentAcademicYear()
+    // always returned null for a school whose year was created (and thus
+    // left `is_current = false`) through the normal Years screen. The
+    // sibling "creates sections, grade levels, and classes" test above
+    // masks this by seeding a year with the factory's ->current() state
+    // directly; this test instead drives the same path the UI now does.
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+    $year = AcademicYear::factory()->for($school)->create(['is_current' => false]);
+
+    // AcademicYear::currentAcademicYear() goes through BelongsToSchool's
+    // global scope, which needs an ambient SchoolContext to return
+    // anything at all (see tests.md) — queried explicitly here via
+    // withoutGlobalScopes() instead of setting context, to keep this
+    // test focused on the is_current flag itself, not context plumbing.
+    expect(AcademicYear::withoutGlobalScopes()->where('school_id', $school->id)->where('is_current', true)->exists())->toBeFalse();
+
+    app(UpdateAcademicYearAction::class)->execute(new UpdateAcademicYearData(
+        yearId: $year->id,
+        schoolId: $school->id,
+        name: $year->name,
+        startsOn: $year->starts_on,
+        endsOn: $year->ends_on,
+        isCurrent: true,
+    ));
+
+    expect($year->fresh()->is_current)->toBeTrue();
+
+    $section = SchoolSection::factory()->for($school)->create();
+    $gradeLevel = GradeLevel::factory()->for($school)->for($section, 'section')->create();
+
+    Livewire::actingAs($user)
+        ->test(Manager::class, ['school' => $school])
+        ->assertDontSee('This school has no current academic year yet')
+        ->call('openClassModal', $gradeLevel->id)
+        ->set('classCode', 'G3B')
+        ->set('className', 'Grade 3 Blue')
+        ->call('createClass')
+        ->assertHasNoErrors()
+        ->assertSee('Grade 3 Blue');
 });
 
 it('toggles a module and reports a blocked dependency as a toast rather than a crash', function (): void {

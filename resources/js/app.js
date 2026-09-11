@@ -1,9 +1,26 @@
 import * as bootstrap from 'bootstrap';
-import Alpine from 'alpinejs';
 
 window.bootstrap = bootstrap;
 
-Alpine.start();
+/**
+ * Alpine.js is intentionally NOT imported/started here. Livewire 4 ships
+ * its own bundled Alpine instance and auto-injects it on every page
+ * (`inject_assets` in config/livewire.php) — per Livewire's own
+ * troubleshooting guide ("Multiple instances of Alpine"), `wire:click`/
+ * `wire:model`/etc. are implemented on top of Alpine's own directive
+ * system, so a second, independently-started Alpine instance (as this
+ * file used to `import Alpine from 'alpinejs'; Alpine.start();`) races
+ * Livewire's bundled one to bind DOM elements. Whichever instance wins
+ * that race for a given element determines whether it actually has
+ * Livewire's directives attached — losing the race is silent (no
+ * thrown error most of the time), which is why the symptom looked like
+ * "this click does nothing" on an effectively random subset of elements,
+ * fixed only by a hard reload (which re-runs the race, sometimes
+ * luckily). `x-data`/`x-show`/etc. used declaratively in Blade views
+ * still work fine off Livewire's own Alpine — nothing else in this file
+ * called an `Alpine.*` API, so removing the import/start is a pure fix
+ * with no lost functionality.
+ */
 
 /**
  * Light / dark / system theme. For a signed-in user this is sourced from

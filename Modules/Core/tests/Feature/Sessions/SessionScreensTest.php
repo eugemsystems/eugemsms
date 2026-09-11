@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Livewire\Livewire;
+use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Livewire\Sessions\Calendar;
 use Modules\Core\Livewire\Sessions\CloseChecklist;
 use Modules\Core\Livewire\Sessions\PeriodControl;
@@ -46,6 +47,103 @@ it('lists academic years for the school and creates a term via the inline panel'
         ->assertHasNoErrors();
 
     expect(Term::where('academic_year_id', $year->id)->where('name', 'Term 1')->exists())->toBeTrue();
+});
+
+it('still shows the selected year\'s terms after SchoolContext resets between requests', function (): void {
+    // Regression test for the real "needs a refresh" bug: in production,
+    // every wire:click after the initial page load is its own fresh HTTP
+    // request — Livewire does not re-run mount() — so SchoolContext (a
+    // per-request singleton, set inside InteractsWithSchool::loadSchool()
+    // which only runs from mount()) would be unset for that follow-up
+    // request unless InteractsWithSchool::bootInteractsWithSchool() (a
+    // Livewire boot-hook, which DOES run on every request) re-establishes
+    // it. Livewire::test() keeps every ->call() in the same PHP process,
+    // so SchoolContext otherwise stays set for the whole test and would
+    // never reproduce this — clearing it here between the initial mount
+    // and the follow-up call simulates the real fresh-request boundary.
+    $user = User::factory()->create();
+    $school = assignedSchoolForSessions($user);
+    $year = AcademicYear::factory()->for($school)->create();
+    $term = Term::factory()->for($school)->for($year, 'academicYear')->create(['name' => 'Term 1']);
+
+    $component = Livewire::actingAs($user)->test(Years::class, ['school' => $school]);
+
+    SchoolContext::clear();
+
+    $component->call('selectYear', $year->id)->assertSee('Term 1');
+});
+
+it('edits an academic year, including setting it as the current year (BR-CORE-03-001)', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSessions($user);
+    $oldCurrent = AcademicYear::factory()->for($school)->create(['is_current' => true, 'name' => '2025']);
+    $year = AcademicYear::factory()->for($school)->create(['name' => '2026']);
+
+    Livewire::actingAs($user)
+        ->test(Years::class, ['school' => $school])
+        ->call('openEditYearModal', $year->id)
+        ->assertSet('editYearName', '2026')
+        ->set('editYearName', '2026 (Revised)')
+        ->set('editYearIsCurrent', true)
+        ->call('updateYear')
+        ->assertHasNoErrors();
+
+    expect($year->fresh())->name->toBe('2026 (Revised)')->is_current->toBeTrue();
+    expect($oldCurrent->fresh()->is_current)->toBeFalse();
+});
+
+it('sets a year as current via the row action without opening the edit modal', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSessions($user);
+    $year = AcademicYear::factory()->for($school)->create(['is_current' => false]);
+
+    Livewire::actingAs($user)
+        ->test(Years::class, ['school' => $school])
+        ->call('setCurrentYear', $year->id)
+        ->assertHasNoErrors();
+
+    expect($year->fresh()->is_current)->toBeTrue();
+});
+
+it('deletes an academic year and refuses to delete the current one', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSessions($user);
+    $year = AcademicYear::factory()->for($school)->create(['academic_state' => 'planned', 'financial_state' => 'planned']);
+    $currentYear = AcademicYear::factory()->for($school)->create(['is_current' => true]);
+
+    $component = Livewire::actingAs($user)->test(Years::class, ['school' => $school]);
+
+    $component->call('deleteYear', $year->id);
+    expect(AcademicYear::withoutGlobalScopes()->find($year->id))->toBeNull();
+
+    $component->call('deleteYear', $currentYear->id)->assertDispatched('toast', variant: 'danger');
+    expect(AcademicYear::withoutGlobalScopes()->find($currentYear->id))->not->toBeNull();
+});
+
+it('edits and deletes a term from the inline panel', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolForSessions($user);
+    $year = AcademicYear::factory()->for($school)->create();
+    $term = Term::factory()->for($school)->for($year, 'academicYear')->create([
+        'number' => 1,
+        'name' => 'Term 1',
+        'academic_state' => 'planned',
+        'financial_state' => 'planned',
+    ]);
+
+    $component = Livewire::actingAs($user)
+        ->test(Years::class, ['school' => $school])
+        ->call('selectYear', $year->id)
+        ->call('openEditTermModal', $term->id)
+        ->assertSet('editTermName', 'Term 1')
+        ->set('editTermName', 'Term One')
+        ->call('updateTerm')
+        ->assertHasNoErrors();
+
+    expect($term->fresh()->name)->toBe('Term One');
+
+    $component->call('deleteTerm', $term->id);
+    expect(Term::withoutGlobalScopes()->find($term->id))->toBeNull();
 });
 
 it('creates an academic year with three even terms via the wizard', function (): void {
