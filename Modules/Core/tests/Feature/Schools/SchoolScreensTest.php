@@ -23,6 +23,7 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Tenant;
+use Modules\People\Models\Student;
 
 function assignedSchoolFor(User $user): School
 {
@@ -197,6 +198,27 @@ it('edits an existing section, grade level, and class from the structure manager
     expect($class->fresh()->capacity)->toBe(35);
 });
 
+it('surfaces an out-of-range grade level ordinal as a toast instead of failing silently', function (): void {
+    // Regression test: CreateGradeLevelAction validates under the bare
+    // key 'ordinal', which never matches this component's own prefixed
+    // property 'gradeLevelOrdinal' — an inline @error('gradeLevelOrdinal')
+    // can never fire for it, so the fix surfaces the message as a toast.
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+    $section = SchoolSection::factory()->for($school)->create();
+
+    Livewire::actingAs($user)
+        ->test(Manager::class, ['school' => $school])
+        ->call('openGradeLevelModal', $section->id)
+        ->set('gradeLevelCode', 'G99')
+        ->set('gradeLevelName', 'Grade 99')
+        ->set('gradeLevelOrdinal', 99)
+        ->call('createGradeLevel')
+        ->assertDispatched('toast', variant: 'danger');
+
+    expect(GradeLevel::where('school_id', $school->id)->where('code', 'G99')->exists())->toBeFalse();
+});
+
 it('creates a house', function (): void {
     $user = User::factory()->create();
     $school = assignedSchoolFor($user);
@@ -208,6 +230,40 @@ it('creates a house', function (): void {
         ->call('create')
         ->assertHasNoErrors()
         ->assertSee('Chitepo');
+});
+
+it('edits a house', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+    $house = House::factory()->for($school)->create(['code' => 'CHI', 'name' => 'Chitepo']);
+
+    Livewire::actingAs($user)
+        ->test(HousesIndex::class, ['school' => $school])
+        ->call('openEditModal', $house->id)
+        ->assertSet('name', 'Chitepo')
+        ->set('name', 'Chitepo House')
+        ->call('create')
+        ->assertHasNoErrors()
+        ->assertSee('Chitepo House');
+
+    expect($house->fresh()->name)->toBe('Chitepo House');
+});
+
+it('deletes a house, but refuses while a student is assigned to it', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+    $house = House::factory()->for($school)->create();
+    $student = Student::factory()->for($school)->create(['house_id' => $house->id]);
+
+    $component = Livewire::actingAs($user)->test(HousesIndex::class, ['school' => $school]);
+
+    $component->call('delete', $house->id)->assertDispatched('toast', variant: 'danger');
+    expect(House::withoutGlobalScopes()->find($house->id))->not->toBeNull();
+
+    $student->delete();
+
+    $component->call('delete', $house->id);
+    expect(House::withoutGlobalScopes()->find($house->id))->toBeNull();
 });
 
 it('still shows a newly created house after SchoolContext resets between requests', function (): void {

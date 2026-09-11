@@ -2,23 +2,31 @@
     @include('core::schools.partials.tabs', ['school' => $school, 'active' => 'houses'])
 
     <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-primary" wire:click="$set('showCreateModal', true)">
+        <button type="button" class="btn btn-primary" wire:click="openCreateModal">
             <i class="ri ri-add-line me-1"></i>{{ __('New house') }}
         </button>
     </div>
 
     <div class="row g-3">
         @forelse ($houses as $house)
-            <div class="col-md-4">
+            <div class="col-md-4" wire:key="house-{{ $house->id }}">
                 <div class="card h-100">
                     <div class="card-body d-flex align-items-center gap-3">
                         <span class="rounded-circle flex-shrink-0" style="width:2.5rem;height:2.5rem;background-color:{{ $house->colour ?? '#8592a3' }};"></span>
-                        <div>
+                        <div class="flex-grow-1">
                             <div class="fw-medium">{{ $house->name }}</div>
                             <div class="small text-body-secondary">{{ $house->code }}</div>
                             @if ($house->motto)
                                 <div class="small text-body-tertiary fst-italic">"{{ $house->motto }}"</div>
                             @endif
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="openEditModal({{ $house->id }})" title="{{ __('Edit house') }}" aria-label="{{ __('Edit house') }}">
+                                <i class="icon-base ri ri-edit-line icon-22px"></i>
+                            </button>
+                            <button type="button" class="btn btn-icon btn-sm btn-outline-danger" wire:click="delete({{ $house->id }})" wire:confirm="{{ __('Delete this house?') }}" title="{{ __('Delete house') }}" aria-label="{{ __('Delete house') }}">
+                                <i class="icon-base ri ri-delete-bin-line icon-22px"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -38,7 +46,7 @@
                 <div class="modal-content">
                     <form wire:submit="create">
                         <div class="modal-header">
-                            <h5 class="modal-title">{{ __('New house') }}</h5>
+                            <h5 class="modal-title">{{ $editingHouseId !== null ? __('Edit house') : __('New house') }}</h5>
                             <button type="button" class="btn-close" wire:click="$set('showCreateModal', false)" aria-label="{{ __('Close') }}"></button>
                         </div>
                         <div class="modal-body">
@@ -63,7 +71,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" wire:click="$set('showCreateModal', false)">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Create') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ $editingHouseId !== null ? __('Save') : __('Create') }}</button>
                         </div>
                     </form>
                 </div>

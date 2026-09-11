@@ -6,6 +6,7 @@ namespace Modules\Core\Livewire\Structure;
 
 use App\Concerns\Toasts;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -142,29 +143,41 @@ final class Manager extends Component
 
     public function createSection(): void
     {
-        if ($this->editingSectionId !== null) {
-            app(UpdateSectionAction::class)->execute(new UpdateSectionData(
+        try {
+            if ($this->editingSectionId !== null) {
+                app(UpdateSectionAction::class)->execute(new UpdateSectionData(
+                    schoolId: $this->school->id,
+                    sectionId: $this->editingSectionId,
+                    code: $this->sectionCode,
+                    name: $this->sectionName,
+                    type: $this->sectionType,
+                ));
+
+                $this->reset(['sectionCode', 'sectionName', 'editingSectionId', 'showSectionModal']);
+                $this->sectionType = 'primary';
+
+                $this->toast(__('Section updated.'));
+
+                return;
+            }
+
+            app(CreateSectionAction::class)->execute(new CreateSectionData(
                 schoolId: $this->school->id,
-                sectionId: $this->editingSectionId,
                 code: $this->sectionCode,
                 name: $this->sectionName,
                 type: $this->sectionType,
             ));
-
-            $this->reset(['sectionCode', 'sectionName', 'editingSectionId', 'showSectionModal']);
-            $this->sectionType = 'primary';
-
-            $this->toast(__('Section updated.'));
+        } catch (ValidationException $e) {
+            // The action validates under bare field names ('code',
+            // 'name', 'type'), which never match this component's own
+            // prefixed properties ('sectionCode', etc.) — an inline
+            // @error('sectionCode') can never fire for it, so surface
+            // the real message as a toast instead of silently doing
+            // nothing (see .ai/rules/domain-actions.md).
+            $this->toast($e->validator->errors()->first(), 'danger');
 
             return;
         }
-
-        app(CreateSectionAction::class)->execute(new CreateSectionData(
-            schoolId: $this->school->id,
-            code: $this->sectionCode,
-            name: $this->sectionName,
-            type: $this->sectionType,
-        ));
 
         $this->reset(['sectionCode', 'sectionName', 'showSectionModal']);
         $this->sectionType = 'primary';
@@ -178,29 +191,35 @@ final class Manager extends Component
             return;
         }
 
-        if ($this->editingGradeLevelId !== null) {
-            app(UpdateGradeLevelAction::class)->execute(new UpdateGradeLevelData(
+        try {
+            if ($this->editingGradeLevelId !== null) {
+                app(UpdateGradeLevelAction::class)->execute(new UpdateGradeLevelData(
+                    schoolId: $this->school->id,
+                    gradeLevelId: $this->editingGradeLevelId,
+                    code: $this->gradeLevelCode,
+                    name: $this->gradeLevelName,
+                    ordinal: $this->gradeLevelOrdinal ?? 0,
+                ));
+
+                $this->reset(['gradeLevelCode', 'gradeLevelName', 'gradeLevelOrdinal', 'editingGradeLevelId', 'showGradeLevelModal']);
+
+                $this->toast(__('Grade level updated.'));
+
+                return;
+            }
+
+            app(CreateGradeLevelAction::class)->execute(new CreateGradeLevelData(
                 schoolId: $this->school->id,
-                gradeLevelId: $this->editingGradeLevelId,
+                sectionId: $this->gradeLevelSectionId,
                 code: $this->gradeLevelCode,
                 name: $this->gradeLevelName,
                 ordinal: $this->gradeLevelOrdinal ?? 0,
             ));
-
-            $this->reset(['gradeLevelCode', 'gradeLevelName', 'gradeLevelOrdinal', 'editingGradeLevelId', 'showGradeLevelModal']);
-
-            $this->toast(__('Grade level updated.'));
+        } catch (ValidationException $e) {
+            $this->toast($e->validator->errors()->first(), 'danger');
 
             return;
         }
-
-        app(CreateGradeLevelAction::class)->execute(new CreateGradeLevelData(
-            schoolId: $this->school->id,
-            sectionId: $this->gradeLevelSectionId,
-            code: $this->gradeLevelCode,
-            name: $this->gradeLevelName,
-            ordinal: $this->gradeLevelOrdinal ?? 0,
-        ));
 
         $this->reset(['gradeLevelCode', 'gradeLevelName', 'gradeLevelOrdinal', 'showGradeLevelModal']);
 
@@ -209,43 +228,49 @@ final class Manager extends Component
 
     public function createClass(): void
     {
-        if ($this->editingClassId !== null) {
-            app(UpdateClassAction::class)->execute(new UpdateClassData(
+        try {
+            if ($this->editingClassId !== null) {
+                app(UpdateClassAction::class)->execute(new UpdateClassData(
+                    schoolId: $this->school->id,
+                    classId: $this->editingClassId,
+                    code: $this->classCode,
+                    name: $this->className,
+                    capacity: $this->classCapacity,
+                ));
+
+                $this->reset(['classCode', 'className', 'editingClassId', 'showClassModal']);
+                $this->classCapacity = 40;
+
+                $this->toast(__('Class updated.'));
+
+                return;
+            }
+
+            $year = $this->school->currentAcademicYear();
+
+            if ($year === null) {
+                $this->toast(__('This school has no current academic year yet.'), 'danger');
+
+                return;
+            }
+
+            if ($this->classGradeLevelId === null) {
+                return;
+            }
+
+            app(CreateClassAction::class)->execute(new CreateClassData(
                 schoolId: $this->school->id,
-                classId: $this->editingClassId,
+                academicYearId: $year->id,
+                gradeLevelId: $this->classGradeLevelId,
                 code: $this->classCode,
                 name: $this->className,
                 capacity: $this->classCapacity,
             ));
-
-            $this->reset(['classCode', 'className', 'editingClassId', 'showClassModal']);
-            $this->classCapacity = 40;
-
-            $this->toast(__('Class updated.'));
+        } catch (ValidationException $e) {
+            $this->toast($e->validator->errors()->first(), 'danger');
 
             return;
         }
-
-        $year = $this->school->currentAcademicYear();
-
-        if ($year === null) {
-            $this->addError('className', __('This school has no current academic year yet.'));
-
-            return;
-        }
-
-        if ($this->classGradeLevelId === null) {
-            return;
-        }
-
-        app(CreateClassAction::class)->execute(new CreateClassData(
-            schoolId: $this->school->id,
-            academicYearId: $year->id,
-            gradeLevelId: $this->classGradeLevelId,
-            code: $this->classCode,
-            name: $this->className,
-            capacity: $this->classCapacity,
-        ));
 
         $this->reset(['classCode', 'className', 'showClassModal']);
         $this->classCapacity = 40;
