@@ -12,12 +12,20 @@ use Livewire\Component;
 use Modules\Core\Domain\Actions\Schools\CreateClassAction;
 use Modules\Core\Domain\Actions\Schools\CreateGradeLevelAction;
 use Modules\Core\Domain\Actions\Schools\CreateSectionAction;
+use Modules\Core\Domain\Actions\Schools\UpdateClassAction;
+use Modules\Core\Domain\Actions\Schools\UpdateGradeLevelAction;
+use Modules\Core\Domain\Actions\Schools\UpdateSectionAction;
 use Modules\Core\Domain\DataObjects\Schools\CreateClassData;
 use Modules\Core\Domain\DataObjects\Schools\CreateGradeLevelData;
 use Modules\Core\Domain\DataObjects\Schools\CreateSectionData;
+use Modules\Core\Domain\DataObjects\Schools\UpdateClassData;
+use Modules\Core\Domain\DataObjects\Schools\UpdateGradeLevelData;
+use Modules\Core\Domain\DataObjects\Schools\UpdateSectionData;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
+use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolClass;
+use Modules\Core\Models\SchoolSection;
 
 /**
  * `Core\Structure\Manager` (Book A CORE-02 §5). Sections → grade levels →
@@ -38,6 +46,8 @@ final class Manager extends Component
 
     public bool $showSectionModal = false;
 
+    public ?int $editingSectionId = null;
+
     public string $sectionCode = '';
 
     public string $sectionName = '';
@@ -45,6 +55,8 @@ final class Manager extends Component
     public string $sectionType = 'primary';
 
     public bool $showGradeLevelModal = false;
+
+    public ?int $editingGradeLevelId = null;
 
     public ?int $gradeLevelSectionId = null;
 
@@ -55,6 +67,8 @@ final class Manager extends Component
     public ?int $gradeLevelOrdinal = null;
 
     public bool $showClassModal = false;
+
+    public ?int $editingClassId = null;
 
     public ?int $classGradeLevelId = null;
 
@@ -69,20 +83,82 @@ final class Manager extends Component
         $this->loadSchool($school);
     }
 
+    public function openSectionModal(): void
+    {
+        $this->reset(['editingSectionId', 'sectionCode', 'sectionName']);
+        $this->sectionType = 'primary';
+        $this->showSectionModal = true;
+    }
+
+    public function openEditSectionModal(int $sectionId): void
+    {
+        $section = SchoolSection::where('school_id', $this->school->id)->findOrFail($sectionId);
+
+        $this->editingSectionId = $section->id;
+        $this->sectionCode = $section->code;
+        $this->sectionName = $section->name;
+        $this->sectionType = $section->type;
+        $this->showSectionModal = true;
+    }
+
     public function openGradeLevelModal(int $sectionId): void
     {
+        $this->reset(['editingGradeLevelId', 'gradeLevelCode', 'gradeLevelName', 'gradeLevelOrdinal']);
         $this->gradeLevelSectionId = $sectionId;
+        $this->showGradeLevelModal = true;
+    }
+
+    public function openEditGradeLevelModal(int $gradeLevelId): void
+    {
+        $gradeLevel = GradeLevel::where('school_id', $this->school->id)->findOrFail($gradeLevelId);
+
+        $this->editingGradeLevelId = $gradeLevel->id;
+        $this->gradeLevelSectionId = $gradeLevel->section_id;
+        $this->gradeLevelCode = $gradeLevel->code;
+        $this->gradeLevelName = $gradeLevel->name;
+        $this->gradeLevelOrdinal = $gradeLevel->ordinal;
         $this->showGradeLevelModal = true;
     }
 
     public function openClassModal(int $gradeLevelId): void
     {
+        $this->reset(['editingClassId', 'classCode', 'className']);
+        $this->classCapacity = 40;
         $this->classGradeLevelId = $gradeLevelId;
+        $this->showClassModal = true;
+    }
+
+    public function openEditClassModal(int $classId): void
+    {
+        $class = SchoolClass::where('school_id', $this->school->id)->findOrFail($classId);
+
+        $this->editingClassId = $class->id;
+        $this->classGradeLevelId = $class->grade_level_id;
+        $this->classCode = $class->code;
+        $this->className = $class->name;
+        $this->classCapacity = $class->capacity;
         $this->showClassModal = true;
     }
 
     public function createSection(): void
     {
+        if ($this->editingSectionId !== null) {
+            app(UpdateSectionAction::class)->execute(new UpdateSectionData(
+                schoolId: $this->school->id,
+                sectionId: $this->editingSectionId,
+                code: $this->sectionCode,
+                name: $this->sectionName,
+                type: $this->sectionType,
+            ));
+
+            $this->reset(['sectionCode', 'sectionName', 'editingSectionId', 'showSectionModal']);
+            $this->sectionType = 'primary';
+
+            $this->toast(__('Section updated.'));
+
+            return;
+        }
+
         app(CreateSectionAction::class)->execute(new CreateSectionData(
             schoolId: $this->school->id,
             code: $this->sectionCode,
@@ -102,6 +178,22 @@ final class Manager extends Component
             return;
         }
 
+        if ($this->editingGradeLevelId !== null) {
+            app(UpdateGradeLevelAction::class)->execute(new UpdateGradeLevelData(
+                schoolId: $this->school->id,
+                gradeLevelId: $this->editingGradeLevelId,
+                code: $this->gradeLevelCode,
+                name: $this->gradeLevelName,
+                ordinal: $this->gradeLevelOrdinal ?? 0,
+            ));
+
+            $this->reset(['gradeLevelCode', 'gradeLevelName', 'gradeLevelOrdinal', 'editingGradeLevelId', 'showGradeLevelModal']);
+
+            $this->toast(__('Grade level updated.'));
+
+            return;
+        }
+
         app(CreateGradeLevelAction::class)->execute(new CreateGradeLevelData(
             schoolId: $this->school->id,
             sectionId: $this->gradeLevelSectionId,
@@ -117,6 +209,23 @@ final class Manager extends Component
 
     public function createClass(): void
     {
+        if ($this->editingClassId !== null) {
+            app(UpdateClassAction::class)->execute(new UpdateClassData(
+                schoolId: $this->school->id,
+                classId: $this->editingClassId,
+                code: $this->classCode,
+                name: $this->className,
+                capacity: $this->classCapacity,
+            ));
+
+            $this->reset(['classCode', 'className', 'editingClassId', 'showClassModal']);
+            $this->classCapacity = 40;
+
+            $this->toast(__('Class updated.'));
+
+            return;
+        }
+
         $year = $this->school->currentAcademicYear();
 
         if ($year === null) {

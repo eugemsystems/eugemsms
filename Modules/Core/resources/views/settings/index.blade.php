@@ -16,62 +16,63 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-        <ul class="nav nav-tabs flex-nowrap overflow-auto pb-0">
-            @foreach ($modules as $moduleCode)
-                <li class="nav-item">
-                    <button
-                        type="button"
-                        class="nav-link text-nowrap {{ $activeModule === $moduleCode ? 'active' : '' }}"
-                        wire:click="setActiveModule('{{ $moduleCode }}')"
-                    >
-                        {{ $moduleCode }}
-                        <span class="badge text-bg-light ms-1">{{ $moduleCounts[$moduleCode] ?? 0 }}</span>
-                    </button>
-                </li>
-            @endforeach
-        </ul>
-
-        <div class="input-group input-group-merge input-group-sm flex-shrink-0" style="width: 16rem;">
-            <span class="input-group-text"><i class="ri ri-search-line"></i></span>
-            <input
-                type="search"
-                class="form-control"
-                placeholder="{{ __('Search this module…') }}"
-                wire:model.live.debounce.400ms="search"
-                aria-label="{{ __('Search settings') }}"
-            >
+    <div class="row g-3">
+        <div class="col-md-3 col-lg-2">
+            <ul class="nav nav-pills flex-column">
+                @foreach ($modules as $moduleCode)
+                    <li class="nav-item">
+                        <button
+                            type="button"
+                            class="nav-link d-flex align-items-center justify-content-between w-100 text-start {{ $activeModule === $moduleCode ? 'active' : '' }}"
+                            wire:click="setActiveModule('{{ $moduleCode }}')"
+                        >
+                            {{ $this->moduleName($moduleCode) }}
+                            <span class="badge {{ $activeModule === $moduleCode ? 'text-bg-light' : 'text-bg-secondary' }} ms-1">{{ $moduleCounts[$moduleCode] ?? 0 }}</span>
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
         </div>
-    </div>
 
-    @forelse ($groups as $groupKey => $groupDefinitions)
-        @if ($groups->count() > 1)
-            <h6 class="text-uppercase text-body-secondary small fw-semibold mt-4 mb-2">{{ \Illuminate\Support\Str::headline($groupKey) }}</h6>
-        @endif
+        <div class="col-md-9 col-lg-10">
+            <div class="input-group input-group-merge input-group-sm mb-3" style="max-width: 20rem;">
+                <span class="input-group-text"><i class="ri ri-search-line"></i></span>
+                <input
+                    type="search"
+                    class="form-control"
+                    placeholder="{{ __('Search this module…') }}"
+                    wire:model.live.debounce.400ms="search"
+                    aria-label="{{ __('Search settings') }}"
+                >
+            </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
-                @foreach ($groupDefinitions as $definition)
-                    @php $allowed = $this->schoolScopeAllowedFor($definition); @endphp
-                    <div class="row py-3 {{ ! $loop->last ? 'border-bottom' : '' }}" wire:key="setting-row-{{ $definition->id }}">
-                        <div class="col-md-5 mb-2 mb-md-0">
-                            <label class="form-label fw-medium mb-0" for="setting-{{ $definition->id }}">{{ $definition->label }}</label>
-                            @if ($definition->description)
-                                <div class="text-body-secondary small">{{ $definition->description }}</div>
-                            @endif
-                            <div class="d-flex align-items-center gap-2 mt-1">
-                                <code class="small text-body-secondary">{{ $definition->key }}</code>
-                                @if ($allowed && ! $definition->is_encrypted)
-                                    @if ($this->hasOverrideFor($definition))
-                                        <span class="badge text-bg-info">{{ __('Set here') }}</span>
-                                    @else
-                                        <span class="badge text-bg-light">{{ __('Inherited') }}</span>
+            @forelse ($groups as $groupKey => $groupDefinitions)
+                @if ($groups->count() > 1)
+                    <h6 class="text-uppercase text-body-secondary small fw-semibold mt-4 mb-2">{{ \Illuminate\Support\Str::headline($groupKey) }}</h6>
+                @endif
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        @foreach ($groupDefinitions as $definition)
+                            @php $allowed = $this->schoolScopeAllowedFor($definition); @endphp
+                            <div class="row py-3 {{ ! $loop->last ? 'border-bottom' : '' }}" wire:key="setting-row-{{ $definition->id }}">
+                                <div class="col-md-5 mb-2 mb-md-0">
+                                    <label class="form-label fw-medium mb-0" for="setting-{{ $definition->id }}">{{ $definition->label }}</label>
+                                    @if ($definition->description)
+                                        <div class="text-body-secondary small">{{ $definition->description }}</div>
                                     @endif
-                                @endif
-                            </div>
-                        </div>
+                                    @if ($allowed && ! $definition->is_encrypted)
+                                        <div class="mt-1">
+                                            @if ($this->hasOverrideFor($definition))
+                                                <span class="badge text-bg-info">{{ __('Set here') }}</span>
+                                            @else
+                                                <span class="badge text-bg-light">{{ __('Inherited') }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
 
-                        <div class="col-md-7">
+                                <div class="col-md-7">
                             @if (! $allowed)
                                 <div class="text-body-secondary small fst-italic">
                                     {{ __('This setting can only be overridden at a narrower scope than school (e.g. per-term or per-user) — that isn\'t supported by this screen yet.') }}
@@ -152,16 +153,18 @@
                                     </button>
                                 </div>
                             @endif
-                        </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
+                </div>
+            @empty
+                <div class="card">
+                    <div class="card-body text-center text-body-secondary py-4">
+                        {{ __('No settings match your search in this module.') }}
+                    </div>
+                </div>
+            @endforelse
         </div>
-    @empty
-        <div class="card">
-            <div class="card-body text-center text-body-secondary py-4">
-                {{ __('No settings match your search in this module.') }}
-            </div>
-        </div>
-    @endforelse
+    </div>
 </div>

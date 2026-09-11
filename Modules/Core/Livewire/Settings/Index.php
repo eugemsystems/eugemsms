@@ -50,6 +50,31 @@ final class Index extends Component
     use InteractsWithSchool;
     use Toasts;
 
+    /**
+     * Every `setting_definitions.module_code` value currently seeded
+     * across the app (confirmed via a distinct query against a real
+     * dev database — there is no registry of module display names
+     * anywhere in the codebase to read this from instead) mapped to the
+     * human name its Book uses, so the settings tabs read as words, not
+     * codes. A module_code with no entry here falls back to the raw
+     * code itself (see `moduleName()`), so this never hard-fails if a
+     * new module_code is introduced before this list is updated.
+     *
+     * @var array<string, string>
+     */
+    private const array MODULE_NAMES = [
+        'CORE' => 'Platform Core',
+        'FIN' => 'Finance',
+        'PPL' => 'People',
+        'ACA' => 'Academic',
+        'BRD' => 'Boarding',
+        'OPS' => 'Operations',
+        'COM' => 'Communications',
+        'INT' => 'Intelligence',
+        'SAA' => 'SaaS Administration',
+        'CMP' => 'Compliance',
+    ];
+
     #[Url(as: 'module', history: true)]
     public string $activeModule = '';
 
@@ -218,6 +243,11 @@ final class Index extends Component
             'groups' => $definitions->groupBy('group_key'),
             'resolved' => $resolved,
         ]);
+    }
+
+    public function moduleName(string $code): string
+    {
+        return self::MODULE_NAMES[$code] ?? $code;
     }
 
     protected function scopeChain(): ScopeChain

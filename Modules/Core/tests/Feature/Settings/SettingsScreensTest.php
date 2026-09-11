@@ -31,11 +31,12 @@ it('lists setting definitions with their resolved value for the school, grouped 
     // The real app already ships dozens of registered SettingDefinition
     // rows (synced from other modules' own migrations) across several
     // module tabs — the new row only appears once its own module tab is
-    // active, exactly as an admin would need to click to it.
+    // active, exactly as an admin would need to click to it. The raw
+    // setting key is deliberately not shown in the UI (admin-facing
+    // labels only) — assert the label instead.
     Livewire::actingAs($user)
         ->test(SettingsIndex::class, ['school' => $school])
         ->set('activeModule', $definition->module_code)
-        ->assertSee('core.demo_flag')
         ->assertSee('Demo flag');
 });
 

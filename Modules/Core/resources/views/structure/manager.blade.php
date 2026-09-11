@@ -9,27 +9,32 @@
     @endunless
 
     <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-primary" wire:click="$set('showSectionModal', true)">
+        <button type="button" class="btn btn-primary" wire:click="openSectionModal">
             <i class="ri ri-add-line me-1"></i>{{ __('New section') }}
         </button>
     </div>
 
     @forelse ($sections as $section)
-        <div class="card mb-3">
+        <div class="card mb-3" wire:key="section-{{ $section->id }}">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <div>
                     <span class="fw-medium">{{ $section->name }}</span>
                     <span class="text-body-secondary small ms-1">{{ $section->code }} &middot; {{ __(ucfirst($section->type)) }}</span>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="openGradeLevelModal({{ $section->id }})">
-                    <i class="ri ri-add-line me-1"></i>{{ __('Add grade level') }}
-                </button>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="openEditSectionModal({{ $section->id }})" title="{{ __('Edit section') }}" aria-label="{{ __('Edit section') }}">
+                        <i class="icon-base ri ri-edit-line icon-22px"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="openGradeLevelModal({{ $section->id }})">
+                        <i class="ri ri-add-line me-1"></i>{{ __('Add grade level') }}
+                    </button>
+                </div>
             </div>
 
             @if ($section->gradeLevels->isNotEmpty())
                 <div class="list-group list-group-flush">
                     @foreach ($section->gradeLevels as $gradeLevel)
-                        <div class="list-group-item">
+                        <div class="list-group-item" wire:key="grade-level-{{ $gradeLevel->id }}">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="fw-medium">{{ $gradeLevel->name }}</span>
@@ -38,19 +43,25 @@
                                         <span class="badge text-bg-warning ms-1">{{ __('Exam level') }}</span>
                                     @endif
                                 </div>
-                                @if ($currentYear)
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="openClassModal({{ $gradeLevel->id }})">
-                                        <i class="ri ri-add-line me-1"></i>{{ __('Add class') }}
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="openEditGradeLevelModal({{ $gradeLevel->id }})" title="{{ __('Edit grade level') }}" aria-label="{{ __('Edit grade level') }}">
+                                        <i class="icon-base ri ri-edit-line icon-22px"></i>
                                     </button>
-                                @endif
+                                    @if ($currentYear)
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="openClassModal({{ $gradeLevel->id }})">
+                                            <i class="ri ri-add-line me-1"></i>{{ __('Add class') }}
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
 
                             @php $classes = $classesByGradeLevel->get($gradeLevel->id, collect()); @endphp
                             @if ($classes->isNotEmpty())
                                 <div class="d-flex flex-wrap gap-2 mt-2">
                                     @foreach ($classes as $class)
-                                        <span class="badge text-bg-light border">
+                                        <span class="badge text-bg-light border d-inline-flex align-items-center gap-1" wire:key="class-{{ $class->id }}">
                                             {{ $class->name }} &middot; {{ $class->capacity }} {{ __('seats') }}
+                                            <i class="ri ri-edit-line" role="button" wire:click="openEditClassModal({{ $class->id }})" title="{{ __('Edit class') }}" aria-label="{{ __('Edit class') }}"></i>
                                         </span>
                                     @endforeach
                                 </div>
@@ -74,7 +85,7 @@
                 <div class="modal-content">
                     <form wire:submit="createSection">
                         <div class="modal-header">
-                            <h5 class="modal-title">{{ __('New section') }}</h5>
+                            <h5 class="modal-title">{{ $editingSectionId !== null ? __('Edit section') : __('New section') }}</h5>
                             <button type="button" class="btn-close" wire:click="$set('showSectionModal', false)" aria-label="{{ __('Close') }}"></button>
                         </div>
                         <div class="modal-body">
@@ -100,7 +111,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" wire:click="$set('showSectionModal', false)">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Create') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ $editingSectionId !== null ? __('Save') : __('Create') }}</button>
                         </div>
                     </form>
                 </div>
@@ -114,7 +125,7 @@
                 <div class="modal-content">
                     <form wire:submit="createGradeLevel">
                         <div class="modal-header">
-                            <h5 class="modal-title">{{ __('New grade level') }}</h5>
+                            <h5 class="modal-title">{{ $editingGradeLevelId !== null ? __('Edit grade level') : __('New grade level') }}</h5>
                             <button type="button" class="btn-close" wire:click="$set('showGradeLevelModal', false)" aria-label="{{ __('Close') }}"></button>
                         </div>
                         <div class="modal-body">
@@ -136,7 +147,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" wire:click="$set('showGradeLevelModal', false)">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Create') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ $editingGradeLevelId !== null ? __('Save') : __('Create') }}</button>
                         </div>
                     </form>
                 </div>
@@ -150,7 +161,7 @@
                 <div class="modal-content">
                     <form wire:submit="createClass">
                         <div class="modal-header">
-                            <h5 class="modal-title">{{ __('New class') }}</h5>
+                            <h5 class="modal-title">{{ $editingClassId !== null ? __('Edit class') : __('New class') }}</h5>
                             <button type="button" class="btn-close" wire:click="$set('showClassModal', false)" aria-label="{{ __('Close') }}"></button>
                         </div>
                         <div class="modal-body">
@@ -172,7 +183,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary" wire:click="$set('showClassModal', false)">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Create') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ $editingClassId !== null ? __('Save') : __('Create') }}</button>
                         </div>
                     </form>
                 </div>

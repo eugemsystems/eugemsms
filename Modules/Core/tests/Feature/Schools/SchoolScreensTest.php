@@ -20,6 +20,7 @@ use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\House;
 use Modules\Core\Models\School;
+use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Tenant;
 
@@ -159,6 +160,41 @@ it('creates sections, grade levels, and classes from the structure manager', fun
         ->call('createClass')->assertHasNoErrors();
 
     $component->assertSee('Grade 3 Blue');
+});
+
+it('edits an existing section, grade level, and class from the structure manager', function (): void {
+    $user = User::factory()->create();
+    $school = assignedSchoolFor($user);
+    $year = AcademicYear::factory()->for($school)->current()->create();
+    $section = SchoolSection::factory()->for($school)->create(['code' => 'JUN', 'name' => 'Junior', 'type' => 'primary']);
+    $gradeLevel = GradeLevel::factory()->for($school)->create(['section_id' => $section->id, 'code' => 'G3', 'name' => 'Grade 3', 'ordinal' => 3]);
+    $class = SchoolClass::factory()->for($school)->create([
+        'academic_year_id' => $year->id,
+        'grade_level_id' => $gradeLevel->id,
+        'code' => 'G3B',
+        'name' => 'Grade 3 Blue',
+        'capacity' => 30,
+    ]);
+
+    $component = Livewire::actingAs($user)->test(Manager::class, ['school' => $school]);
+
+    $component->call('openEditSectionModal', $section->id)
+        ->assertSet('sectionName', 'Junior')
+        ->set('sectionName', 'Junior School')
+        ->call('createSection')->assertHasNoErrors();
+    expect($section->fresh()->name)->toBe('Junior School');
+
+    $component->call('openEditGradeLevelModal', $gradeLevel->id)
+        ->assertSet('gradeLevelName', 'Grade 3')
+        ->set('gradeLevelName', 'Grade Three')
+        ->call('createGradeLevel')->assertHasNoErrors();
+    expect($gradeLevel->fresh()->name)->toBe('Grade Three');
+
+    $component->call('openEditClassModal', $class->id)
+        ->assertSet('className', 'Grade 3 Blue')
+        ->set('classCapacity', 35)
+        ->call('createClass')->assertHasNoErrors();
+    expect($class->fresh()->capacity)->toBe(35);
 });
 
 it('creates a house', function (): void {
