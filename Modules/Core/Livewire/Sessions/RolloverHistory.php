@@ -63,6 +63,7 @@ final class RolloverHistory extends Component
     protected function tableColumns(): array
     {
         return [
+            'term' => ['label' => __('Term')],
             'status' => [
                 'label' => __('Status'), 'sortable' => true, 'filter' => 'select',
                 'options' => [

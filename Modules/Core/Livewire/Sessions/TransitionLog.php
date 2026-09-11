@@ -52,6 +52,7 @@ final class TransitionLog extends Component
     protected function tableColumns(): array
     {
         return [
+            'term' => ['label' => __('Term')],
             'period_type' => [
                 'label' => __('Type'), 'sortable' => true, 'filter' => 'select',
                 'options' => ['academic' => __('Academic'), 'financial' => __('Financial')],
@@ -59,6 +60,7 @@ final class TransitionLog extends Component
             'from_state' => ['label' => __('From'), 'sortable' => true],
             'to_state' => ['label' => __('To'), 'sortable' => true],
             'occurred_at' => ['label' => __('When'), 'sortable' => true],
+            'performed_by' => ['label' => __('Performed by')],
         ];
     }
 }

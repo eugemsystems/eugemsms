@@ -39,9 +39,11 @@
                     </td>
                 @endif
                 <td class="text-end">
-                    <a href="{{ route('schools.profile', $school) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>
-                        {{ __('Manage') }}
-                    </a>
+                    <div class="d-flex justify-content-end gap-1">
+                        <a href="{{ route('schools.profile', $school) }}" class="btn btn-icon btn-sm btn-outline-primary" wire:navigate title="{{ __('Manage') }}" aria-label="{{ __('Manage') }}">
+                            <i class="icon-base ri ri-arrow-right-line icon-22px"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
         @empty

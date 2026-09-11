@@ -19,10 +19,13 @@
         :column-filters="$columnFilters"
         :hidden-columns="$hiddenColumns"
         :per-page-options="$this->perPageOptions()"
+        :with-actions="false"
     >
         @forelse ($transitions as $transition)
             <tr wire:key="transition-{{ $transition->id }}">
-                <td>{{ $transition->term->name }}</td>
+                @if ($this->columnVisible('term'))
+                    <td>{{ $transition->term->name }}</td>
+                @endif
                 @if ($this->columnVisible('period_type'))
                     <td class="text-capitalize">{{ $transition->period_type->value }}</td>
                 @endif
@@ -35,15 +38,17 @@
                 @if ($this->columnVisible('occurred_at'))
                     <td>{{ $transition->occurred_at->format('d M Y H:i') }}</td>
                 @endif
-                <td>
-                    {{ $transition->performer->name }}
-                    @if ($transition->approver)
-                        <span class="text-body-secondary">&middot; {{ __('approved by') }} {{ $transition->approver->name }}</span>
-                    @endif
-                    @if ($transition->reason)
-                        <div class="text-body-secondary small">{{ $transition->reason }}</div>
-                    @endif
-                </td>
+                @if ($this->columnVisible('performed_by'))
+                    <td>
+                        {{ $transition->performer->name }}
+                        @if ($transition->approver)
+                            <span class="text-body-secondary">&middot; {{ __('approved by') }} {{ $transition->approver->name }}</span>
+                        @endif
+                        @if ($transition->reason)
+                            <div class="text-body-secondary small">{{ $transition->reason }}</div>
+                        @endif
+                    </td>
+                @endif
             </tr>
         @empty
             <tr>

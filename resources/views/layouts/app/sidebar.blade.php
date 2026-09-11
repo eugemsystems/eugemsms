@@ -28,7 +28,13 @@
                         <a href="{{ route('sessions.years', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('sessions.*') ? 'active' : '' }}" wire:navigate>
                             <i class="ri ri-calendar-event-line"></i> {{ __('Academic sessions') }}
                         </a>
+                        <a href="{{ route('settings.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
+                            <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
+                        </a>
                     @endif
+                    <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
+                        <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
+                    </a>
                 </nav>
 
                 <div class="mt-auto">

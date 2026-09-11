@@ -62,8 +62,10 @@ final class Snapshots extends Component
     protected function tableColumns(): array
     {
         return [
+            'term' => ['label' => __('Term')],
             'snapshot_type' => ['label' => __('Type'), 'sortable' => true, 'searchable' => true],
             'taken_at' => ['label' => __('Taken'), 'sortable' => true],
+            'taken_by' => ['label' => __('Taken by')],
         ];
     }
 }

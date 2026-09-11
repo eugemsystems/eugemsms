@@ -330,6 +330,52 @@ body {
     display: none !important;
 }
 
+// ---- Icon-only buttons (table action columns, tab-bar back link, sidebar
+// toggle) — ported from TEMPLATE's `_bootstrap-extended/_buttons.scss`
+// `.btn-icon` and `_utilities.scss` `.icon-base`/`.icon-Npx` (the full
+// $prefix-based file isn't imported, see .ai/rules/views.md, so the
+// equivalent is hand-written here). TEMPLATE's `waves-effect` ripple class
+// is deliberately NOT ported: `node-waves` isn't installed or wired up in
+// this app's resources/js/app.js, so the class would be dead markup with no
+// visual effect — see .ai/rules (pagination/data-table work, 2026-09-11).
+.icon-base {
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.icon-20px {
+    font-size: 20px;
+    inline-size: 20px;
+    block-size: 20px;
+}
+
+.icon-22px {
+    font-size: 22px;
+    inline-size: 22px;
+    block-size: 22px;
+}
+
+.btn-icon {
+    $btn-icon-size: ($btn-font-size * $btn-line-height) + ($btn-padding-y * 2);
+
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: $btn-font-size * $btn-line-height;
+    inline-size: calc(#{$btn-icon-size} + #{$btn-border-width} * 2);
+    block-size: calc(#{$btn-icon-size} + #{$btn-border-width} * 2);
+
+    &.btn-sm {
+        $btn-icon-size-sm: ($btn-font-size-sm * $btn-line-height) + ($btn-padding-y-sm * 2);
+
+        font-size: $btn-font-size-sm;
+        inline-size: calc(#{$btn-icon-size-sm} + #{$btn-border-width} * 2);
+        block-size: calc(#{$btn-icon-size-sm} + #{$btn-border-width} * 2);
+    }
+}
+
 // ---- Misc ------------------------------------------------------------------
 [data-bs-theme='dark'] .serp-qr-code {
     filter: invert(1) brightness(1.5);

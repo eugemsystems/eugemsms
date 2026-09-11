@@ -45,11 +45,13 @@
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        @unless ($assignedUser->pivot->is_primary)
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="makePrimary({{ $assignedUser->id }})">
-                                                {{ __('Make primary') }}
-                                            </button>
-                                        @endunless
+                                        <div class="d-flex justify-content-end gap-1">
+                                            @unless ($assignedUser->pivot->is_primary)
+                                                <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="makePrimary({{ $assignedUser->id }})" title="{{ __('Make primary') }}" aria-label="{{ __('Make primary') }}">
+                                                    <i class="icon-base ri ri-star-line icon-22px"></i>
+                                                </button>
+                                            @endunless
+                                        </div>
                                     </td>
                                 </tr>
                             @empty

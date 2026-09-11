@@ -29,15 +29,17 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                @if ($module['isEnabled'])
-                                    <button type="button" class="btn btn-sm btn-outline-danger" wire:click="toggle('{{ $module['code'] }}', false)">
-                                        {{ __('Disable') }}
-                                    </button>
-                                @else
-                                    <button type="button" class="btn btn-sm btn-outline-primary" wire:click="toggle('{{ $module['code'] }}', true)">
-                                        {{ __('Enable') }}
-                                    </button>
-                                @endif
+                                <div class="d-flex justify-content-end gap-1">
+                                    @if ($module['isEnabled'])
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-warning" wire:click="toggle('{{ $module['code'] }}', false)" title="{{ __('Disable') }}" aria-label="{{ __('Disable') }}">
+                                            <i class="icon-base ri ri-forbid-line icon-22px"></i>
+                                        </button>
+                                    @else
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-success" wire:click="toggle('{{ $module['code'] }}', true)" title="{{ __('Enable') }}" aria-label="{{ __('Enable') }}">
+                                            <i class="icon-base ri ri-check-line icon-22px"></i>
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforeach

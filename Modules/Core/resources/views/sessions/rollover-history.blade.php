@@ -27,7 +27,9 @@
     >
         @forelse ($rollovers as $rollover)
             <tr wire:key="rollover-{{ $rollover->id }}">
-                <td>{{ $rollover->fromTerm->name }} &rarr; {{ $rollover->toTerm->name }}</td>
+                @if ($this->columnVisible('term'))
+                    <td>{{ $rollover->fromTerm->name }} &rarr; {{ $rollover->toTerm->name }}</td>
+                @endif
                 @if ($this->columnVisible('status'))
                     <td>
                         <span @class([
@@ -46,9 +48,11 @@
                     <td>{{ $rollover->completed_at?->format('d M Y H:i') ?? '—' }}</td>
                 @endif
                 <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="view({{ $rollover->id }})">
-                        {{ __('View') }}
-                    </button>
+                    <div class="d-flex justify-content-end gap-1">
+                        <button type="button" class="btn btn-icon btn-sm btn-outline-secondary" wire:click="view({{ $rollover->id }})" title="{{ __('View') }}" aria-label="{{ __('View') }}">
+                            <i class="icon-base ri ri-eye-line icon-22px"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         @empty

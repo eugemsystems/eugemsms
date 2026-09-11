@@ -13,6 +13,12 @@
     visibility must be checked per cell in that row markup too, e.g.
     @if ($columnVisible('status')) <td>...</td> @endif — hiding a column
     here only hides the header, not any cell the caller still renders.
+    Every <tr> the caller renders MUST have exactly the same number of
+    <td> as this component renders <th> — a data cell with no matching
+    header (or vice versa) reads as a broken/misaligned table. Any
+    "extra" cell not covered by $columns (typically a trailing actions
+    cell) is covered by the $withActions prop below rather than being
+    left un-headed.
 --}}
 @props([
     'columns' => [],
@@ -24,6 +30,7 @@
     'columnFilters' => [],
     'hiddenColumns' => [],
     'perPageOptions' => [10, 15, 30, 50],
+    'withActions' => true,
 ])
 
 @php
@@ -127,6 +134,9 @@
                             </th>
                         @endif
                     @endforeach
+                    @if ($withActions)
+                        <th class="text-end">{{ __('Actions') }}</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>

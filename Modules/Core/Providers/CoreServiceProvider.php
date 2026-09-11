@@ -193,6 +193,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/schools.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/sessions.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/settings.php');
         });
     }
 

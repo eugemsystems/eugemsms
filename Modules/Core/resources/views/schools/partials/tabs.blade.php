@@ -5,6 +5,7 @@
         'structure' => ['label' => __('Academic structure'), 'route' => 'structure.index'],
         'houses' => ['label' => __('Houses'), 'route' => 'houses.index'],
         'modules' => ['label' => __('Modules'), 'route' => 'modules.index'],
+        'settings' => ['label' => __('Settings'), 'route' => 'settings.index'],
         'users' => ['label' => __('Users'), 'route' => 'schools.users'],
         'clone' => ['label' => __('Clone setup'), 'route' => 'schools.clone'],
     ];

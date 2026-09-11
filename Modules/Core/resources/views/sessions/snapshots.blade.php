@@ -22,18 +22,24 @@
     >
         @forelse ($snapshots as $snapshot)
             <tr wire:key="snapshot-{{ $snapshot->id }}">
-                <td>{{ $snapshot->term->name }} <span class="text-body-secondary">({{ $snapshot->academicYear->name }})</span></td>
+                @if ($this->columnVisible('term'))
+                    <td>{{ $snapshot->term->name }} <span class="text-body-secondary">({{ $snapshot->academicYear->name }})</span></td>
+                @endif
                 @if ($this->columnVisible('snapshot_type'))
                     <td class="text-capitalize">{{ str_replace('_', ' ', $snapshot->snapshot_type) }}</td>
                 @endif
                 @if ($this->columnVisible('taken_at'))
                     <td>{{ $snapshot->taken_at->format('d M Y H:i') }}</td>
                 @endif
-                <td>{{ $snapshot->takenBy?->name ?? '—' }}</td>
+                @if ($this->columnVisible('taken_by'))
+                    <td>{{ $snapshot->takenBy?->name ?? '—' }}</td>
+                @endif
                 <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="view({{ $snapshot->id }})">
-                        {{ __('View') }}
-                    </button>
+                    <div class="d-flex justify-content-end gap-1">
+                        <button type="button" class="btn btn-icon btn-sm btn-outline-secondary" wire:click="view({{ $snapshot->id }})" title="{{ __('View') }}" aria-label="{{ __('View') }}">
+                            <i class="icon-base ri ri-eye-line icon-22px"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         @empty

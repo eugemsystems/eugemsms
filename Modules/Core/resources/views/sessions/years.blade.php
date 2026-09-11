@@ -33,6 +33,7 @@
         :column-filters="$columnFilters"
         :hidden-columns="$hiddenColumns"
         :per-page-options="$this->perPageOptions()"
+        :with-actions="false"
         class="mb-4"
     >
         @forelse ($years as $year)
@@ -102,9 +103,11 @@
                                 <td><span class="badge text-bg-light text-capitalize">{{ str_replace('_', ' ', $term->academic_state->value) }}</span></td>
                                 <td><span class="badge text-bg-light text-capitalize">{{ str_replace('_', ' ', $term->financial_state->value) }}</span></td>
                                 <td class="text-end">
-                                    <a href="{{ route('sessions.terms.show', [$school, $term]) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>
-                                        {{ __('Manage') }}
-                                    </a>
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <a href="{{ route('sessions.terms.show', [$school, $term]) }}" class="btn btn-icon btn-sm btn-outline-primary" wire:navigate title="{{ __('Manage') }}" aria-label="{{ __('Manage') }}">
+                                            <i class="icon-base ri ri-arrow-right-line icon-22px"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
