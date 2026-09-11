@@ -175,6 +175,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         Route::middleware('web')->group(function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/schools.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/sessions.php');
         });
     }
 

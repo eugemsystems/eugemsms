@@ -35,10 +35,10 @@
     );
 @endphp
 
-<div {{ $attributes->class('card') }}>
+<div {{ $attributes->class(['card', 'serp-data-table']) }}>
     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <div class="input-group input-group-merge" style="max-width: 16rem;">
+        <div class="d-flex flex-nowrap align-items-center gap-2">
+            <div class="input-group input-group-merge input-group-sm flex-shrink-0" style="width: 16rem;">
                 <span class="input-group-text"><i class="ri ri-search-line"></i></span>
                 <input
                     type="search"
@@ -50,8 +50,8 @@
             </div>
 
             @if ($filterableColumns->isNotEmpty())
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="dropdown flex-shrink-0">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="ri ri-filter-3-line me-1"></i>{{ __('Filters') }}
                     </button>
                     <div class="dropdown-menu p-3" style="min-width: 16rem;">
@@ -86,7 +86,7 @@
 
         <div class="d-flex align-items-center gap-2">
             <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ri ri-layout-column-line me-1"></i>{{ __('Columns') }}
                 </button>
                 <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 14rem;">

@@ -33,13 +33,32 @@ function swapThemedImages() {
     });
 }
 
+function applyStoredTheme() {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+    document.documentElement.setAttribute('data-bs-theme', resolvedTheme(stored));
+    swapThemedImages();
+}
+
 window.applySerpTheme = function applySerpTheme(preference) {
     localStorage.setItem(THEME_STORAGE_KEY, preference);
-    document.documentElement.setAttribute('data-bs-theme', resolvedTheme(preference));
-    swapThemedImages();
+    applyStoredTheme();
 };
 
 document.addEventListener('DOMContentLoaded', swapThemedImages);
+
+/**
+ * `wire:navigate` swaps the page without a full reload, so the pre-paint
+ * inline script in partials/head.blade.php (which only runs on a real
+ * document load) never re-fires — and Livewire's own DOM morph does not
+ * reliably preserve the `data-bs-theme` attribute on <html>, since it was
+ * added by JS rather than present in the server-rendered markup for that
+ * page. Left alone, this makes the theme flip to Bootstrap's light default
+ * (or whatever the previous page happened to leave behind) on every
+ * internal navigation. Re-apply the persisted preference — mirrored to
+ * localStorage on every real load and on every explicit theme change —
+ * after each `wire:navigate` transition so it stays consistent.
+ */
+document.addEventListener('livewire:navigated', applyStoredTheme);
 
 /**
  * Mobile sidebar toggle for the app shell (app/sidebar.blade.php).

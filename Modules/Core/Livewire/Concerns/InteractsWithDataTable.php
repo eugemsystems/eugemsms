@@ -36,7 +36,7 @@ use Livewire\WithPagination;
  * ]
  * ```
  *
- * @phpstan-type ColumnConfig array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}
+ * @phpstan-type ColumnConfig array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}
  */
 trait InteractsWithDataTable
 {
@@ -73,7 +73,7 @@ trait InteractsWithDataTable
     public array $hiddenColumns = [];
 
     /**
-     * @return array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>
+     * @return array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>
      */
     abstract protected function tableColumns(): array;
 
@@ -148,7 +148,7 @@ trait InteractsWithDataTable
 
     /**
      * @param  Builder<*>  $query
-     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>  $columns
+     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>  $columns
      * @return LengthAwarePaginator<int, *>
      */
     protected function paginateDataTable(Builder $query, array $columns): LengthAwarePaginator
@@ -162,7 +162,7 @@ trait InteractsWithDataTable
 
     /**
      * @param  Builder<*>  $query
-     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>  $columns
+     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>  $columns
      */
     private function applySearch(Builder $query, array $columns): void
     {
@@ -193,7 +193,7 @@ trait InteractsWithDataTable
 
     /**
      * @param  Builder<*>  $query
-     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>  $columns
+     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>  $columns
      */
     private function applyColumnFilters(Builder $query, array $columns): void
     {
@@ -221,7 +221,7 @@ trait InteractsWithDataTable
 
     /**
      * @param  Builder<*>  $query
-     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>  $columns
+     * @param  array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>  $columns
      */
     private function applySort(Builder $query, array $columns): void
     {

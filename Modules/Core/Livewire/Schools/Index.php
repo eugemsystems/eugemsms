@@ -83,7 +83,7 @@ final class Index extends Component
     }
 
     /**
-     * @return array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>
+     * @return array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<int|string, string>}>
      */
     protected function tableColumns(): array
     {
