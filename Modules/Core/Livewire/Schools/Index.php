@@ -14,6 +14,8 @@ use Modules\Core\Domain\Actions\Schools\AssignUserToSchoolAction;
 use Modules\Core\Domain\Actions\Schools\CreateSchoolAction;
 use Modules\Core\Domain\DataObjects\Schools\AssignUserData;
 use Modules\Core\Domain\DataObjects\Schools\CreateSchoolData;
+use Modules\Core\Livewire\Concerns\InteractsWithDataTable;
+use Modules\Core\Models\School;
 
 /**
  * `Core\Schools\Index` (Book A CORE-02 §5). The schools the current user
@@ -24,6 +26,7 @@ use Modules\Core\Domain\DataObjects\Schools\CreateSchoolData;
 #[Layout('layouts.app')]
 final class Index extends Component
 {
+    use InteractsWithDataTable;
     use Toasts;
 
     public bool $showCreateModal = false;
@@ -70,8 +73,34 @@ final class Index extends Component
 
     public function render(): View
     {
+        $schoolIds = Auth::user()?->schools()->pluck('schools.id') ?? collect();
+
+        $query = School::query()->whereIn('id', $schoolIds)->orderBy('name');
+
         return view('core::schools.index', [
-            'schools' => Auth::user()?->schools()->orderBy('name')->get() ?? collect(),
+            'schools' => $this->paginateDataTable($query, $this->tableColumns()),
         ]);
+    }
+
+    /**
+     * @return array<string, array{label: string, column?: string, sortable?: bool, searchable?: bool, filter?: string|null, options?: array<string, string>}>
+     */
+    protected function tableColumns(): array
+    {
+        return [
+            'code' => ['label' => __('Code'), 'sortable' => true, 'searchable' => true],
+            'name' => ['label' => __('Name'), 'sortable' => true, 'searchable' => true],
+            'category' => [
+                'label' => __('Category'), 'sortable' => true, 'filter' => 'select',
+                'options' => [
+                    'government' => __('Government'), 'council' => __('Council'), 'mission' => __('Mission'),
+                    'trust' => __('Trust'), 'private' => __('Private'),
+                ],
+            ],
+            'status' => [
+                'label' => __('Status'), 'sortable' => true, 'filter' => 'select',
+                'options' => ['active' => __('Active'), 'archived' => __('Archived')],
+            ],
+        ];
     }
 }

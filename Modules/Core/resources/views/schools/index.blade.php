@@ -9,46 +9,49 @@
         </button>
     </div>
 
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>{{ __('Code') }}</th>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Category') }}</th>
-                        <th>{{ __('Status') }}</th>
-                        <th class="text-end">{{ __('Actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($schools as $school)
-                        <tr>
-                            <td><span class="fw-medium">{{ $school->code }}</span></td>
-                            <td>{{ $school->name }}</td>
-                            <td class="text-capitalize">{{ $school->category }}</td>
-                            <td>
-                                <span class="badge {{ $school->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }} text-capitalize">
-                                    {{ $school->status }}
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                <a href="{{ route('schools.profile', $school) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>
-                                    {{ __('Manage') }}
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-body-secondary py-4">
-                                {{ __('No schools yet.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <x-data-table
+        :columns="$this->tableColumns()"
+        :rows="$schools"
+        :search="$search"
+        :sort-column="$sortColumn"
+        :sort-direction="$sortDirection"
+        :per-page="$perPage"
+        :column-filters="$columnFilters"
+        :hidden-columns="$hiddenColumns"
+        :per-page-options="$this->perPageOptions()"
+    >
+        @forelse ($schools as $school)
+            <tr wire:key="school-{{ $school->id }}">
+                @if ($this->columnVisible('code'))
+                    <td><span class="fw-medium">{{ $school->code }}</span></td>
+                @endif
+                @if ($this->columnVisible('name'))
+                    <td>{{ $school->name }}</td>
+                @endif
+                @if ($this->columnVisible('category'))
+                    <td class="text-capitalize">{{ $school->category }}</td>
+                @endif
+                @if ($this->columnVisible('status'))
+                    <td>
+                        <span class="badge {{ $school->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }} text-capitalize">
+                            {{ $school->status }}
+                        </span>
+                    </td>
+                @endif
+                <td class="text-end">
+                    <a href="{{ route('schools.profile', $school) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>
+                        {{ __('Manage') }}
+                    </a>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="5" class="text-center text-body-secondary py-4">
+                    {{ __('No schools yet.') }}
+                </td>
+            </tr>
+        @endforelse
+    </x-data-table>
 
     @if ($showCreateModal)
         <div class="modal show d-block" tabindex="-1" style="background: rgba(0, 0, 0, .5);">

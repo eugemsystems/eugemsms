@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -32,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // The admin UI is Bootstrap 5 throughout (see resources/css/app.scss) —
+        // Laravel's default pagination views are Tailwind-styled, so without
+        // this every <x-data-table> footer would render the wrong framework's
+        // markup.
+        Paginator::useBootstrapFive();
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
