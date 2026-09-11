@@ -13,6 +13,7 @@ use Modules\Academic\Domain\Listeners\CreateSubstitutionsForApprovedLeaveListene
 use Modules\Academic\Domain\Listeners\ExemptProjectOnSubjectDropListener;
 use Modules\Academic\Domain\Support\ContinuousAssessmentProvider;
 use Modules\Academic\Domain\Support\EloquentContinuousAssessmentProvider;
+use Modules\Academic\Models\AcquisitionRequest;
 use Modules\Academic\Models\Assessment;
 use Modules\Academic\Models\AssessmentInstrument;
 use Modules\Academic\Models\AssessmentMark;
@@ -24,6 +25,8 @@ use Modules\Academic\Models\AttendanceMarkingCompliance;
 use Modules\Academic\Models\AttendanceReasonCode;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\AttendanceSession;
+use Modules\Academic\Models\BorrowerCategory;
+use Modules\Academic\Models\BulkTextbookIssue;
 use Modules\Academic\Models\CbtCandidateAttempt;
 use Modules\Academic\Models\CbtResponse;
 use Modules\Academic\Models\CbtTest;
@@ -49,6 +52,10 @@ use Modules\Academic\Models\LearnerSubjectEnrolment;
 use Modules\Academic\Models\LegacyCalaRecord;
 use Modules\Academic\Models\LessonSubstitution;
 use Modules\Academic\Models\LevelSubjectOffering;
+use Modules\Academic\Models\LibraryCopy;
+use Modules\Academic\Models\LibraryItem;
+use Modules\Academic\Models\LibraryStockTake;
+use Modules\Academic\Models\Loan;
 use Modules\Academic\Models\MalpracticeIncident;
 use Modules\Academic\Models\Pathway;
 use Modules\Academic\Models\PeriodSlot;
@@ -250,6 +257,15 @@ class AcademicServiceProvider extends ModuleServiceProvider
             isUrgent: false,
             isTransactional: true,
         ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'library.overdue_reminder',
+            variables: ['item.title', 'loan.due_on'],
+            defaultChannels: ['in_app'],
+            defaultAudience: 'borrower',
+            isUrgent: false,
+            isTransactional: true,
+        ));
     }
 
     /**
@@ -313,6 +329,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             ['cbt.autosave_interval_seconds', 'int', '15', 'Maximum seconds between client autosaves during a CBT attempt (BR-ACA-09-001).'],
             ['cbt.default_max_tab_switches', 'int', '3', 'Default tab-switch limit before a CBT attempt is flagged for review when a test does not set its own.'],
             ['cbt.auto_submit_on_time_expiry', 'bool', '1', 'Whether a CBT attempt auto-submits when its time limit is reached (locked — always true in this pass).'],
+            ['library.daily_fine_rate_minor', 'int', '50', 'Daily fine rate (minor units) for a late library return, capped at the item\'s replacement cost (BR-ACA-10-006).'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
@@ -1074,6 +1091,39 @@ class AcademicServiceProvider extends ModuleServiceProvider
 
             return CbtResponse::factory()->create(['school_id' => $school->id, 'attempt_id' => $attempt->id, 'question_id' => $question->id]);
         });
+
+        TenantModelRegistry::register(LibraryItem::class, fn (School $school): LibraryItem => LibraryItem::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(LibraryCopy::class, function (School $school): LibraryCopy {
+            $item = LibraryItem::factory()->create(['school_id' => $school->id]);
+
+            return LibraryCopy::factory()->create(['school_id' => $school->id, 'item_id' => $item->id]);
+        });
+
+        TenantModelRegistry::register(BorrowerCategory::class, fn (School $school): BorrowerCategory => BorrowerCategory::factory()->create(['school_id' => $school->id]));
+
+        TenantModelRegistry::register(Loan::class, function (School $school): Loan {
+            $item = LibraryItem::factory()->create(['school_id' => $school->id]);
+            $copy = LibraryCopy::factory()->create(['school_id' => $school->id, 'item_id' => $item->id]);
+            [$student, $term] = $this->studentAndTerm($school);
+
+            return Loan::factory()->create([
+                'school_id' => $school->id, 'term_id' => $term->id, 'copy_id' => $copy->id, 'borrower_id' => $student->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(BulkTextbookIssue::class, function (School $school): BulkTextbookIssue {
+            [, $term] = $this->studentAndTerm($school);
+            $class = SchoolClass::factory()->for($school)->create();
+
+            return BulkTextbookIssue::factory()->create(['school_id' => $school->id, 'term_id' => $term->id, 'class_id' => $class->id]);
+        });
+
+        TenantModelRegistry::register(AcquisitionRequest::class, fn (School $school): AcquisitionRequest => AcquisitionRequest::factory()->create([
+            'school_id' => $school->id, 'requested_by' => User::factory(),
+        ]));
+
+        TenantModelRegistry::register(LibraryStockTake::class, fn (School $school): LibraryStockTake => LibraryStockTake::factory()->create(['school_id' => $school->id]));
     }
 
     /**
