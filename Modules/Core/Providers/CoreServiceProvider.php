@@ -7,6 +7,7 @@ namespace Modules\Core\Providers;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
+use Livewire\Livewire;
 use Modules\Core\Console\Commands\InstallCommand;
 use Modules\Core\Console\Commands\InstallStatusCommand;
 use Modules\Core\Console\Commands\InstallVerifyCommand;
@@ -163,6 +164,22 @@ class CoreServiceProvider extends ModuleServiceProvider
 
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
         DefaultTemplateFilters::register();
+
+        // Without this, every `Route::livewire($uri, SomeClass::class)`
+        // route whose class is literally named `Index` (Schools\Index,
+        // Houses\Index, ModuleEntitlement\Index, …) 500s on a real HTTP
+        // request with "Unable to find component: [...]" — Livewire's
+        // implicit-binding-substitution step re-derives a canonical name
+        // from the class *before* the controller runs, and its own
+        // "an Index class names its parent folder" convention strips the
+        // trailing `.index` segment; resolving that shortened name back
+        // to a class then requires a registered class location to search,
+        // which nothing configures by default beyond `App\Livewire`
+        // (`config('livewire.class_namespace')`). Livewire's own test
+        // helpers (`Livewire::test(SomeClass::class)`) never hit this —
+        // they instantiate the class directly — which is why this stayed
+        // invisible until a real browser hit `/schools`.
+        Livewire::addLocation(classNamespace: 'Modules\Core\Livewire');
 
         // `loadRoutesFrom()` just requires the file — unlike the app's own
         // `bootstrap/app.php` routing (which auto-applies `web` to
