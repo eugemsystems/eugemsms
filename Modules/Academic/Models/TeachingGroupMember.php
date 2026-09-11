@@ -64,4 +64,18 @@ class TeachingGroupMember extends Model
     {
         return $this->belongsTo(Student::class);
     }
+
+    /**
+     * Book K ACA-08 §4/BR-ACA-08-002. Whether a student currently holds
+     * an active membership of a teaching group, as of today.
+     */
+    public static function isActiveFor(int $studentId, int $teachingGroupId): bool
+    {
+        return static::query()
+            ->where('student_id', $studentId)
+            ->where('teaching_group_id', $teachingGroupId)
+            ->whereDate('effective_from', '<=', Carbon::today())
+            ->where(fn ($query) => $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', Carbon::today()))
+            ->exists();
+    }
 }

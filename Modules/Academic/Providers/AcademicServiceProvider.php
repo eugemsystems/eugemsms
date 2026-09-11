@@ -18,13 +18,19 @@ use Modules\Academic\Models\AssessmentInstrument;
 use Modules\Academic\Models\AssessmentMark;
 use Modules\Academic\Models\AssessmentMarkVersion;
 use Modules\Academic\Models\AssessmentType;
+use Modules\Academic\Models\Assignment;
+use Modules\Academic\Models\AssignmentSubmission;
 use Modules\Academic\Models\AttendanceMarkingCompliance;
 use Modules\Academic\Models\AttendanceReasonCode;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\AttendanceSession;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\CommentBank;
+use Modules\Academic\Models\ContentItem;
+use Modules\Academic\Models\CourseSpace;
 use Modules\Academic\Models\CurriculumFramework;
+use Modules\Academic\Models\DiscussionPost;
+use Modules\Academic\Models\DiscussionThread;
 use Modules\Academic\Models\ExaminationCandidate;
 use Modules\Academic\Models\ExaminationMark;
 use Modules\Academic\Models\ExaminationPaper;
@@ -231,6 +237,15 @@ class AcademicServiceProvider extends ModuleServiceProvider
             isUrgent: false,
             isTransactional: true,
         ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'lms.non_submission_reminder',
+            variables: ['assignment.title', 'assignment.due_at'],
+            defaultChannels: ['in_app'],
+            defaultAudience: 'student',
+            isUrgent: false,
+            isTransactional: true,
+        ));
     }
 
     /**
@@ -290,6 +305,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             ['exams.moderation_sample_percent', 'int', '15', 'Percentage of exam marks sampled for moderation (BR-ACA-07-014).'],
             ['exams.paper_max_downloads_per_user', 'int', '3', 'Downloads of a released paper per user before a security event is raised.'],
             ['exams.exclude_subject_teacher_from_invigilation', 'bool', '1', 'Whether a teacher of the examined subject is excluded from invigilating that paper by default (BR-ACA-07-010).'],
+            ['academic.lms_similarity_threshold_percent', 'int', '70', 'Word-shingle similarity percentage above which two assignment submissions in the same class are flagged for teacher review (BR-ACA-08-006).'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {
@@ -986,6 +1002,47 @@ class AcademicServiceProvider extends ModuleServiceProvider
 
             return MalpracticeIncident::factory()->create(['school_id' => $school->id, 'session_id' => $session->id, 'reported_by' => User::factory()]);
         });
+
+        TenantModelRegistry::register(CourseSpace::class, fn (School $school): CourseSpace => $this->courseSpaceFor($school));
+
+        TenantModelRegistry::register(ContentItem::class, function (School $school): ContentItem {
+            $courseSpace = $this->courseSpaceFor($school);
+
+            return ContentItem::factory()->create(['school_id' => $school->id, 'course_space_id' => $courseSpace->id]);
+        });
+
+        TenantModelRegistry::register(Assignment::class, function (School $school): Assignment {
+            $courseSpace = $this->courseSpaceFor($school);
+
+            return Assignment::factory()->create(['school_id' => $school->id, 'course_space_id' => $courseSpace->id]);
+        });
+
+        TenantModelRegistry::register(AssignmentSubmission::class, function (School $school): AssignmentSubmission {
+            $courseSpace = $this->courseSpaceFor($school);
+            $assignment = Assignment::factory()->create(['school_id' => $school->id, 'course_space_id' => $courseSpace->id]);
+            $student = Student::factory()->for($school)->create();
+
+            return AssignmentSubmission::factory()->create([
+                'school_id' => $school->id, 'assignment_id' => $assignment->id, 'student_id' => $student->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(DiscussionThread::class, function (School $school): DiscussionThread {
+            $courseSpace = $this->courseSpaceFor($school);
+
+            return DiscussionThread::factory()->create([
+                'school_id' => $school->id, 'course_space_id' => $courseSpace->id, 'created_by' => User::factory(),
+            ]);
+        });
+
+        TenantModelRegistry::register(DiscussionPost::class, function (School $school): DiscussionPost {
+            $courseSpace = $this->courseSpaceFor($school);
+            $thread = DiscussionThread::factory()->create([
+                'school_id' => $school->id, 'course_space_id' => $courseSpace->id, 'created_by' => User::factory(),
+            ]);
+
+            return DiscussionPost::factory()->create(['school_id' => $school->id, 'thread_id' => $thread->id, 'posted_by_id' => User::factory()]);
+        });
     }
 
     /**
@@ -998,5 +1055,29 @@ class AcademicServiceProvider extends ModuleServiceProvider
         $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
 
         return [$student, $term, $year];
+    }
+
+    /**
+     * Book K ACA-08. Every FK is derived explicitly from the same
+     * `$school`/`$term`/`$year` triple — a course space's `TeachingGroup`
+     * must never end up pointing at a different school than the course
+     * space itself (see `CourseSpaceFactory`'s own docblock for why its
+     * bare default isn't reused here).
+     */
+    private function courseSpaceFor(School $school): CourseSpace
+    {
+        [, $term, $year] = $this->studentAndTerm($school);
+        $framework = CurriculumFramework::factory()->for($school)->create();
+        $subject = Subject::factory()->for($school)->create(['framework_id' => $framework->id]);
+        $gradeLevel = GradeLevel::factory()->for($school)->create();
+        $group = TeachingGroup::factory()->create([
+            'school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id,
+            'subject_id' => $subject->id, 'grade_level_id' => $gradeLevel->id,
+        ]);
+
+        return CourseSpace::factory()->create([
+            'school_id' => $school->id, 'academic_year_id' => $year->id, 'term_id' => $term->id,
+            'subject_id' => $subject->id, 'teaching_group_id' => $group->id,
+        ]);
     }
 }
