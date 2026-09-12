@@ -12,11 +12,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Core\Database\Factories\NumberingSeriesFactory;
 use Modules\Core\Domain\Concerns\BelongsToSchool;
+use Modules\Core\Domain\Concerns\HasUlid;
 
 /**
  * Book A CORE-06 §2/§3.
  *
  * @property int $id
+ * @property string $ulid
  * @property int $school_id
  * @property string $document_type
  * @property int|null $academic_year_id
@@ -37,6 +39,8 @@ class NumberingSeries extends Model
 
     /** @use HasFactory<NumberingSeriesFactory> */
     use HasFactory;
+
+    use HasUlid;
 
     protected $fillable = [
         'school_id', 'document_type', 'academic_year_id', 'term_id', 'pattern',

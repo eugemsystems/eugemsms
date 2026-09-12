@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Modules\Core\Database\Factories\SchoolFactory;
 use Modules\Core\Domain\Concerns\HasUlid;
+use Modules\Core\Domain\Support\SchoolContext;
 
 /**
  * The tenancy anchor (Volume 1 ADR-003, Book A CORE-02 §2). Every other
@@ -226,5 +227,42 @@ class School extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * 2026-09-12, user-reported: editing a numbering series (and, once
+     * checked, a term/session screen too) 404'd even with the correct
+     * ulid in the URL. Root cause: implicit route-model binding
+     * resolves EVERY route parameter as one pass over the URI's
+     * segments in order — `{school}` first, then whatever
+     * `BelongsToSchool` child parameter follows it (`{series}`,
+     * `{term}`, `{template}`, ...). `BelongsToSchool`'s `SchoolScope`
+     * filters to zero rows without an ambient `SchoolContext`
+     * (BR-GLOBAL-010) — and nothing had set one yet at that point,
+     * since `InteractsWithSchool::loadSchool()` only runs once
+     * Livewire's OWN `mount()` executes, well after routing has
+     * already finished resolving every parameter (including the child
+     * one, which fails first). `Livewire::test()` never surfaces this:
+     * it hands the component an already-resolved model directly,
+     * bypassing routing/binding entirely — every screen's own test
+     * suite passed while the real URL 404'd.
+     *
+     * Setting `SchoolContext` here, as a side effect of `{school}`
+     * itself resolving, means it's already in place by the time
+     * Laravel moves on to bind any sibling parameter in the same
+     * route — no route needs its own middleware for this, and
+     * `InteractsWithSchool::loadSchool()`/`bootInteractsWithSchool()`
+     * are unaffected (they still (re)set it explicitly every request,
+     * which stays correct and is now merely redundant on first mount).
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        $school = parent::resolveRouteBinding($value, $field);
+
+        if ($school instanceof self) {
+            SchoolContext::set($school);
+        }
+
+        return $school;
     }
 }
