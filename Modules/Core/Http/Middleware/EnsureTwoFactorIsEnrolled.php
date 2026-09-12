@@ -55,6 +55,24 @@ final class EnsureTwoFactorIsEnrolled
             return $next($request);
         }
 
+        // Livewire's own background update endpoint (`X-Livewire` header,
+        // sent on every `wire:click`/`wire:submit`/etc. call — see
+        // `HandleRequests::isLivewireRequest()`) is a SINGLE shared route
+        // for every component in the app, never named `two-factor.*`, so
+        // the excluded-route-name check above can never match it. Without
+        // this, every Livewire action on the enrolment screen itself
+        // (Enable/Confirm/Disable) silently redirected instead of running
+        // — the browser's `fetch()` followed the redirect body back as
+        // if it were a Livewire response, which it can't parse, so the
+        // button visibly did nothing (2026-09-12, user-reported: "the
+        // button to enable 2 factor authentication ... is not working").
+        // The page itself was already gated correctly on its own initial
+        // GET request; this only lets an already-open page's Livewire
+        // calls keep working, it doesn't grant access to a new page.
+        if ($request->hasHeader('X-Livewire')) {
+            return $next($request);
+        }
+
         if (! $this->twoFactorRequirement->isRequiredFor($user)) {
             return $next($request);
         }
