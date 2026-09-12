@@ -28,7 +28,7 @@
                         $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? \Modules\Core\Domain\Support\ActiveSchoolResolver::resolveId(auth()->user());
                         $sessionsSchool = $sessionsSchoolId !== null ? \Modules\Core\Models\School::find($sessionsSchoolId) : null;
 
-                        $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('numbering.*') || request()->routeIs('templates.*') || request()->routeIs('documents.*') || request()->routeIs('audit.*') || request()->routeIs('notifications.*') || request()->routeIs('files.*');
+                        $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('numbering.*') || request()->routeIs('templates.*') || request()->routeIs('documents.*') || request()->routeIs('audit.*') || request()->routeIs('notifications.*') || request()->routeIs('files.*') || request()->routeIs('imports.*');
 
                         $identityGroupActive = request()->routeIs('users.*') || request()->routeIs('impersonate.*') || request()->routeIs('login-audit.*');
                     @endphp
@@ -87,6 +87,9 @@
                                     </a>
                                     <a href="{{ route('files.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('files.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-folder-3-line"></i> {{ __('Files') }}
+                                    </a>
+                                    <a href="{{ route('imports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-upload-cloud-2-line"></i> {{ __('Import data') }}
                                     </a>
                                 @endif
                             </div>

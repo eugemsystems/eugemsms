@@ -211,6 +211,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/audit.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/notifications.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/files.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/imports.php');
         });
     }
 
@@ -486,6 +487,8 @@ class CoreServiceProvider extends ModuleServiceProvider
             'file.delete' => ['description' => 'Soft-delete an uploaded file.'],
             'file.manage_quota' => ['description' => 'View storage usage and set a school\'s storage quota.'],
             'file.view_access_log' => ['description' => 'View the file access log for sensitive-category files.'],
+            'import.view' => ['description' => 'Browse the import centre and batch history.'],
+            'import.rollback' => ['description' => 'Roll back a completed, rollbackable import batch.'],
         ]);
     }
 
