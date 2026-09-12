@@ -110,6 +110,52 @@ it('creates a user via the form', function (): void {
         ->and($created->first_name)->toBe('Rudo');
 });
 
+it('creates a user and assigns a role in one step from the form', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $admin->schools()->attach($school->id, ['status' => 'active']);
+    $role = Role::factory()->forSchool($school->id)->create(['display_name' => 'Class Teacher']);
+    grantRoleUpdatePermission($admin, $school);
+
+    Livewire::actingAs($admin)
+        ->test(Form::class)
+        ->set('firstName', 'Rudo')
+        ->set('lastName', 'Chuma')
+        ->set('email', 'rudo-role@example.com')
+        ->set('userType', 'staff')
+        ->set('roleSchoolId', $school->id)
+        ->set('roleId', $role->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $created = User::where('email', 'rudo-role@example.com')->sole();
+
+    app(PermissionRegistrar::class)->setPermissionsTeamId($school->id);
+    expect($created->fresh()->hasRole($role))->toBeTrue();
+});
+
+it('refuses to assign a role at creation without core.role.update in that school', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $admin->schools()->attach($school->id, ['status' => 'active']);
+    $role = Role::factory()->forSchool($school->id)->create();
+
+    Livewire::actingAs($admin)
+        ->test(Form::class)
+        ->set('firstName', 'Rudo')
+        ->set('lastName', 'Chuma')
+        ->set('email', 'rudo-forbidden@example.com')
+        ->set('userType', 'staff')
+        ->set('roleSchoolId', $school->id)
+        ->set('roleId', $role->id)
+        ->call('save')
+        ->assertForbidden();
+
+    expect(User::where('email', 'rudo-forbidden@example.com')->exists())->toBeFalse();
+});
+
 it('toasts a domain error instead of crashing when the form would leave a user with no identity', function (): void {
     $tenant = Tenant::factory()->create();
     $admin = User::factory()->create(['tenant_id' => $tenant->id]);

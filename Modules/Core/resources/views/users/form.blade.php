@@ -89,6 +89,38 @@
                     @endif
                 </div>
 
+                @if ($editingUserId === null)
+                    <hr class="my-4">
+                    <h6 class="mb-1">{{ __('Role (optional)') }}</h6>
+                    <p class="text-body-secondary small mb-3">{{ __('Grant a role now so this user can do something as soon as they log in — or skip this and assign one later from their profile.') }}</p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-floating form-floating-outline">
+                                <select class="form-select @error('roleSchoolId') is-invalid @enderror" id="roleSchoolId" wire:model="roleSchoolId">
+                                    <option value="">{{ __('Select a school') }}</option>
+                                    @foreach ($availableSchools as $availableSchool)
+                                        <option value="{{ $availableSchool->id }}">{{ $availableSchool->name }}</option>
+                                    @endforeach
+                                </select>
+                                <label for="roleSchoolId">{{ __('School') }}</label>
+                                @error('roleSchoolId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating form-floating-outline">
+                                <select class="form-select @error('roleId') is-invalid @enderror" id="roleId" wire:model="roleId">
+                                    <option value="">{{ __('Select a role') }}</option>
+                                    @foreach ($availableRoles as $availableRole)
+                                        <option value="{{ $availableRole->id }}">{{ $availableRole->display_name }}</option>
+                                    @endforeach
+                                </select>
+                                <label for="roleId">{{ __('Role') }}</label>
+                                @error('roleId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-4 d-flex gap-2">
                     <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
                         {{ $editingUserId !== null ? __('Save changes') : __('Create user') }}

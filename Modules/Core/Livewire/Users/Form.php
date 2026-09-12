@@ -12,12 +12,17 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Core\Domain\Actions\Auth\AssignRoleAction;
 use Modules\Core\Domain\Actions\Auth\CreateUserAction;
 use Modules\Core\Domain\Actions\Auth\UpdateUserAction;
 use Modules\Core\Domain\DataObjects\Auth\CreateUserData;
+use Modules\Core\Domain\DataObjects\Auth\RoleAssignmentData;
 use Modules\Core\Domain\DataObjects\Auth\UpdateUserData;
 use Modules\Core\Domain\Exceptions\DomainException;
 use Modules\Core\Domain\Support\Auth\UserType;
+use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
+use Modules\Core\Models\Role;
+use Modules\Core\Models\School;
 
 /**
  * `Core\Users\Form` (Book A CORE-05 §6) — one component for both create
@@ -27,13 +32,25 @@ use Modules\Core\Domain\Support\Auth\UserType;
  * an implicitly-bound `User` on the edit route, and `$editingUserId`
  * being null/non-null is what the rest of the component branches on —
  * the same "one property decides create vs update" shape
- * `Structure\Manager` uses for its own modals. Permission gating not yet
- * enforced — see `Users\Index`'s docblock.
+ * `Structure\Manager` uses for its own modals. Baseline `core.user.*`
+ * gating not yet enforced — see `Users\Index`'s docblock.
+ *
+ * `roleSchoolId`/`roleId` (2026-09-12, user-requested — "when i create
+ * users should i not choose the role for them"): an optional role
+ * assignment made in the same step as creation, rather than forcing a
+ * trip to `Users\Show` afterward just to make the new account usable.
+ * Create-only (an existing user already has `Show`'s own role-management
+ * UI, which handles multiple schools/roles — this form only ever grants
+ * one). Reuses `AssignRoleAction` and `Show::assignRole()`'s own
+ * "explicit schoolId, `core.role.update`" gate — see `.ai/rules/auth.md`
+ * on why a tenant-wide screen like this one can't rely on the ambient
+ * school.
  */
 #[Title('User')]
 #[Layout('layouts.app')]
 final class Form extends Component
 {
+    use AuthorizesPermissions;
     use Toasts;
 
     public ?int $editingUserId = null;
@@ -56,6 +73,10 @@ final class Form extends Component
 
     public string $password = '';
 
+    public ?int $roleSchoolId = null;
+
+    public ?int $roleId = null;
+
     public function mount(?User $user = null): void
     {
         if ($user === null) {
@@ -77,6 +98,8 @@ final class Form extends Component
 
     public function save(): void
     {
+        $assignsRole = $this->editingUserId === null && ($this->roleSchoolId !== null || $this->roleId !== null);
+
         $this->validate([
             'firstName' => ['required', 'string', 'max:80'],
             'lastName' => ['required', 'string', 'max:80'],
@@ -87,7 +110,13 @@ final class Form extends Component
             'userType' => ['required', Rule::enum(UserType::class)],
             'locale' => ['required', 'string', 'max:10'],
             'password' => $this->editingUserId === null ? ['nullable', 'string'] : ['prohibited'],
+            'roleSchoolId' => $assignsRole ? ['required', 'integer'] : ['nullable', 'integer'],
+            'roleId' => $assignsRole ? ['required', 'integer'] : ['nullable', 'integer'],
         ]);
+
+        if ($assignsRole) {
+            $this->authorizePermission('core.role.update', schoolId: (int) $this->roleSchoolId);
+        }
 
         $actingUserId = (int) Auth::id();
         $userType = UserType::from($this->userType);
@@ -120,6 +149,15 @@ final class Form extends Component
                     locale: $this->locale,
                     createdByUserId: $actingUserId,
                 ));
+
+                if ($assignsRole) {
+                    app(AssignRoleAction::class)->execute(new RoleAssignmentData(
+                        userId: $user->id,
+                        roleId: (int) $this->roleId,
+                        schoolId: (int) $this->roleSchoolId,
+                        performedByUserId: $actingUserId,
+                    ));
+                }
             }
         } catch (DomainException $e) {
             $this->toast($e->getMessage(), 'danger');
@@ -134,6 +172,21 @@ final class Form extends Component
 
     public function render(): View
     {
-        return view('core::users.form');
+        $availableSchools = School::query()
+            ->whereIn('id', Auth::user()?->schools()->pluck('schools.id') ?? [])
+            ->orderBy('name')
+            ->get();
+
+        $availableRoles = Role::query()
+            ->where(function ($query) use ($availableSchools): void {
+                $query->whereNull('school_id')->orWhereIn('school_id', $availableSchools->pluck('id'));
+            })
+            ->orderBy('display_name')
+            ->get();
+
+        return view('core::users.form', [
+            'availableSchools' => $availableSchools,
+            'availableRoles' => $availableRoles,
+        ]);
     }
 }
