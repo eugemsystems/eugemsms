@@ -204,6 +204,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/roles.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/profile.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/impersonation.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/numbering.php');
         });
     }
 
@@ -453,6 +454,16 @@ class CoreServiceProvider extends ModuleServiceProvider
             'import.run' => ['description' => 'Run a bulk data import.', 'dangerous' => true],
             'approval.cancel' => ['description' => 'Cancel a pending approval request.'],
             'system.bypass_school_scope' => ['description' => 'Read or write across every school\'s data, ignoring the normal school scope.', 'dangerous' => true],
+            'numbering.view' => ['description' => 'View numbering series and the gap report.'],
+            'numbering.manage' => ['description' => 'Create and edit numbering series.'],
+            'template.view' => ['description' => 'View document templates and their version history.'],
+            'template.create' => ['description' => 'Create a new document template.'],
+            'template.update' => ['description' => 'Edit a document template, creating a new version.'],
+            'template.delete' => ['description' => 'Delete a document template.'],
+            'document.view' => ['description' => 'View the generated document archive.'],
+            'document.generate' => ['description' => 'Generate documents, individually or in bulk.'],
+            'document.download' => ['description' => 'Download a generated document.'],
+            'document.delete' => ['description' => 'Delete a generated document.', 'dangerous' => true],
         ]);
     }
 
