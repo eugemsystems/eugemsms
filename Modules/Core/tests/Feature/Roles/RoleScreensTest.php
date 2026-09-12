@@ -4,8 +4,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\UpdateRolePermissionsAction;
+use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\RolePermissionData;
+use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Livewire\Roles\Editor as RolesEditor;
 use Modules\Core\Livewire\Roles\Index as RolesIndex;
@@ -27,10 +29,35 @@ function loadRoleRoutesForTest(): void
     }
 }
 
+/**
+ * `core.role.view`/`core.role.update` are now enforced on every screen
+ * in this file (2026-09-12) — grant both as direct permissions (rather
+ * than via a role, to keep this helper independent of role-assignment
+ * machinery) so every test's acting user can actually reach the screen
+ * under test.
+ */
 function assignedSchoolForRoleScreens(User $user): School
 {
     $school = School::factory()->create();
     $user->schools()->attach($school, ['is_primary' => true, 'status' => 'active']);
+
+    $viewPermission = Permission::firstOrCreate(
+        ['name' => 'core.role.view'],
+        ['guard_name' => 'web', 'module_code' => 'CORE', 'resource' => 'role', 'action' => 'view'],
+    );
+    $updatePermission = Permission::firstOrCreate(
+        ['name' => 'core.role.update'],
+        ['guard_name' => 'web', 'module_code' => 'CORE', 'resource' => 'role', 'action' => 'update'],
+    );
+
+    app(UpdateUserPermissionsAction::class)->execute(new UserPermissionData(
+        userId: $user->id,
+        schoolId: $school->id,
+        grants: [
+            new PermissionGrantData($viewPermission->id, PermissionScope::School),
+            new PermissionGrantData($updatePermission->id, PermissionScope::School),
+        ],
+    ));
 
     return $school;
 }

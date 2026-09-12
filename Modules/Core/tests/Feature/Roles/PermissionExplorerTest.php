@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\AssignRoleAction;
 use Modules\Core\Domain\Actions\Auth\UpdateRolePermissionsAction;
+use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\RoleAssignmentData;
 use Modules\Core\Domain\DataObjects\Auth\RolePermissionData;
+use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Livewire\Permissions\Explorer as PermissionsExplorer;
@@ -29,10 +31,26 @@ function loadRoleRoutesForExplorerTest(): void
     }
 }
 
+/**
+ * `core.role.view` is now enforced on this screen (2026-09-12) — granted
+ * as a direct permission for the same reason RoleScreensTest's identical
+ * helper does it that way.
+ */
 function assignedSchoolForPermissionExplorer(User $user): School
 {
     $school = School::factory()->create();
     $user->schools()->attach($school, ['is_primary' => true, 'status' => 'active']);
+
+    $viewPermission = Permission::firstOrCreate(
+        ['name' => 'core.role.view'],
+        ['guard_name' => 'web', 'module_code' => 'CORE', 'resource' => 'role', 'action' => 'view'],
+    );
+
+    app(UpdateUserPermissionsAction::class)->execute(new UserPermissionData(
+        userId: $user->id,
+        schoolId: $school->id,
+        grants: [new PermissionGrantData($viewPermission->id, PermissionScope::School)],
+    ));
 
     return $school;
 }

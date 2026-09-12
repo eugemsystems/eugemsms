@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Core\Domain\Actions\Auth\CloneRoleTemplateAction;
 use Modules\Core\Domain\DataObjects\Auth\CloneRoleData;
 use Modules\Core\Domain\Exceptions\DomainException;
+use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Concerns\InteractsWithDataTable;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\Role;
@@ -28,11 +29,16 @@ use Modules\Core\Models\School;
  * role links straight to `Core\Roles\Editor`; a system template offers
  * "Clone" instead of "Edit", since editing one directly throws
  * `SystemRoleTemplateException`.
+ *
+ * `core.role.view` is now enforced (2026-09-12 — CORE-05's permission
+ * catalogue exists and is seeded, so the "not yet enforced" era for this
+ * screen is over).
  */
 #[Title('Roles')]
 #[Layout('layouts.app')]
 final class Index extends Component
 {
+    use AuthorizesPermissions;
     use InteractsWithDataTable;
     use InteractsWithSchool;
     use Toasts;
@@ -50,6 +56,7 @@ final class Index extends Component
     public function mount(School $school): void
     {
         $this->loadSchool($school);
+        $this->authorizePermission('core.role.view');
     }
 
     public function openCloneModal(int $roleId): void
@@ -66,6 +73,8 @@ final class Index extends Component
 
     public function cloneRole(): void
     {
+        $this->authorizePermission('core.role.update');
+
         $this->validate([
             'newName' => ['required', 'string', 'max:80'],
             'newDisplayName' => ['required', 'string', 'max:120'],

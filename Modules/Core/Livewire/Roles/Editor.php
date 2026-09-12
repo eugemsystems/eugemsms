@@ -18,13 +18,15 @@ use Modules\Core\Domain\DataObjects\Auth\RolePermissionData;
 use Modules\Core\Domain\Exceptions\AuthorisationException;
 use Modules\Core\Domain\Exceptions\SystemRoleTemplateException;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
+use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\Role;
 use Modules\Core\Models\School;
 
 /**
- * `Core\Roles\Editor` (Book A CORE-05 §6, `core.role.update`). The
+ * `Core\Roles\Editor` (Book A CORE-05 §6, `core.role.update`, enforced
+ * 2026-09-12). The
  * permission matrix: every `Permission` grouped by `module_code` into a
  * tab (mirrors `Core\Settings\Index`'s module-tab pattern), each with a
  * grant checkbox and, once granted, a scope `<select>` — one "Save"
@@ -42,6 +44,7 @@ use Modules\Core\Models\School;
 #[Layout('layouts.app')]
 final class Editor extends Component
 {
+    use AuthorizesPermissions;
     use InteractsWithSchool;
     use Toasts;
 
@@ -72,6 +75,7 @@ final class Editor extends Component
     public function mount(School $school, Role $role): void
     {
         $this->loadSchool($school);
+        $this->authorizePermission('core.role.update');
 
         if ($role->is_system) {
             $this->toast(__('System role templates cannot be edited directly. Clone it first, then edit the clone.'), 'danger');

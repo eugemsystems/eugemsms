@@ -4,15 +4,40 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\AssignRoleAction;
+use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
+use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\RoleAssignmentData;
+use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Livewire\Users\Form;
 use Modules\Core\Livewire\Users\Index;
 use Modules\Core\Livewire\Users\Show;
 use Modules\Core\Models\LoginAttempt;
+use Modules\Core\Models\Permission;
 use Modules\Core\Models\Role;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Tenant;
 use Modules\Core\Models\UserAccountLink;
+use Spatie\Permission\PermissionRegistrar;
+
+/**
+ * `core.role.update` is now enforced on `Show::assignRole()`/
+ * `removeRole()` (2026-09-12) — grants it as a direct permission for the
+ * acting admin in the given school.
+ */
+function grantRoleUpdatePermission(User $admin, School $school): void
+{
+    $permission = Permission::firstOrCreate(
+        ['name' => 'core.role.update'],
+        ['guard_name' => 'web', 'module_code' => 'CORE', 'resource' => 'role', 'action' => 'update'],
+    );
+
+    app(UpdateUserPermissionsAction::class)->execute(new UserPermissionData(
+        userId: $admin->id,
+        schoolId: $school->id,
+        grants: [new PermissionGrantData($permission->id, PermissionScope::School)],
+    ));
+}
 
 // `users.php` is deliberately not yet wired into CoreServiceProvider (a
 // concurrent change registers it there), but every view under test here
@@ -213,4 +238,57 @@ it('deactivates a user from the show screen', function (): void {
         ->assertDispatched('toast');
 
     expect($target->fresh()->status->value)->toBe('inactive');
+});
+
+it('assigns a role to a user in one of the acting admin\'s own schools', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $target = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $admin->schools()->attach($school->id, ['status' => 'active']);
+    $role = Role::factory()->forSchool($school->id)->create(['display_name' => 'Class Teacher']);
+    grantRoleUpdatePermission($admin, $school);
+
+    Livewire::actingAs($admin)
+        ->test(Show::class, ['user' => $target])
+        ->call('openAssignRoleModal')
+        ->set('assignRoleSchoolId', $school->id)
+        ->set('assignRoleId', $role->id)
+        ->call('assignRole')
+        ->assertHasNoErrors()
+        ->assertDispatched('toast');
+
+    expect($target->hasRole($role))->toBeFalse(); // ambient team differs from the assignment's school outside the request
+
+    app(PermissionRegistrar::class)->setPermissionsTeamId($school->id);
+    expect($target->fresh()->hasRole($role))->toBeTrue();
+});
+
+it('does not offer a school the acting admin has no access to when assigning a role', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $target = User::factory()->create(['tenant_id' => $tenant->id]);
+    $inaccessibleSchool = School::factory()->create(['name' => 'Off Limits School']);
+
+    Livewire::actingAs($admin)
+        ->test(Show::class, ['user' => $target])
+        ->assertDontSee('Off Limits School');
+});
+
+it('removes a role from a user from the show screen', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $target = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $role = Role::factory()->forSchool($school->id)->create();
+    app(AssignRoleAction::class)->execute(new RoleAssignmentData($target->id, $role->id, $school->id));
+    grantRoleUpdatePermission($admin, $school);
+
+    Livewire::actingAs($admin)
+        ->test(Show::class, ['user' => $target])
+        ->call('removeRole', $role->id, $school->id)
+        ->assertDispatched('toast');
+
+    app(PermissionRegistrar::class)->setPermissionsTeamId($school->id);
+    expect($target->fresh()->hasRole($role))->toBeFalse();
 });

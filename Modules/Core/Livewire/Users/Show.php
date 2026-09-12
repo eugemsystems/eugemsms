@@ -13,16 +13,22 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Core\Domain\Actions\Auth\AssignRoleAction;
 use Modules\Core\Domain\Actions\Auth\DeactivateUserAction;
 use Modules\Core\Domain\Actions\Auth\ResetPasswordAction;
+use Modules\Core\Domain\Actions\Auth\RevokeRoleAction;
 use Modules\Core\Domain\Actions\Auth\RevokeTokenAction;
 use Modules\Core\Domain\DataObjects\Auth\DeactivateUserData;
 use Modules\Core\Domain\DataObjects\Auth\ResetPasswordData;
 use Modules\Core\Domain\DataObjects\Auth\RevokeTokenData;
+use Modules\Core\Domain\DataObjects\Auth\RoleAssignmentData;
 use Modules\Core\Domain\Exceptions\DomainException;
+use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Models\LoginAttempt;
 use Modules\Core\Models\ModelHasRole;
 use Modules\Core\Models\PersonalAccessToken;
+use Modules\Core\Models\Role;
+use Modules\Core\Models\School;
 use Modules\Core\Models\UserAccountLink;
 
 /**
@@ -36,20 +42,79 @@ use Modules\Core\Models\UserAccountLink;
  * scope would otherwise silently filter to one ambient school instead of
  * every school the user is linked in. Permission gating not yet
  * enforced — see `Users\Index`'s docblock.
+ *
+ * `assignRole()`/`removeRole()` (2026-09-12, user-requested — "then the
+ * user can create roles then use the coded permissions so that they can
+ * control what their users do") wire the long-unused `AssignRoleAction`/
+ * `RevokeRoleAction` to a real screen for the first time; `$availableSchools`
+ * is deliberately the ACTING admin's own schools (`Auth::user()->schools()`,
+ * same source `Schools\Index` uses), not the target user's — an admin can
+ * only grant a role in a school they themselves can operate in. See
+ * `Users\DirectPermissions` for granting one permission straight to this
+ * user without a role.
  */
 #[Title('User')]
 #[Layout('layouts.app')]
 final class Show extends Component
 {
+    use AuthorizesPermissions;
     use Toasts;
 
     public User $user;
+
+    public bool $showAssignRoleModal = false;
+
+    public ?int $assignRoleSchoolId = null;
+
+    public ?int $assignRoleId = null;
 
     public function mount(User $user): void
     {
         abort_unless($user->tenant_id === Auth::user()?->tenant_id, 403);
 
         $this->user = $user;
+    }
+
+    public function openAssignRoleModal(): void
+    {
+        $this->assignRoleSchoolId = null;
+        $this->assignRoleId = null;
+        $this->showAssignRoleModal = true;
+        $this->resetErrorBag();
+    }
+
+    public function assignRole(): void
+    {
+        $this->validate([
+            'assignRoleSchoolId' => ['required', 'integer'],
+            'assignRoleId' => ['required', 'integer'],
+        ]);
+
+        $this->authorizePermission('core.role.update', schoolId: (int) $this->assignRoleSchoolId);
+
+        app(AssignRoleAction::class)->execute(new RoleAssignmentData(
+            userId: $this->user->id,
+            roleId: (int) $this->assignRoleId,
+            schoolId: (int) $this->assignRoleSchoolId,
+            performedByUserId: (int) Auth::id(),
+        ));
+
+        $this->showAssignRoleModal = false;
+        $this->toast(__('Role assigned.'));
+    }
+
+    public function removeRole(int $roleId, int $schoolId): void
+    {
+        $this->authorizePermission('core.role.update', schoolId: $schoolId);
+
+        app(RevokeRoleAction::class)->execute(new RoleAssignmentData(
+            userId: $this->user->id,
+            roleId: $roleId,
+            schoolId: $schoolId,
+            performedByUserId: (int) Auth::id(),
+        ));
+
+        $this->toast(__('Role removed.'));
     }
 
     public function resetPassword(): void
@@ -132,8 +197,20 @@ final class Show extends Component
             ->leftJoin('schools', 'schools.id', '=', 'model_has_roles.school_id')
             ->where('model_has_roles.model_id', $this->user->id)
             ->where('model_has_roles.model_type', $this->user->getMorphClass())
-            ->select(['roles.display_name as role_name', 'schools.name as school_name'])
+            ->select(['roles.id as role_id', 'roles.display_name as role_name', 'schools.id as school_id', 'schools.name as school_name'])
             ->orderBy('schools.name')
+            ->get();
+
+        $availableSchools = School::query()
+            ->whereIn('id', Auth::user()?->schools()->pluck('schools.id') ?? [])
+            ->orderBy('name')
+            ->get();
+
+        $availableRoles = Role::query()
+            ->where(function ($query) use ($availableSchools): void {
+                $query->whereNull('school_id')->orWhereIn('school_id', $availableSchools->pluck('id'));
+            })
+            ->orderBy('display_name')
             ->get();
 
         $devices = $this->user->tokens()->whereNull('revoked_at')->orderByDesc('last_used_at')->get();
@@ -151,6 +228,8 @@ final class Show extends Component
 
         return view('core::users.show', [
             'roleAssignments' => $roleAssignments,
+            'availableSchools' => $availableSchools,
+            'availableRoles' => $availableRoles,
             'devices' => $devices,
             'loginHistory' => $loginHistory,
             'linkedRecords' => $linkedRecords,

@@ -10,5 +10,6 @@ final readonly class PermissionSyncResult
         public int $created,
         public int $updated,
         public int $total,
+        public int $grantedToSuperAdmin,
     ) {}
 }

@@ -21,3 +21,25 @@ No `EventServiceProvider`/`$listen` map exists in any module — every module's 
 First instance: `Modules\Finance\Domain\Listeners\RaiseMidTermSubjectChangeBillingListener` reacts to Academic's `SubjectEnrolmentAdded`/`SubjectEnrolmentDropped`, registered in `FinanceServiceProvider::registerEventListeners()`. The listener lives in Finance (the consumer/downstream module), not Academic (the producer) — same dependency direction as the Action it calls (`BillMidTermSubjectChangeAction` already imports Academic models). Follow this direction for any future cross-module listener: it lives with whichever module already depends on the other, never the reverse.
 
 The listener never lets a failure in the reacted-to side effect roll back the transaction that emitted the event (`event()` fires synchronously, inside the emitting Action's own open transaction) — wrap the call in try/catch and record success/failure on a tracking column instead of throwing, per CLAUDE.md's "never block the operation it attaches to" doctrine. Also check an idempotency flag (here `subject_enrolment_changes.billing_event_dispatched`) before acting, since a replayed event must not double-execute a financial side effect.
+
+## Every module registers its own permissions via PermissionRegistry, then checks them via AuthorizesPermissions
+User directive (2026-09-12): "permissions must be added and checked when coding" — permissions are NEVER created through the admin UI. Every module's ServiceProvider::boot() must call `Modules\Core\Domain\Registry\PermissionRegistry::register('MODULECODE', [...])` for every permission the module introduces, e.g.:
+```php
+PermissionRegistry::register('ACA', [
+    'result.enter' => ['description' => 'Enter exam results.'],
+    'result.approve' => ['description' => 'Approve entered results.', 'dangerous' => true],
+]);
+```
+This only registers in memory. `php artisan serp:sync-permissions` (Modules\Core\Domain\Actions\Install\SyncPermissionCatalogueAction) writes the actual `permissions` rows — it also runs automatically inside `RunUpgradeAction` on every deploy, and auto-grants every newly-synced permission to the system-wide Super Admin role (school scope) EXCEPT anything under `safeguarding.*` (Book G BRD-08 §8 — never auto-granted, even to Super Admin).
+
+Every new Livewire screen/Action that does something worth restricting MUST check the permission it registered, via `Modules\Core\Livewire\Concerns\AuthorizesPermissions`:
+```php
+use AuthorizesPermissions;
+public function mount(School $school): void {
+    $this->loadSchool($school);
+    $this->authorizePermission('aca.result.enter');
+}
+```
+On a screen with NO single active school (tenant-wide, no `{school}` route param — like `Users\Index`), pass the specific school explicitly: `$this->authorizePermission('core.role.update', schoolId: $someSchoolId)`. See [[permission_scope_resolver_school_param]]. A screen with no permission check and no explanatory docblock for why is a bug, not a deferred TODO — the "not yet enforced, no catalogue exists" excuse used throughout early CORE-05 is gone now that the registry/sync mechanism is real.
+
+The admin UI's job is ONLY to create roles and assign/revoke the already-registered permissions to them (`Roles\Editor`) or directly to a user (`Users\DirectPermissions`, `Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction`) — never to define new permissions.

@@ -8,7 +8,10 @@ use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\DataObjects\Install\PermissionSyncResult;
 use Modules\Core\Domain\DataObjects\Install\SyncPermissionCatalogueData;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Models\Permission;
+use Modules\Core\Models\Role;
+use Modules\Core\Models\RolePermissionScope;
 
 /**
  * ACT-SyncPermissionCatalogue (Book A Part 1.8): writes every permission
@@ -20,6 +23,15 @@ use Modules\Core\Models\Permission;
  * renamed action) is left in place rather than silently dropped out from
  * under any role that already holds it — removing a stale permission is
  * a deliberate, separate operation, not a side effect of a routine sync.
+ *
+ * Every synced permission is also granted to the platform's one
+ * system-wide Super Admin role (`super_admin`, `school_id = null`) at
+ * `School` scope, so an admin never has to remember to manually tick a
+ * newly-added permission for that role — with one deliberate exception:
+ * `safeguarding.*` permissions are never auto-granted, even to Super
+ * Admin, matching `Role::givePermissionTo()`'s own hard refusal (Book G
+ * BRD-08 §8 — the platform's own Super Admin has no implicit access to
+ * safeguarding data).
  *
  * Run via `php artisan serp:sync-permissions` and automatically as part
  * of `RunUpgradeAction`, matching the spec's "synced to the database on
@@ -75,7 +87,12 @@ final class SyncPermissionCatalogueAction extends Action
                 }
             }
 
-            return new PermissionSyncResult(created: $created, updated: $updated, total: $total);
+            return new PermissionSyncResult(
+                created: $created,
+                updated: $updated,
+                total: $total,
+                grantedToSuperAdmin: $this->grantEveryPermissionToSuperAdmin(),
+            );
         });
     }
 
@@ -87,5 +104,34 @@ final class SyncPermissionCatalogueAction extends Action
         $parts = explode('.', $path, 2);
 
         return [$parts[0], $parts[1] ?? $parts[0]];
+    }
+
+    private function grantEveryPermissionToSuperAdmin(): int
+    {
+        $superAdmin = Role::query()->where('name', 'super_admin')->whereNull('school_id')->first();
+
+        if ($superAdmin === null) {
+            return 0;
+        }
+
+        $granted = 0;
+
+        Permission::query()->where('guard_name', 'web')->each(function (Permission $permission) use ($superAdmin, &$granted): void {
+            if (str_starts_with($permission->name, 'safeguarding.')) {
+                return;
+            }
+
+            if (! $superAdmin->hasPermissionTo($permission)) {
+                $superAdmin->givePermissionTo($permission);
+                $granted++;
+            }
+
+            RolePermissionScope::firstOrCreate(
+                ['role_id' => $superAdmin->id, 'permission_id' => $permission->id],
+                ['scope' => PermissionScope::School],
+            );
+        });
+
+        return $granted;
     }
 }

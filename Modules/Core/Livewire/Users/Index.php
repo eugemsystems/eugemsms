@@ -24,13 +24,20 @@ use Modules\Core\Livewire\Concerns\InteractsWithDataTable;
  * `{school}` route parameter and no `SchoolContext` involved (unlike
  * almost every other list screen in this app). Authorisation is
  * therefore "any authenticated staff member of this tenant may view/
- * manage its user directory" for now: `core.user.*` (Book A CORE-05 §9)
- * is not yet seeded in this database (zero rows), so gating on
- * `->can()` would make every screen unreachable for everyone — the same
- * situation `InteractsWithSchool` documents for `core.school.*`. This
- * screen, `Show`, and `Form` all follow that same precedent and will
- * start checking `core.user.view`/`core.user.create`/`core.user.update`/
- * `core.user.deactivate` once CORE-05's permission seeding exists.
+ * manage its user directory" for now: the `core.user.*` permission
+ * catalogue now exists and is seeded (`PermissionRegistry`/
+ * `SyncPermissionCatalogueAction`, 2026-09-12), but this screen, `Show`,
+ * and `Form` still don't check it — unlike `Roles\*`/`Permissions\Explorer`
+ * (which now enforce `core.role.*` via `AuthorizesPermissions`), these
+ * three have no single active school to resolve a scope against
+ * (`Users\*` is deliberately tenant-wide, no `{school}` route param).
+ * `PermissionScopeResolver::has()` takes an explicit `$schoolId` for
+ * exactly this shape of screen (see `Users\Show::assignRole()`/
+ * `removeRole()`), but "does this user hold `core.user.view` in ANY of
+ * their schools" needs a resolver method that doesn't exist yet
+ * (`resolve()`/`has()` both check ONE school) — add that before wiring
+ * enforcement here, since checking only one arbitrary school would be
+ * wrong for a genuinely tenant-wide list.
  */
 #[Title('Users')]
 #[Layout('layouts.app')]

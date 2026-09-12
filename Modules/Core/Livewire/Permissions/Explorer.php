@@ -13,6 +13,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\Auth\PermissionScopeResolver;
+use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\ModelHasRole;
 use Modules\Core\Models\Permission;
@@ -21,7 +22,8 @@ use Modules\Core\Models\RolePermissionScope;
 use Modules\Core\Models\School;
 
 /**
- * `Core\Permissions\Explorer` (Book A CORE-05 §6, `core.role.view`). The
+ * `Core\Permissions\Explorer` (Book A CORE-05 §6, `core.role.view`,
+ * enforced 2026-09-12). The
  * "who can do X?" reverse lookup, read literally: pick a permission and
  * see every role usable in this school (school-owned + system templates,
  * same visibility rule as `Core\Roles\Index`) that grants it, each with
@@ -35,6 +37,7 @@ use Modules\Core\Models\School;
 #[Layout('layouts.app')]
 final class Explorer extends Component
 {
+    use AuthorizesPermissions;
     use InteractsWithSchool;
 
     #[Url(as: 'mode', history: true)]
@@ -49,6 +52,7 @@ final class Explorer extends Component
     public function mount(School $school): void
     {
         $this->loadSchool($school);
+        $this->authorizePermission('core.role.view');
     }
 
     public function selectMode(string $mode): void

@@ -24,7 +24,7 @@ final class SyncPermissionsCommand extends Command
     {
         $result = $action->execute(new SyncPermissionCatalogueData);
 
-        $this->info("Permission catalogue synced: {$result->created} created, {$result->updated} updated, {$result->total} total.");
+        $this->info("Permission catalogue synced: {$result->created} created, {$result->updated} updated, {$result->total} total, {$result->grantedToSuperAdmin} newly granted to Super Admin.");
 
         return self::SUCCESS;
     }

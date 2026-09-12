@@ -6,7 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | Modules/Academic/** | .ai/rules/academic.md |
 | Modules/People/Domain/Actions/*Application*.php | .ai/rules/actions.md |
-| Modules/Core/Domain/Support/Auth/SchoolTeamResolver.php | .ai/rules/auth.md |
+| Modules/Core/Domain/Support/Auth/SchoolTeamResolver.php, Modules/Core/Domain/Support/Auth/*.php | .ai/rules/auth.md |
 | bootstrap/app.php | .ai/rules/bootstrap.md |
 | Modules/Core/**, Modules/Core/**/*.php | .ai/rules/core.md |
 | Modules/*/Domain/Actions/*.php | .ai/rules/domain-actions.md |

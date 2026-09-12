@@ -39,7 +39,11 @@ final class PermissionRegistry
 
         foreach ($permissions as $key => $meta) {
             if (is_int($key)) {
-                $path = (string) $meta;
+                if (! is_string($meta)) {
+                    continue;
+                }
+
+                $path = $meta;
                 $meta = [];
             } else {
                 $path = $key;

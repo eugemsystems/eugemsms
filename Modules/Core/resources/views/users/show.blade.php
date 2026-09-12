@@ -62,29 +62,47 @@
             </div>
 
             <div class="card">
-                <div class="card-header"><h5 class="mb-0">{{ __('Roles per school') }}</h5></div>
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">{{ __('Roles per school') }}</h5>
+                    <button type="button" class="btn btn-icon btn-sm btn-outline-primary" wire:click="openAssignRoleModal" title="{{ __('Assign role') }}" aria-label="{{ __('Assign role') }}">
+                        <i class="icon-base ri ri-add-line icon-22px"></i>
+                    </button>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-borderless mb-0">
                         <thead>
                             <tr>
                                 <th>{{ __('School') }}</th>
                                 <th>{{ __('Role') }}</th>
+                                <th class="text-end">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($roleAssignments as $assignment)
-                                <tr>
+                                <tr wire:key="role-assignment-{{ $assignment->role_id }}-{{ $assignment->school_id }}">
                                     <td>{{ $assignment->school_name ?? __('System-wide') }}</td>
                                     <td>{{ $assignment->role_name }}</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-danger" wire:click="removeRole({{ $assignment->role_id }}, {{ $assignment->school_id }})" wire:confirm="{{ __('Remove this role?') }}" title="{{ __('Remove role') }}" aria-label="{{ __('Remove role') }}">
+                                            <i class="icon-base ri ri-delete-bin-line icon-22px"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="2" class="text-center text-body-secondary py-4">{{ __('No roles assigned.') }}</td>
+                                    <td colspan="3" class="text-center text-body-secondary py-4">{{ __('No roles assigned.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                @if ($availableSchools->isNotEmpty())
+                    <div class="card-footer">
+                        <a href="{{ route('users.permissions', [$availableSchools->first(), $user]) }}" class="btn btn-sm btn-outline-secondary w-100" wire:navigate>
+                            <i class="ri ri-key-2-line me-1"></i>{{ __('Direct permissions') }}
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -188,4 +206,45 @@
             </div>
         </div>
     </div>
+
+    @if ($showAssignRoleModal)
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0, 0, 0, .5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form wire:submit="assignRole">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ __('Assign role') }}</h5>
+                            <button type="button" class="btn-close" wire:click="$set('showAssignRoleModal', false)" aria-label="{{ __('Close') }}"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-floating form-floating-outline mb-3">
+                                <select class="form-select @error('assignRoleSchoolId') is-invalid @enderror" id="assign-role-school" wire:model="assignRoleSchoolId">
+                                    <option value="">{{ __('Select a school') }}</option>
+                                    @foreach ($availableSchools as $availableSchool)
+                                        <option value="{{ $availableSchool->id }}">{{ $availableSchool->name }}</option>
+                                    @endforeach
+                                </select>
+                                <label for="assign-role-school">{{ __('School') }}</label>
+                                @error('assignRoleSchoolId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="form-floating form-floating-outline">
+                                <select class="form-select @error('assignRoleId') is-invalid @enderror" id="assign-role-role" wire:model="assignRoleId">
+                                    <option value="">{{ __('Select a role') }}</option>
+                                    @foreach ($availableRoles as $availableRole)
+                                        <option value="{{ $availableRole->id }}">{{ $availableRole->display_name }}</option>
+                                    @endforeach
+                                </select>
+                                <label for="assign-role-role">{{ __('Role') }}</label>
+                                @error('assignRoleId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" wire:click="$set('showAssignRoleModal', false)">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">{{ __('Assign') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
