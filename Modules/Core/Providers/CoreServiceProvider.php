@@ -212,6 +212,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/notifications.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/files.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/imports.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/scheduling.php');
         });
     }
 
@@ -489,6 +490,8 @@ class CoreServiceProvider extends ModuleServiceProvider
             'file.view_access_log' => ['description' => 'View the file access log for sensitive-category files.'],
             'import.view' => ['description' => 'Browse the import centre and batch history.'],
             'import.rollback' => ['description' => 'Roll back a completed, rollbackable import batch.'],
+            'scheduling.view' => ['description' => 'View scheduled tasks, system health, and job progress.'],
+            'scheduling.manage' => ['description' => 'Retry/remove failed jobs and toggle maintenance mode.'],
         ]);
     }
 

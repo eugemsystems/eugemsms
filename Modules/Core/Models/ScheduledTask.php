@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Core\Database\Factories\ScheduledTaskFactory;
 
 /**
@@ -62,5 +63,13 @@ class ScheduledTask extends Model
     public function runs(): HasMany
     {
         return $this->hasMany(ScheduledTaskRun::class, 'task_id');
+    }
+
+    /**
+     * @return HasOne<ScheduledTaskRun, $this>
+     */
+    public function latestRun(): HasOne
+    {
+        return $this->hasOne(ScheduledTaskRun::class, 'task_id')->latestOfMany('started_at');
     }
 }

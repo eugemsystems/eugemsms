@@ -148,6 +148,33 @@
                             </div>
                         </div>
                     </div>
+
+                    @php $systemGroupActive = request()->routeIs('scheduling.*'); @endphp
+                    <div class="app-sidebar-group">
+                        <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $systemGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-system" aria-expanded="{{ $systemGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-system">
+                            <i class="ri ri-pulse-line"></i> {{ __('System') }}
+                            <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                        </a>
+                        <div class="collapse {{ $systemGroupActive ? 'show' : '' }}" id="sidebar-group-system">
+                            <div class="app-sidebar-subnav">
+                                <a href="{{ route('scheduling.health') }}" class="nav-link {{ request()->routeIs('scheduling.health') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-heart-pulse-line"></i> {{ __('Health') }}
+                                </a>
+                                <a href="{{ route('scheduling.tasks') }}" class="nav-link {{ request()->routeIs('scheduling.tasks*') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-calendar-check-line"></i> {{ __('Scheduled tasks') }}
+                                </a>
+                                <a href="{{ route('scheduling.failed-jobs') }}" class="nav-link {{ request()->routeIs('scheduling.failed-jobs') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-error-warning-line"></i> {{ __('Failed jobs') }}
+                                </a>
+                                <a href="{{ route('scheduling.progress') }}" class="nav-link {{ request()->routeIs('scheduling.progress') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-loader-4-line"></i> {{ __('My jobs') }}
+                                </a>
+                                <a href="{{ route('scheduling.maintenance') }}" class="nav-link {{ request()->routeIs('scheduling.maintenance') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-tools-line"></i> {{ __('Maintenance mode') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </nav>
 
                 <div class="mt-auto">
