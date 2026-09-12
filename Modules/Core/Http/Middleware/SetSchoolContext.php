@@ -9,9 +9,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Modules\Core\Domain\Exceptions\MissingSchoolContextException;
 use Modules\Core\Domain\Exceptions\UnauthorisedSchoolAccessException;
+use Modules\Core\Domain\Support\ActiveSchoolResolver;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\School;
-use Modules\Core\Models\UserSessionPreference;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -57,14 +57,8 @@ final class SetSchoolContext
             return $school;
         }
 
-        $preference = UserSessionPreference::where('user_id', $user->id)
-            ->orderByDesc('updated_at')
-            ->first();
+        $schoolId = ActiveSchoolResolver::resolveId($user);
 
-        if ($preference !== null) {
-            return School::query()->whereKey($preference->school_id)->first();
-        }
-
-        return $user->primarySchool();
+        return $schoolId !== null ? School::query()->whereKey($schoolId)->first() : null;
     }
 }

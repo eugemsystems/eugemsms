@@ -15,7 +15,7 @@
 
                 <nav class="app-sidebar-nav">
                     @php
-                        $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? auth()->user()?->primarySchool()?->id;
+                        $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? \Modules\Core\Domain\Support\ActiveSchoolResolver::resolveId(auth()->user());
 
                         $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*');
 

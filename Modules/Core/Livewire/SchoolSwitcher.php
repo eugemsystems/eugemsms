@@ -9,14 +9,25 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Modules\Core\Domain\Actions\Schools\SwitchActiveSchoolAction;
 use Modules\Core\Domain\DataObjects\Schools\SwitchSchoolData;
+use Modules\Core\Domain\Support\ActiveSchoolResolver;
 use Modules\Core\Domain\Support\SchoolContext;
 
 /**
  * `Core\SchoolSwitcher` (Book A CORE-02 §5) — a header dropdown, not a
  * page. Always available to an authenticated user with more than one
- * assigned school. A full page reload after switching is deliberate: the
- * new active school only takes effect once `SetSchoolContext` middleware
- * re-resolves it on the *next* request (see `SwitchActiveSchoolAction`).
+ * assigned school. A full page reload after switching is deliberate.
+ *
+ * Bugfix (2026-09-12, user-reported: "when i choose a different school
+ * ... nothing changes"): `SetSchoolContext` middleware — the thing this
+ * class's docblock used to say re-resolves the switch on the next
+ * request — is never actually applied to any real route in this app
+ * (see `Modules\Core\Domain\Support\ActiveSchoolResolver`'s own
+ * docblock for the full story). `render()` now calls
+ * `ActiveSchoolResolver::resolveId()` directly instead of jumping
+ * straight to `primarySchool()`, so a switch actually shows up on any
+ * page with no `{school}` in its own URL (dashboard, Users, Feature
+ * flags, and this widget itself) — a `{school}`-scoped page still
+ * correctly shows whatever school its URL names, unaffected by this.
  */
 final class SchoolSwitcher extends Component
 {
@@ -32,12 +43,7 @@ final class SchoolSwitcher extends Component
 
     public function render(): View
     {
-        // Falls back to the user's primary school outside the CORE-02
-        // routes that actually run `serp.school-context` (dashboard,
-        // settings) — this dropdown is rendered from the shared app
-        // shell, so it has to make sense everywhere, not just where the
-        // middleware happens to have resolved a context already.
-        $currentSchoolId = SchoolContext::currentId() ?? Auth::user()?->primarySchool()?->id;
+        $currentSchoolId = SchoolContext::currentId() ?? ActiveSchoolResolver::resolveId(Auth::user());
 
         return view('core::livewire.school-switcher', [
             'schools' => Auth::user()?->schools()->orderBy('name')->get() ?? collect(),

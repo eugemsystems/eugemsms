@@ -3,7 +3,7 @@
 ])
 
 @php
-    $brandingSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? auth()->user()?->primarySchool()?->id;
+    $brandingSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? \Modules\Core\Domain\Support\ActiveSchoolResolver::resolveId(auth()->user());
     $brandingSchool = $brandingSchoolId !== null ? \Modules\Core\Models\School::find($brandingSchoolId) : null;
 @endphp
 
