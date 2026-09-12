@@ -13,8 +13,8 @@ use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Actions\Audit\RecordSecurityEventAction;
 use Modules\Core\Domain\DataObjects\Audit\RecordSecurityEventData;
 use Modules\Core\Domain\DataObjects\Backups\CreateBackupData;
-use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Domain\Support\Backups\OwnedTableScanner;
+use Modules\Core\Domain\Support\Backups\TenantDataDumper;
 use Modules\Core\Models\Backup;
 use Modules\Core\Models\File;
 use RuntimeException;
@@ -46,6 +46,7 @@ final class CreateBackupAction extends Action
 
     public function __construct(
         private readonly RecordSecurityEventAction $recordSecurityEvent,
+        private readonly TenantDataDumper $tenantDataDumper,
     ) {}
 
     public function execute(CreateBackupData $data): Backup
@@ -157,28 +158,18 @@ final class CreateBackupAction extends Action
      */
     private function dumpTables(?int $schoolId): array
     {
-        $dump = [];
-
-        if ($schoolId === null) {
-            foreach (OwnedTableScanner::names() as $table) {
-                if (! Schema::hasTable($table)) {
-                    continue;
-                }
-
-                $dump[$table] = DB::table($table)->get()->map(fn (object $row): array => (array) $row)->all();
-            }
-
-            return $dump;
+        if ($schoolId !== null) {
+            return $this->tenantDataDumper->dumpTables($schoolId);
         }
 
-        foreach (array_keys(TenantModelRegistry::all()) as $modelClass) {
-            $model = new $modelClass;
+        $dump = [];
 
-            $dump[$model->getTable()] = $modelClass::withoutGlobalScopes()
-                ->where('school_id', $schoolId)
-                ->get()
-                ->map(fn ($row): array => $row->toArray())
-                ->all();
+        foreach (OwnedTableScanner::names() as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            $dump[$table] = DB::table($table)->get()->map(fn (object $row): array => (array) $row)->all();
         }
 
         return $dump;
@@ -189,15 +180,13 @@ final class CreateBackupAction extends Action
      */
     private function dumpFiles(?int $schoolId): array
     {
-        $query = File::query();
-
         if ($schoolId !== null) {
-            $query->where('school_id', $schoolId);
+            return $this->tenantDataDumper->dumpFiles($schoolId);
         }
 
         $dump = [];
 
-        foreach ($query->get() as $file) {
+        foreach (File::query()->get() as $file) {
             try {
                 $contents = Storage::disk($file->disk)->get($file->path);
             } catch (Throwable) {

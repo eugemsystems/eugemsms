@@ -213,6 +213,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/files.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/imports.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/scheduling.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/backups.php');
         });
     }
 
@@ -340,6 +341,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             new FileCategoryDefinition('zimsec_statement_of_entry', 'ZIMSEC Statement of Entry', 'CMP-01', ['application/json', 'text/plain'], 5 * 1024 * 1024),
             new FileCategoryDefinition('statutory_return_export', 'Statutory School Return Export', 'CMP-02', ['application/json', 'text/plain'], 10 * 1024 * 1024),
             new FileCategoryDefinition('inspection_pack', 'Inspection Pack', 'CMP-02', ['application/json', 'text/plain'], 20 * 1024 * 1024, isSensitive: true),
+            new FileCategoryDefinition('contract_exit_export', 'Contract-Exit Export', 'CORE-13', ['application/zip'], 500 * 1024 * 1024, isSensitive: true),
         ];
 
         foreach ($categories as $category) {
@@ -492,6 +494,9 @@ class CoreServiceProvider extends ModuleServiceProvider
             'import.rollback' => ['description' => 'Roll back a completed, rollbackable import batch.'],
             'scheduling.view' => ['description' => 'View scheduled tasks, system health, and job progress.'],
             'scheduling.manage' => ['description' => 'Retry/remove failed jobs and toggle maintenance mode.'],
+            'backup.view' => ['description' => 'View backups and restore test history.'],
+            'backup.manage' => ['description' => 'Trigger backups, restore tests, and retention runs.'],
+            'backup.export' => ['description' => 'Generate a contract-exit data export for a school.'],
         ]);
     }
 

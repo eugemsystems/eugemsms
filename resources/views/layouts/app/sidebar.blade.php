@@ -28,7 +28,7 @@
                         $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? \Modules\Core\Domain\Support\ActiveSchoolResolver::resolveId(auth()->user());
                         $sessionsSchool = $sessionsSchoolId !== null ? \Modules\Core\Models\School::find($sessionsSchoolId) : null;
 
-                        $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('numbering.*') || request()->routeIs('templates.*') || request()->routeIs('documents.*') || request()->routeIs('audit.*') || request()->routeIs('notifications.*') || request()->routeIs('files.*') || request()->routeIs('imports.*');
+                        $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('numbering.*') || request()->routeIs('templates.*') || request()->routeIs('documents.*') || request()->routeIs('audit.*') || request()->routeIs('notifications.*') || request()->routeIs('files.*') || request()->routeIs('imports.*') || request()->routeIs('backups.contract-exit-export');
 
                         $identityGroupActive = request()->routeIs('users.*') || request()->routeIs('impersonate.*') || request()->routeIs('login-audit.*');
                     @endphp
@@ -91,6 +91,9 @@
                                     <a href="{{ route('imports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('imports.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-upload-cloud-2-line"></i> {{ __('Import data') }}
                                     </a>
+                                    <a href="{{ route('backups.contract-exit-export', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('backups.contract-exit-export') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-archive-line"></i> {{ __('Contract-exit export') }}
+                                    </a>
                                 @endif
                             </div>
                         </div>
@@ -149,7 +152,7 @@
                         </div>
                     </div>
 
-                    @php $systemGroupActive = request()->routeIs('scheduling.*'); @endphp
+                    @php $systemGroupActive = request()->routeIs('scheduling.*') || request()->routeIs('backups.index') || request()->routeIs('backups.show'); @endphp
                     <div class="app-sidebar-group">
                         <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $systemGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-system" aria-expanded="{{ $systemGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-system">
                             <i class="ri ri-pulse-line"></i> {{ __('System') }}
@@ -171,6 +174,9 @@
                                 </a>
                                 <a href="{{ route('scheduling.maintenance') }}" class="nav-link {{ request()->routeIs('scheduling.maintenance') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-tools-line"></i> {{ __('Maintenance mode') }}
+                                </a>
+                                <a href="{{ route('backups.index') }}" class="nav-link {{ request()->routeIs('backups.index') || request()->routeIs('backups.show') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-hard-drive-2-line"></i> {{ __('Backups') }}
                                 </a>
                             </div>
                         </div>
