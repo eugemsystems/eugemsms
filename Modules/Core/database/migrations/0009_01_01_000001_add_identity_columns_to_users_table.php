@@ -20,6 +20,17 @@ use Illuminate\Support\Str;
  * application layer. `name` itself is kept, not replaced — it stays the
  * single source Fortify's views read, kept in sync by `CreateUserAction`/
  * `UpdateProfileAction` as "{first} {last}".
+ *
+ * `last_login_at` originally anchored `->after('two_factor_confirmed_at')`
+ * for cosmetic column ordering — but that column belongs to
+ * `database/migrations/2025_08_14_170933_add_two_factor_columns_to_users_table.php`,
+ * whose `Y_m_d_His` filename sorts AFTER this migration's `0009_01_01_...`
+ * numeric prefix alphabetically, so on a genuinely fresh install (not an
+ * already-migrated dev DB, where the column already existed) this
+ * migration ran first and failed with "column not found" — found via
+ * `migrate:fresh` against a clean database, the Book A Acceptance Gate's
+ * own check for this. Column order has no functional effect in MySQL;
+ * dropped the anchor rather than reordering either migration file.
  */
 return new class extends Migration
 {
@@ -40,7 +51,7 @@ return new class extends Migration
             $table->boolean('must_change_password')->default(false)->after('status');
             $table->timestamp('password_changed_at')->nullable()->after('must_change_password');
             $table->timestamp('phone_verified_at')->nullable()->after('phone');
-            $table->timestamp('last_login_at')->nullable()->after('two_factor_confirmed_at');
+            $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip', 45)->nullable()->after('last_login_at');
             $table->smallInteger('failed_login_count')->default(0)->after('last_login_ip');
             $table->timestamp('locked_until')->nullable()->after('failed_login_count');
