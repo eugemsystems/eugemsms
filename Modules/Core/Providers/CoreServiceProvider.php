@@ -207,6 +207,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/numbering.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/templates.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/documents.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/approvals.php');
         });
     }
 
@@ -466,6 +467,10 @@ class CoreServiceProvider extends ModuleServiceProvider
             'document.generate' => ['description' => 'Generate documents, individually or in bulk.'],
             'document.download' => ['description' => 'Download a generated document.'],
             'document.delete' => ['description' => 'Delete a generated document.', 'dangerous' => true],
+            'approval.view' => ['description' => 'View any approval request in the school, not just your own.'],
+            'approval.configure' => ['description' => 'Create and manage approval chains.'],
+            'approval.delegate_others' => ['description' => 'Create or revoke a delegation on another user\'s behalf.'],
+            'approval.view_reports' => ['description' => 'View the approvals SLA report.'],
         ]);
     }
 

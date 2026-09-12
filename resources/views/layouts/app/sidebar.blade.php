@@ -84,6 +84,35 @@
                         </div>
                     </div>
 
+                    @if ($sessionsSchool)
+                        @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">
+                                <i class="ri ri-checkbox-multiple-line"></i> {{ __('Approvals') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $approvalsGroupActive ? 'show' : '' }}" id="sidebar-group-approvals">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('approvals.queue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('approvals.queue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-inbox-line"></i> {{ __('My approvals') }}
+                                    </a>
+                                    <a href="{{ route('approvals.mine', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('approvals.mine') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-send-plane-line"></i> {{ __('My requests') }}
+                                    </a>
+                                    <a href="{{ route('approvals.delegations', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('approvals.delegations') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-shared-line"></i> {{ __('Delegations') }}
+                                    </a>
+                                    <a href="{{ route('approvals.chains', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('approvals.chains*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-branch-line"></i> {{ __('Chains') }}
+                                    </a>
+                                    <a href="{{ route('approvals.sla-report', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('approvals.sla-report') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-time-line"></i> {{ __('SLA report') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
                     </a>
