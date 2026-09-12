@@ -45,6 +45,16 @@ use Modules\Core\Models\AcademicYear;
  * matching bugfix note — `$this->redirect(Referer)` is replaced with an
  * unconditional `$this->js('window.location.reload()')` plus a
  * session-flashed success toast, for the same reason.
+ *
+ * Fourth bugfix, same report, still recurring: also see `SchoolSwitcher`'s
+ * matching note on ITS fourth bugfix — the actual, final root cause.
+ * `InteractsWithSession::bootInteractsWithSession()` sets `SessionContext`
+ * from a `{term}`-scoped URL's own `{term}` segment on every request,
+ * unconditionally, so reloading such a page after switching re-derives
+ * the OLD term from the URL again regardless of what was just switched
+ * to. `SchoolContext::currentId() !== null` doubles as the right signal
+ * here too (a `{term}`-scoped URL is necessarily also `{school}`-scoped)
+ * — bounce to the dashboard instead of reloading in place.
  */
 final class SessionSwitcher extends Component
 {
@@ -55,6 +65,8 @@ final class SessionSwitcher extends Component
         if ($schoolId === null) {
             return;
         }
+
+        $wasScopedToASpecificSchoolUrl = SchoolContext::currentId() !== null;
 
         $result = app(SwitchSessionAction::class)->execute(new SwitchSessionData(
             userId: (int) Auth::id(),
@@ -68,6 +80,12 @@ final class SessionSwitcher extends Component
             : __('Switched to :year.', ['year' => $result->academicYear->name]);
 
         session()->flash('serp_toast', ['text' => $text, 'variant' => 'success']);
+
+        if ($wasScopedToASpecificSchoolUrl) {
+            $this->redirect(route('dashboard'), navigate: true);
+
+            return;
+        }
 
         $this->js('window.location.reload()');
     }

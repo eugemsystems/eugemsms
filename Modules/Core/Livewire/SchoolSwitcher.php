@@ -42,6 +42,23 @@ use Modules\Core\Domain\Support\SchoolContext;
  * (read back by `resources/js/app.js` after the reload — see
  * `layouts/app/sidebar.blade.php`) gives explicit success feedback,
  * since a same-content reload can otherwise look like nothing happened.
+ *
+ * Third bugfix, same report, still recurring ("just flicking and
+ * nothing" — reported repeatedly because every prior fix here was
+ * real but incomplete, not because it didn't work): reloading the
+ * CURRENT url is actively wrong on any `{school}`-scoped page (schools/
+ * {school}/settings, /roles, /sessions/..., /houses, /structure, ...).
+ * `InteractsWithSchool::bootInteractsWithSchool()` sets `SchoolContext`
+ * from THAT URL'S OWN `{school}` segment on every request, unconditionally
+ * — so reloading `/schools/{old-school}/settings` after switching to a
+ * different school re-derives `SchoolContext` from the old school
+ * again, every time, no matter what `UserSessionPreference` says. The
+ * switch was never failing; the page you were on was simply pinned to
+ * the old school by its own URL. `SchoolContext::currentId() !== null`
+ * is true precisely on these pages (nothing else ever sets it — see
+ * `ActiveSchoolResolver`'s docblock), so that's the signal to bounce to
+ * the dashboard — never `{school}`-scoped — instead of reloading in
+ * place.
  */
 final class SchoolSwitcher extends Component
 {
@@ -53,6 +70,12 @@ final class SchoolSwitcher extends Component
         ));
 
         session()->flash('serp_toast', ['text' => __('Switched to :school.', ['school' => $school->name]), 'variant' => 'success']);
+
+        if (SchoolContext::currentId() !== null) {
+            $this->redirect(route('dashboard'), navigate: true);
+
+            return;
+        }
 
         $this->js('window.location.reload()');
     }
