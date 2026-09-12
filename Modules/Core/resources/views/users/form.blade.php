@@ -1,9 +1,14 @@
 <div>
-    <div class="mb-4">
-        <h4 class="mb-1">{{ $editingUserId !== null ? __('Edit user') : __('New user') }}</h4>
-        <p class="text-body-secondary mb-0">
-            {{ __('A user must have at least one of email, phone, or username.') }}
-        </p>
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{{ $editingUserId !== null ? route('users.show', $editingUserId) : route('users.index') }}" class="btn btn-icon btn-outline-secondary btn-sm" wire:navigate>
+            <i class="ri ri-arrow-left-line"></i>
+        </a>
+        <div>
+            <h4 class="mb-1">{{ $editingUserId !== null ? __('Edit user') : __('New user') }}</h4>
+            <p class="text-body-secondary mb-0">
+                {{ __('A user must have at least one of email, phone, or username.') }}
+            </p>
+        </div>
     </div>
 
     <div class="card">

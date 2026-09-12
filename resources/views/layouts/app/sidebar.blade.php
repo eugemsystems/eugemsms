@@ -14,44 +14,79 @@
                 </div>
 
                 <nav class="app-sidebar-nav">
+                    @php
+                        $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? auth()->user()?->primarySchool()?->id;
+
+                        $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*');
+
+                        $identityGroupActive = request()->routeIs('users.*') || request()->routeIs('impersonate.*') || request()->routeIs('login-audit.*');
+                    @endphp
+
                     <div class="app-sidebar-heading">{{ __('Platform') }}</div>
                     <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-home-5-line"></i> {{ __('Dashboard') }}
                     </a>
-                    <a href="{{ route('schools.index') }}" class="nav-link {{ request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') ? 'active' : '' }}" wire:navigate>
-                        <i class="ri ri-school-line"></i> {{ __('Schools') }}
-                    </a>
-                    @php
-                        $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? auth()->user()?->primarySchool()?->id;
-                    @endphp
-                    @if ($sessionsSchoolId)
-                        <a href="{{ route('sessions.years', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('sessions.*') ? 'active' : '' }}" wire:navigate>
-                            <i class="ri ri-calendar-event-line"></i> {{ __('Academic sessions') }}
+
+                    {{-- Collapsible nav groups: plain Bootstrap 5 `collapse` (already
+                    loaded app-wide, see resources/js/app.js) rather than TEMPLATE's
+                    own custom menu.js widget — that widget is entangled with
+                    horizontal-menu-only logic (PerfectScrollbar, slide arrows) that
+                    doesn't cleanly separate from the vertical accordion behaviour
+                    actually needed here (2026-09-12). Initial expand/collapse state
+                    is rendered server-side from $xGroupActive so the correct state
+                    shows on first paint with no JS required; Bootstrap's own
+                    data-bs-toggle="collapse" click handling takes over from there. --}}
+                    <div class="app-sidebar-group">
+                        <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $schoolGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-school" aria-expanded="{{ $schoolGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-school">
+                            <i class="ri ri-school-line"></i> {{ __('School setup') }}
+                            <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
                         </a>
-                        <a href="{{ route('settings.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
-                            <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
-                        </a>
-                        <a href="{{ route('roles.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" wire:navigate>
-                            <i class="ri ri-shield-user-line"></i> {{ __('Roles') }}
-                        </a>
-                        <a href="{{ route('permissions.explorer', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" wire:navigate>
-                            <i class="ri ri-key-2-line"></i> {{ __('Permissions') }}
-                        </a>
-                    @endif
+                        <div class="collapse {{ $schoolGroupActive ? 'show' : '' }}" id="sidebar-group-school">
+                            <div class="app-sidebar-subnav">
+                                <a href="{{ route('schools.index') }}" class="nav-link {{ request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-school-line"></i> {{ __('Schools') }}
+                                </a>
+                                @if ($sessionsSchoolId)
+                                    <a href="{{ route('sessions.years', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('sessions.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Academic sessions') }}
+                                    </a>
+                                    <a href="{{ route('settings.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
+                                    </a>
+                                    <a href="{{ route('roles.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-user-line"></i> {{ __('Roles') }}
+                                    </a>
+                                    <a href="{{ route('permissions.explorer', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-key-2-line"></i> {{ __('Permissions') }}
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
                     </a>
 
-                    <div class="app-sidebar-heading">{{ __('Identity') }}</div>
-                    <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" wire:navigate>
-                        <i class="ri ri-team-line"></i> {{ __('Users') }}
-                    </a>
-                    <a href="{{ route('impersonate.index') }}" class="nav-link {{ request()->routeIs('impersonate.*') ? 'active' : '' }}" wire:navigate>
-                        <i class="ri ri-spy-line"></i> {{ __('Impersonation') }}
-                    </a>
-                    <a href="{{ route('login-audit.index') }}" class="nav-link {{ request()->routeIs('login-audit.*') ? 'active' : '' }}" wire:navigate>
-                        <i class="ri ri-history-line"></i> {{ __('Login audit') }}
-                    </a>
+                    <div class="app-sidebar-group">
+                        <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $identityGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-identity" aria-expanded="{{ $identityGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-identity">
+                            <i class="ri ri-team-line"></i> {{ __('Users & security') }}
+                            <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                        </a>
+                        <div class="collapse {{ $identityGroupActive ? 'show' : '' }}" id="sidebar-group-identity">
+                            <div class="app-sidebar-subnav">
+                                <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-team-line"></i> {{ __('Users') }}
+                                </a>
+                                <a href="{{ route('impersonate.index') }}" class="nav-link {{ request()->routeIs('impersonate.*') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-spy-line"></i> {{ __('Impersonation') }}
+                                </a>
+                                <a href="{{ route('login-audit.index') }}" class="nav-link {{ request()->routeIs('login-audit.*') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-history-line"></i> {{ __('Login audit') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </nav>
 
                 <div class="mt-auto">

@@ -1,7 +1,12 @@
 <div>
-    <div class="mb-4">
-        <h4 class="mb-1">{{ __('New academic year') }}</h4>
-        <p class="text-body-secondary mb-0">{{ __('For :school.', ['school' => $school->name]) }}</p>
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{{ route('sessions.years', $school) }}" class="btn btn-icon btn-outline-secondary btn-sm" wire:navigate>
+            <i class="ri ri-arrow-left-line"></i>
+        </a>
+        <div>
+            <h4 class="mb-1">{{ __('New academic year') }}</h4>
+            <p class="text-body-secondary mb-0">{{ __('For :school.', ['school' => $school->name]) }}</p>
+        </div>
     </div>
 
     <div class="card" style="max-width: 40rem;">

@@ -283,6 +283,35 @@ body {
     padding: 1rem 0.75rem 0.25rem;
 }
 
+// ---- Collapsible sidebar nav groups (plain Bootstrap 5 `collapse`, not
+// TEMPLATE's own menu.js widget — see the comment in
+// layouts/app/sidebar.blade.php for why). The caret rotates purely off
+// Bootstrap's own `aria-expanded` attribute, so no extra JS is needed
+// beyond the `collapse` behaviour `resources/js/app.js` already loads.
+.app-sidebar-toggle-link {
+    cursor: pointer;
+}
+
+.app-sidebar-caret {
+    transition: transform 0.2s ease;
+}
+
+.app-sidebar-toggle-link[aria-expanded='true'] .app-sidebar-caret {
+    transform: rotate(90deg);
+}
+
+.app-sidebar-subnav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-block-start: 0.15rem;
+}
+
+.app-sidebar-subnav .nav-link {
+    padding-inline-start: 2.25rem;
+    font-size: 0.875rem;
+}
+
 .app-main {
     flex: 1 1 auto;
     margin-inline-start: var(--serp-sidebar-width);

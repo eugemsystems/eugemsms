@@ -1,12 +1,17 @@
 <div>
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <div>
-            <h4 class="mb-1">{{ $user->first_name }} {{ $user->last_name }}</h4>
-            <p class="text-body-secondary mb-0">
-                @if ($user->email) {{ $user->email }} @endif
-                @if ($user->phone) &middot; {{ $user->phone }} @endif
-                @if ($user->username) &middot; {{ '@'.$user->username }} @endif
-            </p>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('users.index') }}" class="btn btn-icon btn-outline-secondary btn-sm" wire:navigate>
+                <i class="ri ri-arrow-left-line"></i>
+            </a>
+            <div>
+                <h4 class="mb-1">{{ $user->first_name }} {{ $user->last_name }}</h4>
+                <p class="text-body-secondary mb-0">
+                    @if ($user->email) {{ $user->email }} @endif
+                    @if ($user->phone) &middot; {{ $user->phone }} @endif
+                    @if ($user->username) &middot; {{ '@'.$user->username }} @endif
+                </p>
+            </div>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('users.edit', $user) }}" class="btn btn-outline-primary" wire:navigate>
