@@ -18,10 +18,13 @@ use Modules\Core\Models\LoginAttempt;
  * `login_attempts` is append-only and no Action ever updates/deletes a row
  * (Volume 1's append-only-at-the-grant-level doctrine).
  *
- * Gating: the spec requires `core.audit.view`, not yet seeded (zero rows —
- * same finding as `Core\Users\Impersonate`), so this screen follows the
- * same "authenticated only, for now" precedent as `Core\Users\Index` until
- * CORE-05's permission catalogue exists.
+ * Gating: the spec requires `core.audit.view`, which the catalogue now
+ * has (2026-09-12) — but this screen is tenant-wide with no `{school}` of
+ * its own, the same "no 'any school' resolver method yet" gap documented
+ * on `Users\Index`/`Show`/`Form` in `.ai/rules/auth.md`. Enforcing it here
+ * correctly needs that resolver, not a single arbitrary school passed to
+ * `PermissionScopeResolver`, so this screen keeps the same
+ * "authenticated only, for now" precedent until that resolver exists.
  *
  * Tenant scoping: `login_attempts.user_id` is nullable — an attempt against
  * an identifier that never resolved to a user (typo'd email, brute-force

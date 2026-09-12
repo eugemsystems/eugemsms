@@ -208,6 +208,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/templates.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/documents.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/approvals.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/audit.php');
         });
     }
 
@@ -444,8 +445,8 @@ class CoreServiceProvider extends ModuleServiceProvider
             'period.approve_reopen' => ['description' => 'Approve another admin\'s request to reopen a closed period.', 'dangerous' => true],
             'settings.view' => ['description' => 'View a school\'s settings.'],
             'settings.update' => ['description' => 'Change a school\'s settings.'],
-            'audit.view' => ['description' => 'View login and audit history.'],
-            'audit.export' => ['description' => 'Export login and audit history.'],
+            'audit.view' => ['description' => 'View login history, the activity log, and the integrity dashboard.'],
+            'audit.export' => ['description' => 'Export audit records for an external auditor.', 'dangerous' => true],
             'user.view' => ['description' => 'View the user directory.'],
             'user.create' => ['description' => 'Create new users.'],
             'user.update' => ['description' => 'Edit existing users.'],
@@ -471,6 +472,10 @@ class CoreServiceProvider extends ModuleServiceProvider
             'approval.configure' => ['description' => 'Create and manage approval chains.'],
             'approval.delegate_others' => ['description' => 'Create or revoke a delegation on another user\'s behalf.'],
             'approval.view_reports' => ['description' => 'View the approvals SLA report.'],
+            'audit.view_financial' => ['description' => 'View the append-only financial audit stream.'],
+            'audit.view_security' => ['description' => 'View security events.'],
+            'audit.view_access' => ['description' => 'View the sensitive-data access log.'],
+            'audit.review_security_event' => ['description' => 'Mark a security event as reviewed.'],
         ]);
     }
 
