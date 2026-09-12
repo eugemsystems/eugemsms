@@ -324,6 +324,22 @@ it('assigns a role to a user in one of the acting admin\'s own schools', functio
     expect($target->fresh()->hasRole($role))->toBeTrue();
 });
 
+it('only offers school-owned (cloned) roles when assigning a role from the show screen, never system templates', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $target = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $admin->schools()->attach($school->id, ['status' => 'active']);
+    Role::factory()->forSchool($school->id)->create(['display_name' => 'Cloned Teacher']);
+    Role::factory()->system()->create(['display_name' => 'System Super Admin']);
+
+    Livewire::actingAs($admin)
+        ->test(Show::class, ['user' => $target])
+        ->call('openAssignRoleModal')
+        ->assertSee('Cloned Teacher')
+        ->assertDontSee('System Super Admin');
+});
+
 it('does not offer a school the acting admin has no access to when assigning a role', function (): void {
     $tenant = Tenant::factory()->create();
     $admin = User::factory()->create(['tenant_id' => $tenant->id]);

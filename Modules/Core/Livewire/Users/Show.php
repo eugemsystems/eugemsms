@@ -206,10 +206,13 @@ final class Show extends Component
             ->orderBy('name')
             ->get();
 
+        // System templates excluded (2026-09-12, user-requested — same
+        // rule as `Users\Form`'s own create-time picker): a role handed
+        // out here must already be one the school controls the
+        // permissions of, never the shared vendor template itself.
         $availableRoles = Role::query()
-            ->where(function ($query) use ($availableSchools): void {
-                $query->whereNull('school_id')->orWhereIn('school_id', $availableSchools->pluck('id'));
-            })
+            ->where('is_system', false)
+            ->whereIn('school_id', $availableSchools->pluck('id'))
             ->orderBy('display_name')
             ->get();
 
