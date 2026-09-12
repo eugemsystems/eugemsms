@@ -39,6 +39,12 @@ use Modules\Core\Models\AcademicYear;
  * and lost every checkmark regardless of what was actually saved. Now
  * falls back to `ActiveSessionResolver::resolve()`, which reads the same
  * `UserSessionPreference` row `SetSessionContext` does.
+ *
+ * Third bugfix, same report, recurring ("sometimes working sometimes not
+ * ... just blinking but nothing changes"): see `SchoolSwitcher`'s own
+ * matching bugfix note — `$this->redirect(Referer)` is replaced with an
+ * unconditional `$this->js('window.location.reload()')` plus a
+ * session-flashed success toast, for the same reason.
  */
 final class SessionSwitcher extends Component
 {
@@ -50,14 +56,20 @@ final class SessionSwitcher extends Component
             return;
         }
 
-        app(SwitchSessionAction::class)->execute(new SwitchSessionData(
+        $result = app(SwitchSessionAction::class)->execute(new SwitchSessionData(
             userId: (int) Auth::id(),
             schoolId: $schoolId,
             academicYearId: $academicYearId,
             termId: $termId,
         ));
 
-        $this->redirect(request()->header('Referer') ?? route('dashboard'));
+        $text = $result->term !== null
+            ? __('Switched to :year, :term.', ['year' => $result->academicYear->name, 'term' => $result->term->name])
+            : __('Switched to :year.', ['year' => $result->academicYear->name]);
+
+        session()->flash('serp_toast', ['text' => $text, 'variant' => 'success']);
+
+        $this->js('window.location.reload()');
     }
 
     public function render(): View

@@ -141,5 +141,18 @@
         </div>
 
         <div id="serp-toast-region" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
+
+        {{--
+            SchoolSwitcher/SessionSwitcher (2026-09-12, user-reported:
+            "its just blinking but nothing changes when i switch the
+            school") force a hard `window.location.reload()` instead of a
+            Livewire-response redirect, so their own `toast()` dispatch
+            never survives to be caught client-side — this reads back a
+            session-flashed one instead (see resources/js/app.js's
+            `livewire:init` listener).
+        --}}
+        @if (session('serp_toast'))
+            <script>window.__serpFlashedToast = @json(session('serp_toast'));</script>
+        @endif
     </body>
 </html>

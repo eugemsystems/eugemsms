@@ -110,6 +110,20 @@ it('creates a user via the form', function (): void {
         ->and($created->first_name)->toBe('Rudo');
 });
 
+it('only offers school-owned (cloned) roles on the create form, never system templates', function (): void {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $school = School::factory()->create();
+    $admin->schools()->attach($school->id, ['status' => 'active']);
+    Role::factory()->forSchool($school->id)->create(['display_name' => 'Cloned Teacher']);
+    Role::factory()->system()->create(['display_name' => 'System Super Admin']);
+
+    Livewire::actingAs($admin)
+        ->test(Form::class)
+        ->assertSee('Cloned Teacher')
+        ->assertDontSee('System Super Admin');
+});
+
 it('creates a user and assigns a role in one step from the form', function (): void {
     $tenant = Tenant::factory()->create();
     $admin = User::factory()->create(['tenant_id' => $tenant->id]);

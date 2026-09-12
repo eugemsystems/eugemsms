@@ -177,10 +177,19 @@ final class Form extends Component
             ->orderBy('name')
             ->get();
 
+        // System templates deliberately excluded here (2026-09-12,
+        // user-requested — "i need the admin to be able to control all
+        // the permissions for each role so they will clone from the
+        // system ones first"): a role assigned at creation must already
+        // be one the school controls the permissions of, i.e. a clone
+        // (`is_system = false`), never the shared vendor template itself
+        // — unlike `Show`'s own assign-role modal, which still offers
+        // every role (including system ones) for an EXISTING user, since
+        // that screen predates this constraint and covers other cases
+        // (e.g. handing out `Super Admin` itself).
         $availableRoles = Role::query()
-            ->where(function ($query) use ($availableSchools): void {
-                $query->whereNull('school_id')->orWhereIn('school_id', $availableSchools->pluck('id'));
-            })
+            ->where('is_system', false)
+            ->whereIn('school_id', $availableSchools->pluck('id'))
             ->orderBy('display_name')
             ->get();
 

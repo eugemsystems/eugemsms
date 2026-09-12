@@ -156,6 +156,15 @@ function renderToast({ text, variant = 'success' }) {
 
 document.addEventListener('livewire:init', () => {
     Livewire.on('toast', renderToast);
+
+    // A toast flashed to the session by the server (e.g. SchoolSwitcher/
+    // SessionSwitcher, which force a hard `window.location.reload()`
+    // rather than a Livewire response — nothing survives that reload for
+    // `Livewire.on('toast', ...)` to catch, so the confirmation has to be
+    // read back out of the fresh page's own HTML instead).
+    if (window.__serpFlashedToast) {
+        renderToast(window.__serpFlashedToast);
+    }
 });
 
 /**

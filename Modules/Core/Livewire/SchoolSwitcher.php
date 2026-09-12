@@ -28,17 +28,33 @@ use Modules\Core\Domain\Support\SchoolContext;
  * page with no `{school}` in its own URL (dashboard, Users, Feature
  * flags, and this widget itself) — a `{school}`-scoped page still
  * correctly shows whatever school its URL names, unaffected by this.
+ *
+ * Second bugfix, same report, recurring ("sometimes working sometimes
+ * not ... just blinking but nothing changes"): `$this->redirect(Referer)`
+ * depends on the browser having actually sent a `Referer` header for
+ * this fetch() call and on `window.location.href = <that URL>` reliably
+ * forcing a real reload — neither is guaranteed (a referrer policy, an
+ * ad blocker, or the URL happening to already match `window.location`
+ * exactly can all make it a same-URL no-op that just re-renders nothing,
+ * which reads as "it blinked"). `$this->js('window.location.reload()')`
+ * is unconditional: it always re-fetches the exact page currently open
+ * from the server, no header or URL comparison involved. A flashed toast
+ * (read back by `resources/js/app.js` after the reload — see
+ * `layouts/app/sidebar.blade.php`) gives explicit success feedback,
+ * since a same-content reload can otherwise look like nothing happened.
  */
 final class SchoolSwitcher extends Component
 {
     public function switchTo(int $schoolId): void
     {
-        app(SwitchActiveSchoolAction::class)->execute(new SwitchSchoolData(
+        $school = app(SwitchActiveSchoolAction::class)->execute(new SwitchSchoolData(
             userId: (int) Auth::id(),
             schoolId: $schoolId,
         ));
 
-        $this->redirect(request()->header('Referer') ?? route('dashboard'));
+        session()->flash('serp_toast', ['text' => __('Switched to :school.', ['school' => $school->name]), 'variant' => 'success']);
+
+        $this->js('window.location.reload()');
     }
 
     public function render(): View
