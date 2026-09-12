@@ -6,7 +6,6 @@ namespace Modules\Core\Domain\Actions\Auth;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\DataObjects\Auth\AuthResult;
@@ -16,6 +15,7 @@ use Modules\Core\Domain\Events\Auth\UserLoggedIn;
 use Modules\Core\Domain\Events\Auth\UserLoginFailed;
 use Modules\Core\Domain\Exceptions\AccountLockedException;
 use Modules\Core\Domain\Exceptions\InvalidCredentialsException;
+use Modules\Core\Domain\Support\Auth\TwoFactorRequirement;
 use Modules\Core\Domain\Support\Settings\ScopeChain;
 use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Core\Models\LoginAttempt;
@@ -31,6 +31,7 @@ final class AuthenticateWebAction extends Action
 {
     public function __construct(
         private readonly SettingResolver $settings,
+        private readonly TwoFactorRequirement $twoFactorRequirement,
     ) {}
 
     public function execute(WebLoginData $data): AuthResult
@@ -76,7 +77,7 @@ final class AuthenticateWebAction extends Action
         $this->recordAttempt($data, $user, true, null);
         event(new UserLoggedIn($user, 'web'));
 
-        $requiresTwoFactor = $user->two_factor_confirmed_at !== null || $this->roleRequiresTwoFactor($user, $scope);
+        $requiresTwoFactor = $user->two_factor_confirmed_at !== null || $this->twoFactorRequirement->isRequiredFor($user);
 
         return new AuthResult($user, $requiresTwoFactor);
     }
@@ -134,28 +135,5 @@ final class AuthenticateWebAction extends Action
             'user_agent' => $data->userAgent,
             'attempted_at' => Carbon::now(),
         ]);
-    }
-
-    /**
-     * Queried directly against `model_has_roles` rather than
-     * `$user->roles()` — the "team" (school) scope spatie's relation
-     * applies isn't resolvable yet at login time (`SchoolContext` is
-     * only set after authentication, by `SetSchoolContext`), and
-     * BR-CORE-05-005 doesn't limit the 2FA requirement to one school.
-     */
-    private function roleRequiresTwoFactor(User $user, ScopeChain $scope): bool
-    {
-        $requiredRoles = (array) $this->settings->get('auth.require_2fa_roles', $scope);
-
-        if ($requiredRoles === []) {
-            return false;
-        }
-
-        return DB::table('model_has_roles')
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->where('model_has_roles.model_id', $user->id)
-            ->where('model_has_roles.model_type', $user->getMorphClass())
-            ->whereIn('roles.name', $requiredRoles)
-            ->exists();
     }
 }

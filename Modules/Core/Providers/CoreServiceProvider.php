@@ -76,6 +76,7 @@ use Modules\Core\Http\Middleware\EnforceTokenAbility;
 use Modules\Core\Http\Middleware\EnsureModuleEnabled;
 use Modules\Core\Http\Middleware\EnsureNotInstalled;
 use Modules\Core\Http\Middleware\EnsureSubscriptionActive;
+use Modules\Core\Http\Middleware\EnsureTwoFactorIsEnrolled;
 use Modules\Core\Http\Middleware\EnsureVendorGuard;
 use Modules\Core\Http\Middleware\RecordActivity;
 use Modules\Core\Http\Middleware\ResolveTenant;
@@ -194,6 +195,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/schools.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/sessions.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/settings.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/auth.php');
         });
     }
 
@@ -593,6 +595,7 @@ class CoreServiceProvider extends ModuleServiceProvider
 
         $router->aliasMiddleware('serp.not-installed', EnsureNotInstalled::class);
         $router->aliasMiddleware('serp.resolve-tenant', ResolveTenant::class);
+        $router->aliasMiddleware('serp.require-2fa', EnsureTwoFactorIsEnrolled::class);
         $router->aliasMiddleware('serp.subscription-active', EnsureSubscriptionActive::class);
         $router->aliasMiddleware('serp.school-context', SetSchoolContext::class);
         $router->aliasMiddleware('serp.session-context', SetSessionContext::class);

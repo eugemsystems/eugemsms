@@ -9,7 +9,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\CanonicalizeUsername;
+use Laravel\Fortify\Actions\EnsureLoginIsNotThrottled;
+use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Fortify;
+use Modules\Core\Http\Fortify\AuthenticateViaAction;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -38,6 +42,19 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Book A CORE-05 §4 — real throttle/lockout/status/2FA-requirement
+        // enforcement lives in AuthenticateWebAction, not Fortify's stock
+        // credential check. See AuthenticateViaAction's own docblock for
+        // why this replaces (rather than plugs into via
+        // Fortify::authenticateUsing()) Fortify's default two-stage login
+        // pipeline.
+        Fortify::authenticateThrough(fn (): array => array_filter([
+            config('fortify.limiters.login') ? null : EnsureLoginIsNotThrottled::class,
+            config('fortify.lowercase_usernames') ? CanonicalizeUsername::class : null,
+            AuthenticateViaAction::class,
+            PrepareAuthenticatedSession::class,
+        ]));
     }
 
     /**

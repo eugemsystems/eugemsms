@@ -6,7 +6,7 @@ namespace Modules\Core\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Modules\Core\Models\Tenant;
+use Modules\Core\Domain\Support\TenantResolver;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -15,14 +15,19 @@ use Symfony\Component\HttpFoundation\Response;
  * 404 on an unknown tenant (BR: the installer/tenant routes this guards
  * are opt-in via the `serp.web` / `serp.api` middleware groups, never the
  * application's default groups, so this strictness never affects
- * tenant-agnostic routes).
+ * tenant-agnostic routes). Resolution logic itself lives in
+ * `TenantResolver`, shared with `AuthenticateViaAction`, which needs the
+ * same lookups but must never 404 a login attempt over it.
  */
 final class ResolveTenant
 {
+    public function __construct(
+        private readonly TenantResolver $resolver,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
-        $tenant = $this->resolveFromSubdomain($request)
-            ?? $this->resolveFromAuthenticatedUser($request);
+        $tenant = $this->resolver->resolveForRequest($request);
 
         if ($tenant === null) {
             abort(404);
@@ -31,39 +36,5 @@ final class ResolveTenant
         $request->attributes->set('tenant', $tenant);
 
         return $next($request);
-    }
-
-    private function resolveFromSubdomain(Request $request): ?Tenant
-    {
-        $host = $request->getHost();
-        $appHost = (string) parse_url((string) config('app.url'), PHP_URL_HOST);
-
-        if ($appHost === '' || $host === $appHost || ! str_ends_with($host, '.'.$appHost)) {
-            return null;
-        }
-
-        $subdomain = substr($host, 0, -1 * (strlen($appHost) + 1));
-
-        if ($subdomain === '' || str_contains($subdomain, '.')) {
-            return null;
-        }
-
-        return Tenant::where('slug', $subdomain)->first();
-    }
-
-    private function resolveFromAuthenticatedUser(Request $request): ?Tenant
-    {
-        $guards = array_filter(['web', 'sanctum'], fn (string $guard): bool => array_key_exists($guard, (array) config('auth.guards', [])));
-
-        foreach ($guards as $guard) {
-            $user = $request->user($guard);
-            $school = $user?->primarySchool();
-
-            if ($school !== null) {
-                return $school->tenant;
-            }
-        }
-
-        return null;
     }
 }

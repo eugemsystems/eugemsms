@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Core\Domain\Exceptions\SerpException;
+use Modules\Core\Http\Middleware\EnsureTwoFactorIsEnrolled;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,7 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // BR-CORE-05-005: applied to every web request (not just the
+        // module route groups that remember to ask for it) so a
+        // mandatory-2FA-but-unenrolled user can't reach anything by
+        // going around a specific module's own middleware list — the
+        // middleware itself is what decides who it actually applies to.
+        $middleware->web(append: [EnsureTwoFactorIsEnrolled::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -101,6 +101,13 @@ return [
     |
     */
 
+    // Deliberately NOT 'serp.resolve-tenant' here: that middleware 404s
+    // the whole route when no tenant resolves, which would take down
+    // logout/the bare login-view GET along with login itself. Only the
+    // login POST actually needs a tenant (to scope its user lookup) —
+    // Modules\Core\Http\Fortify\AuthenticateViaAction resolves it
+    // directly, and a failed resolution there just looks like "invalid
+    // credentials" rather than 404ing the whole auth surface.
     'middleware' => ['web'],
 
     /*
