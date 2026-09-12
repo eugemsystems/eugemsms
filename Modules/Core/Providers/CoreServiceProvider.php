@@ -205,6 +205,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/profile.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/impersonation.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/numbering.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/templates.php');
         });
     }
 
