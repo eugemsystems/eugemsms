@@ -70,6 +70,18 @@
                     </div>
                 @endif
 
+                {{--
+                    Book A CORE-05 BR-CORE-05-017: an admin impersonating
+                    another user must always be able to get back to their
+                    own identity, from any page — see
+                    `Modules\Core\Livewire\ImpersonationBanner`'s own
+                    docblock. Same "no global context-resolution middleware
+                    yet" caveat as the historical-period banner above:
+                    this only renders once `session('impersonator_id')` is
+                    set, which only `Core\Users\Impersonate` ever sets.
+                --}}
+                @livewire(\Modules\Core\Livewire\ImpersonationBanner::class)
+
                 <main class="app-content">
                     {{ $slot }}
                 </main>
