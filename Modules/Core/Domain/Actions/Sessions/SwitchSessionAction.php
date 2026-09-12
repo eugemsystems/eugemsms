@@ -21,6 +21,13 @@ use Modules\Core\Models\UserSessionPreference;
  * `SwitchActiveSchoolAction` (CORE-02), this never calls
  * `SessionContext::set()` directly — it persists the preference that
  * `SetSessionContext` middleware reads on the *next* request.
+ *
+ * Bugfix (2026-09-12): same fix as `SwitchActiveSchoolAction`'s own —
+ * `updateOrCreate()`'s `fill()` silently drops `updated_at` (not in
+ * `UserSessionPreference::$fillable`), and `Model::save()` only touches
+ * timestamps when some OTHER attribute is already dirty. Re-selecting
+ * the year/term this preference already stored would otherwise leave
+ * `updated_at` stale. `touch()` forces it unconditionally.
  */
 final class SwitchSessionAction extends Action
 {
@@ -58,10 +65,12 @@ final class SwitchSessionAction extends Action
         }
 
         return $this->transaction(function () use ($user, $year, $term, $data): SessionContextResult {
-            UserSessionPreference::updateOrCreate(
+            $preference = UserSessionPreference::updateOrCreate(
                 ['user_id' => $user->id, 'school_id' => $data->schoolId],
-                ['academic_year_id' => $year->id, 'term_id' => $term?->id, 'updated_at' => now()],
+                ['academic_year_id' => $year->id, 'term_id' => $term?->id],
             );
+
+            $preference->touch();
 
             event(new SessionSwitched($user, $year, $term));
 

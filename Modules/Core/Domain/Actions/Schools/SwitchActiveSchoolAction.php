@@ -31,6 +31,27 @@ use Modules\Core\Models\UserSessionPreference;
  * "Flushes the permission cache, re-resolves the role set" (the rest of
  * BR-CORE-02-008) has no work to do yet — CORE-05 hasn't shipped a
  * permission system for there to be a cache of.
+ *
+ * Bugfix (2026-09-12, user-reported, reproduced against real data after
+ * five rounds of "it's still not switching" — every earlier fix in this
+ * file's git history was real but addressed a different, coincidental
+ * symptom): `updateOrCreate()`'s `fill($values)` silently drops
+ * `updated_at` — it isn't in `UserSessionPreference::$fillable` — and
+ * Eloquent's `save()` only calls `updateTimestamps()` if the model is
+ * ALREADY dirty from some OTHER changed attribute (`Model::save()`
+ * checks `isDirty()` before touching timestamps at all). So whenever the
+ * freshly computed `academic_year_id`/`term_id` happen to already match
+ * what's stored — exactly the case for a school whose "current" term
+ * never changed since the last time this ran — NOTHING is dirty, no
+ * timestamp bump happens, and no UPDATE query is even issued.
+ * `ActiveSchoolResolver::resolveId()` picks the most recently switched
+ * school by that same `updated_at`, so switching TO such a school
+ * silently failed to register as the newer choice, every time,
+ * specifically because nothing else about it had changed — while
+ * switching to a DIFFERENT school (whose term happened to differ) worked
+ * fine, making this look random rather than deterministic. `touch()`
+ * calls `updateTimestamps()` unconditionally and only THEN checks
+ * dirtiness, so it always persists.
  */
 final class SwitchActiveSchoolAction extends Action
 {
@@ -67,14 +88,19 @@ final class SwitchActiveSchoolAction extends Action
                     ->where('is_current', true)->first()
                 : null;
 
-            UserSessionPreference::updateOrCreate(
+            $preference = UserSessionPreference::updateOrCreate(
                 ['user_id' => $user->id, 'school_id' => $school->id],
                 [
                     'academic_year_id' => $year?->id,
                     'term_id' => $term?->id,
-                    'updated_at' => now(),
                 ],
             );
+
+            // Must always bump, even when nothing else about this
+            // preference actually changed — see this class's own
+            // docblock. `updateOrCreate()`'s own `save()` cannot be
+            // trusted to do this on its own.
+            $preference->touch();
 
             $this->auditLogger->record($user, 'school.switched', ['school_id' => $school->id]);
 
