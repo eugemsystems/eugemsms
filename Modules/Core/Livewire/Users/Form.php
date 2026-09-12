@@ -55,6 +55,15 @@ final class Form extends Component
 
     public ?int $editingUserId = null;
 
+    /**
+     * The route key for the "back"/cancel link on the edit form — a
+     * separate property from `$editingUserId` since `route('users.show',
+     * ...)` needs the ulid, not the id, and the view has no other way to
+     * reach the target user's model (2026-09-12 bugfix, see
+     * `Modules\Core\Domain\Concerns\HasUlid`'s docblock).
+     */
+    public ?string $editingUserUlid = null;
+
     public string $firstName = '';
 
     public string $lastName = '';
@@ -86,6 +95,7 @@ final class Form extends Component
         abort_unless($user->tenant_id === Auth::user()?->tenant_id, 403);
 
         $this->editingUserId = $user->id;
+        $this->editingUserUlid = $user->ulid;
         $this->firstName = (string) $user->first_name;
         $this->lastName = (string) $user->last_name;
         $this->otherNames = (string) $user->other_names;
@@ -167,7 +177,7 @@ final class Form extends Component
 
         $this->toast($this->editingUserId !== null ? __('User updated.') : __('User created.'));
 
-        $this->redirectRoute('users.show', ['user' => $user->id], navigate: true);
+        $this->redirectRoute('users.show', ['user' => $user], navigate: true);
     }
 
     public function render(): View

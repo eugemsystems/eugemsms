@@ -15,7 +15,18 @@
 
                 <nav class="app-sidebar-nav">
                     @php
+                        // A model instance, not a bare id (2026-09-12 bugfix,
+                        // user-reported: "settings, roles and permissions urls
+                        // are still showing numbers"): route()/redirect()
+                        // only resolve by HasUlid::getRouteKeyName() when
+                        // given the MODEL — a raw int is plugged into the URL
+                        // literally, which 404s now that binding requires the
+                        // ulid. This was also the likely cause of the school
+                        // switcher looking like it did nothing: reloading
+                        // whatever page was open landed back on one of these
+                        // broken numeric-id links.
                         $sessionsSchoolId = \Modules\Core\Domain\Support\SchoolContext::currentId() ?? \Modules\Core\Domain\Support\ActiveSchoolResolver::resolveId(auth()->user());
+                        $sessionsSchool = $sessionsSchoolId !== null ? \Modules\Core\Models\School::find($sessionsSchoolId) : null;
 
                         $schoolGroupActive = request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') || request()->routeIs('sessions.*') || request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*');
 
@@ -46,17 +57,17 @@
                                 <a href="{{ route('schools.index') }}" class="nav-link {{ request()->routeIs('schools.*') || request()->routeIs('structure.*') || request()->routeIs('houses.*') || request()->routeIs('modules.*') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-school-line"></i> {{ __('Schools') }}
                                 </a>
-                                @if ($sessionsSchoolId)
-                                    <a href="{{ route('sessions.years', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('sessions.*') ? 'active' : '' }}" wire:navigate>
+                                @if ($sessionsSchool)
+                                    <a href="{{ route('sessions.years', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sessions.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-calendar-event-line"></i> {{ __('Academic sessions') }}
                                     </a>
-                                    <a href="{{ route('settings.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
+                                    <a href="{{ route('settings.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
                                     </a>
-                                    <a href="{{ route('roles.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" wire:navigate>
+                                    <a href="{{ route('roles.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shield-user-line"></i> {{ __('Roles') }}
                                     </a>
-                                    <a href="{{ route('permissions.explorer', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" wire:navigate>
+                                    <a href="{{ route('permissions.explorer', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-key-2-line"></i> {{ __('Permissions') }}
                                     </a>
                                 @endif

@@ -1,6 +1,6 @@
 <div>
     <div class="d-flex align-items-center gap-2 mb-4">
-        <a href="{{ $editingUserId !== null ? route('users.show', $editingUserId) : route('users.index') }}" class="btn btn-icon btn-outline-secondary btn-sm" wire:navigate>
+        <a href="{{ $editingUserId !== null ? route('users.show', $editingUserUlid) : route('users.index') }}" class="btn btn-icon btn-outline-secondary btn-sm" wire:navigate>
             <i class="ri ri-arrow-left-line"></i>
         </a>
         <div>
