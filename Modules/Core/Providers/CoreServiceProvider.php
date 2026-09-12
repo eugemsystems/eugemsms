@@ -210,6 +210,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/approvals.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/audit.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/notifications.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/files.php');
         });
     }
 
@@ -480,6 +481,11 @@ class CoreServiceProvider extends ModuleServiceProvider
             'notification.view' => ['description' => 'View the notification log, failure report, and opt-out register.'],
             'notification.manage_templates' => ['description' => 'Create and edit notification templates.'],
             'notification.manage_budget' => ['description' => 'View spend and set monthly notification budgets.'],
+            'file.view' => ['description' => 'Browse the file vault and its metadata.'],
+            'file.view_sensitive' => ['description' => 'View or download a file in a sensitive category (medical, safeguarding, etc.).'],
+            'file.delete' => ['description' => 'Soft-delete an uploaded file.'],
+            'file.manage_quota' => ['description' => 'View storage usage and set a school\'s storage quota.'],
+            'file.view_access_log' => ['description' => 'View the file access log for sensitive-category files.'],
         ]);
     }
 
