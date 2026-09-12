@@ -12,6 +12,7 @@ use Modules\Core\Console\Commands\InstallCommand;
 use Modules\Core\Console\Commands\InstallStatusCommand;
 use Modules\Core\Console\Commands\InstallVerifyCommand;
 use Modules\Core\Console\Commands\SeedZimbabweCommand;
+use Modules\Core\Console\Commands\SyncPermissionsCommand;
 use Modules\Core\Console\Commands\UpgradeCommand;
 use Modules\Core\Domain\Contracts\Auth\BreachedPasswordChecker;
 use Modules\Core\Domain\Contracts\Auth\OtpDeliveryChannel;
@@ -29,6 +30,7 @@ use Modules\Core\Domain\DataObjects\Scheduling\ScheduledTaskDefinitionData;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\HealthCheckRegistry;
 use Modules\Core\Domain\Registry\IntegrityCheckRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\RolloverHandlerRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskRegistry;
 use Modules\Core\Domain\Registry\SeedPackRegistry;
@@ -124,6 +126,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         InstallStatusCommand::class,
         UpgradeCommand::class,
         SeedZimbabweCommand::class,
+        SyncPermissionsCommand::class,
     ];
 
     public function register(): void
@@ -157,6 +160,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSeedPacks();
         $this->registerRolloverHandlers();
+        $this->registerPermissions();
         $this->registerSettingDefinitions();
         $this->registerIntegrityChecks();
         $this->registerFileCategories();
@@ -403,6 +407,53 @@ class CoreServiceProvider extends ModuleServiceProvider
         foreach ($pending as [$code, $label, $description, $module]) {
             SeedPackRegistry::register(new PendingSeedPack($code, $label, $description, $module));
         }
+    }
+
+    /**
+     * Book A Part 1.8's `PermissionRegistry::register('core', [...])`
+     * example, made real: every permission a CORE-05 screen already
+     * refers to in its own docblock as "not yet enforced until CORE-05's
+     * permission catalogue is seeded" (`Users\Index`, `Users\Impersonate`,
+     * `Users\LoginAudit`, `Roles\Index`, `Roles\Editor`,
+     * `Permissions\Explorer`, `Sessions\Years`, `Sessions\PeriodControl`,
+     * `Schools\Index`, `Schools\Concerns\InteractsWithSchool`), plus the
+     * `school.archive`/`period.close`/`settings.*`/`audit.export` entries
+     * the spec's own illustrative example lists. Registering here only
+     * makes the catalogue exist in memory — `SyncPermissionCatalogueAction`
+     * (`php artisan serp:sync-permissions`, also run by `RunUpgradeAction`)
+     * is what writes the `Permission` rows the Roles/Permissions screens
+     * read.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('CORE', [
+            'school.view' => ['description' => 'View school records.'],
+            'school.create' => ['description' => 'Create new schools.'],
+            'school.update' => ['description' => 'Edit a school\'s profile, branding, and settings.'],
+            'school.archive' => ['description' => 'Archive a school.', 'dangerous' => true],
+            'structure.manage' => ['description' => 'Manage a school\'s sections, grade levels, classes, and houses.'],
+            'module.manage' => ['description' => 'Enable or disable modules for a school.'],
+            'session.view' => ['description' => 'View academic years and terms.'],
+            'session.manage' => ['description' => 'Create academic years, terms, and run rollovers.'],
+            'period.close' => ['description' => 'Close an academic or financial period.', 'dangerous' => true],
+            'period.reopen' => ['description' => 'Reopen a closed period.', 'dangerous' => true],
+            'period.approve_reopen' => ['description' => 'Approve another admin\'s request to reopen a closed period.', 'dangerous' => true],
+            'settings.view' => ['description' => 'View a school\'s settings.'],
+            'settings.update' => ['description' => 'Change a school\'s settings.'],
+            'audit.view' => ['description' => 'View login and audit history.'],
+            'audit.export' => ['description' => 'Export login and audit history.'],
+            'user.view' => ['description' => 'View the user directory.'],
+            'user.create' => ['description' => 'Create new users.'],
+            'user.update' => ['description' => 'Edit existing users.'],
+            'user.deactivate' => ['description' => 'Deactivate a user, signing them out everywhere.', 'dangerous' => true],
+            'user.reset_password' => ['description' => 'Force-reset another user\'s password.', 'dangerous' => true],
+            'user.impersonate' => ['description' => 'Sign in as another user.', 'dangerous' => true],
+            'role.view' => ['description' => 'View roles and the permission explorer.'],
+            'role.update' => ['description' => 'Edit a role\'s permission grants.'],
+            'import.run' => ['description' => 'Run a bulk data import.', 'dangerous' => true],
+            'approval.cancel' => ['description' => 'Cancel a pending approval request.'],
+            'system.bypass_school_scope' => ['description' => 'Read or write across every school\'s data, ignoring the normal school scope.', 'dangerous' => true],
+        ]);
     }
 
     /**

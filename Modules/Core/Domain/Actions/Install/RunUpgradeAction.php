@@ -7,6 +7,7 @@ namespace Modules\Core\Domain\Actions\Install;
 use Illuminate\Support\Facades\Artisan;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Contracts\Install\BackupProvider;
+use Modules\Core\Domain\DataObjects\Install\SyncPermissionCatalogueData;
 use Modules\Core\Domain\DataObjects\Install\UpgradeData;
 use Modules\Core\Domain\DataObjects\Install\UpgradeResult;
 use Modules\Core\Domain\Exceptions\DomainException;
@@ -16,14 +17,18 @@ use Throwable;
 
 /**
  * ACT-RunUpgrade (Book A CORE-01 §3): pre-backup → migrate → verify →
- * record. BR-CORE-01-011: takes a full backup before running any
- * migration and records the backup reference; an upgrade with no
- * verified backup is refused.
+ * sync permissions → record. BR-CORE-01-011: takes a full backup before
+ * running any migration and records the backup reference; an upgrade
+ * with no verified backup is refused. The permission-catalogue sync
+ * (Part 1.8: "synced to the database on deploy") runs after migrations
+ * so any new columns/tables a module's permissions depend on already
+ * exist.
  */
 final class RunUpgradeAction extends Action
 {
     public function __construct(
         private readonly BackupProvider $backupProvider,
+        private readonly SyncPermissionCatalogueAction $syncPermissions,
     ) {}
 
     public function execute(UpgradeData $data): UpgradeResult
@@ -53,6 +58,8 @@ final class RunUpgradeAction extends Action
         try {
             Artisan::call('migrate', ['--force' => true]);
             $ran = array_values(array_filter(explode("\n", Artisan::output())));
+
+            $this->syncPermissions->execute(new SyncPermissionCatalogueData);
 
             $upgrade->update([
                 'status' => UpgradeStatus::Completed,
