@@ -209,6 +209,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/documents.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/approvals.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/audit.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/notifications.php');
         });
     }
 
@@ -476,6 +477,9 @@ class CoreServiceProvider extends ModuleServiceProvider
             'audit.view_security' => ['description' => 'View security events.'],
             'audit.view_access' => ['description' => 'View the sensitive-data access log.'],
             'audit.review_security_event' => ['description' => 'Mark a security event as reviewed.'],
+            'notification.view' => ['description' => 'View the notification log, failure report, and opt-out register.'],
+            'notification.manage_templates' => ['description' => 'Create and edit notification templates.'],
+            'notification.manage_budget' => ['description' => 'View spend and set monthly notification budgets.'],
         ]);
     }
 

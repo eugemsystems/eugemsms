@@ -18,7 +18,8 @@
     header (or vice versa) reads as a broken/misaligned table. Any
     "extra" cell not covered by $columns (typically a trailing actions
     cell) is covered by the $withActions prop below rather than being
-    left un-headed.
+    left un-headed. A leading bulk-selection checkbox cell is the other
+    sanctioned exception — set $withSelection to add its (empty) header.
 --}}
 @props([
     'columns' => [],
@@ -31,6 +32,7 @@
     'hiddenColumns' => [],
     'perPageOptions' => [10, 15, 30, 50],
     'withActions' => true,
+    'withSelection' => false,
 ])
 
 @php
@@ -124,6 +126,9 @@
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    @if ($withSelection)
+                        <th style="width: 2rem;"></th>
+                    @endif
                     @foreach ($columns as $key => $config)
                         @if (! in_array($key, $hiddenColumns, true))
                             <th wire:key="table-header-{{ $key }}" @if ($config['sortable'] ?? false) role="button" wire:click="sortByColumn('{{ $key }}')" @endif>
