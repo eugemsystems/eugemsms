@@ -10,8 +10,8 @@ use Livewire\Component;
 use Modules\Core\Domain\Actions\Sessions\SwitchSessionAction;
 use Modules\Core\Domain\DataObjects\Sessions\SwitchSessionData;
 use Modules\Core\Domain\Support\ActiveSchoolResolver;
+use Modules\Core\Domain\Support\ActiveSessionResolver;
 use Modules\Core\Domain\Support\SchoolContext;
-use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Models\AcademicYear;
 
 /**
@@ -29,6 +29,16 @@ use Modules\Core\Models\AcademicYear;
  * on any page with no `{school}` in its own URL, which could easily have
  * no current academic year configured — making the whole dropdown
  * disappear (`@if ($years->isNotEmpty())` in the view).
+ *
+ * Second bugfix, same report ("the session selects still having issues
+ * ... acting weird"): `currentYearId`/`currentTermId` were read from
+ * `SessionContext::isSet()`, which is only ever true on the small set of
+ * `{school}`-scoped pages that run `SetSessionContext` — everywhere else,
+ * including this widget immediately after its own switch-and-redirect,
+ * that was always false, so the dropdown reverted to "Select session"
+ * and lost every checkmark regardless of what was actually saved. Now
+ * falls back to `ActiveSessionResolver::resolve()`, which reads the same
+ * `UserSessionPreference` row `SetSessionContext` does.
  */
 final class SessionSwitcher extends Component
 {
@@ -58,11 +68,13 @@ final class SessionSwitcher extends Component
             ? AcademicYear::query()->where('school_id', $schoolId)->with('terms')->orderByDesc('starts_on')->get()
             : collect();
 
+        [$currentYearId, $currentTermId] = ActiveSessionResolver::resolve(Auth::user(), $schoolId);
+
         return view('core::livewire.session-switcher', [
             'schoolId' => $schoolId,
             'years' => $years,
-            'currentYearId' => SessionContext::isSet() ? SessionContext::yearId() : null,
-            'currentTermId' => SessionContext::isSet() ? SessionContext::termId() : null,
+            'currentYearId' => $currentYearId,
+            'currentTermId' => $currentTermId,
         ]);
     }
 }
