@@ -22,6 +22,15 @@
 
         <div class="dropdown-divider"></div>
 
+        <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('profile.security') }}" wire:navigate>
+            <i class="ri ri-shield-keyhole-line"></i> {{ __('My security') }}
+        </a>
+        <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('profile.devices') }}" wire:navigate>
+            <i class="ri ri-device-line"></i> {{ __('My devices') }}
+        </a>
+
+        <div class="dropdown-divider"></div>
+
         <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('profile.edit') }}" wire:navigate>
             <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
         </a>

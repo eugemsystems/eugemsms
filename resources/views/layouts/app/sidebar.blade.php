@@ -31,9 +31,26 @@
                         <a href="{{ route('settings.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('custom-fields.*') ? 'active' : '' }}" wire:navigate>
                             <i class="ri ri-settings-3-line"></i> {{ __('Settings') }}
                         </a>
+                        <a href="{{ route('roles.index', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" wire:navigate>
+                            <i class="ri ri-shield-user-line"></i> {{ __('Roles') }}
+                        </a>
+                        <a href="{{ route('permissions.explorer', $sessionsSchoolId) }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" wire:navigate>
+                            <i class="ri ri-key-2-line"></i> {{ __('Permissions') }}
+                        </a>
                     @endif
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
+                    </a>
+
+                    <div class="app-sidebar-heading">{{ __('Identity') }}</div>
+                    <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" wire:navigate>
+                        <i class="ri ri-team-line"></i> {{ __('Users') }}
+                    </a>
+                    <a href="{{ route('impersonate.index') }}" class="nav-link {{ request()->routeIs('impersonate.*') ? 'active' : '' }}" wire:navigate>
+                        <i class="ri ri-spy-line"></i> {{ __('Impersonation') }}
+                    </a>
+                    <a href="{{ route('login-audit.index') }}" class="nav-link {{ request()->routeIs('login-audit.*') ? 'active' : '' }}" wire:navigate>
+                        <i class="ri ri-history-line"></i> {{ __('Login audit') }}
                     </a>
                 </nav>
 
