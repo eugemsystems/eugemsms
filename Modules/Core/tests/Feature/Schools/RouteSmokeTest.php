@@ -23,6 +23,6 @@ it('loads every Index-named full-page Livewire route via a real HTTP GET', funct
     $user->schools()->attach($school, ['is_primary' => true, 'status' => 'active']);
 
     $this->actingAs($user)->get('/schools')->assertOk();
-    $this->actingAs($user)->get("/schools/{$school->id}/houses")->assertOk();
-    $this->actingAs($user)->get("/schools/{$school->id}/modules")->assertOk();
+    $this->actingAs($user)->get("/schools/{$school->ulid}/houses")->assertOk();
+    $this->actingAs($user)->get("/schools/{$school->ulid}/modules")->assertOk();
 });

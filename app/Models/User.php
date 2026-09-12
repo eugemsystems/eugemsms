@@ -21,6 +21,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
+use Modules\Core\Domain\Concerns\HasUlid;
 use Modules\Core\Domain\Support\Auth\UserStatus;
 use Modules\Core\Domain\Support\Auth\UserType;
 use Modules\Core\Models\ImpersonationSession;
@@ -79,7 +80,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, HasUlid, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
