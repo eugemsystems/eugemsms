@@ -143,6 +143,24 @@
                                     <a href="{{ route('finance.cost-centres.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.cost-centres.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-building-line"></i> {{ __('Cost centres') }}
                                     </a>
+                                    <a href="{{ route('finance.currency.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-coins-line"></i> {{ __('Currencies') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.rates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.rates') || request()->routeIs('finance.currency.capture-rate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-exchange-line"></i> {{ __('Exchange rates') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.approve-rate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.approve-rate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-circle-line"></i> {{ __('Approve rates') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.simulate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.simulate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-line-chart-line"></i> {{ __('Rate simulator') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.revaluation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.revaluation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-refresh-line"></i> {{ __('FX revaluation') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.conversion-log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.conversion-log') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Conversion log') }}
+                                    </a>
                                     <a href="{{ route('finance.journals.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.journals.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-book-2-line"></i> {{ __('Journals') }}
                                     </a>

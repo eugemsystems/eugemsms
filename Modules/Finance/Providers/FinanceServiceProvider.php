@@ -119,6 +119,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
 
         Route::middleware('web')->group(function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/ledger.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/currency.php');
         });
     }
 
@@ -128,8 +129,8 @@ class FinanceServiceProvider extends ModuleServiceProvider
      * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
      * cases the module code, so `'FINANCE'` here produces names like
      * `finance.account.view`, matching this book's own spec exactly.
-     * Only FIN-01's permissions are registered so far; FIN-02 through
-     * FIN-06 add their own as each module's admin UI is built.
+     * FIN-01's and FIN-06's permissions are registered so far; FIN-02
+     * through FIN-05 add their own as each module's admin UI is built.
      */
     private function registerPermissions(): void
     {
@@ -148,6 +149,11 @@ class FinanceServiceProvider extends ModuleServiceProvider
             'report.trial_balance' => ['description' => 'View the trial balance report.'],
             'integrity.view' => ['description' => 'View cached-vs-source balance verification and trigger a rebuild.'],
             'opening_balance.import' => ['description' => 'Import opening balances as posted journals.', 'dangerous' => true],
+            'currency.manage' => ['description' => 'Register which currencies a school transacts in and set the base currency.', 'dangerous' => true],
+            'rate.view' => ['description' => 'View exchange rate history, the impact simulator, and the conversion audit log.'],
+            'rate.capture' => ['description' => 'Capture a new exchange rate.'],
+            'rate.approve' => ['description' => 'Approve or reject a pending exchange rate.', 'dangerous' => true],
+            'fx.revalue' => ['description' => 'Run or reverse a period-end FX revaluation.', 'dangerous' => true],
         ]);
     }
 
