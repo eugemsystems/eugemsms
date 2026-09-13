@@ -11,6 +11,7 @@ use Livewire\Livewire;
 use Modules\Core\Console\Commands\ApplyBackupRetentionCommand;
 use Modules\Core\Console\Commands\CheckScheduledTaskFreshnessCommand;
 use Modules\Core\Console\Commands\CreateScheduledBackupCommand;
+use Modules\Core\Console\Commands\HardenAppendOnlyTablesCommand;
 use Modules\Core\Console\Commands\InstallCommand;
 use Modules\Core\Console\Commands\InstallStatusCommand;
 use Modules\Core\Console\Commands\InstallVerifyCommand;
@@ -142,6 +143,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         ApplyBackupRetentionCommand::class,
         RunRestoreTestCommand::class,
         CheckScheduledTaskFreshnessCommand::class,
+        HardenAppendOnlyTablesCommand::class,
     ];
 
     public function register(): void
