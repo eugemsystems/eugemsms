@@ -39,6 +39,10 @@ use Modules\People\Models\StudentEnrolment;
  * registered as a setting but not wired — `FeeLineCalculator`'s
  * one-off history check is always school-wide (the default), matching
  * BR-FIN-02-007's "full charging history across all terms and years".
+ * `$data->scopeFilter` (2026-09-13, wired for `Finance\Billing\RunWizard`)
+ * narrows `studentsInScope()` by plain `Student` column equality —
+ * section/grade level/class/enrolment type, the same attributes
+ * `billing_runs.scope_filter` was always meant to record.
  *
  * `gross_minor` is never touched by the discount step (BR-FIN-07-001
  * ⭐) — `DiscountResolver` only ever informs `discount_minor`, and
@@ -68,6 +72,7 @@ final class ComputeBillingRunAction extends Action
             'school_id' => $data->schoolId,
             'academic_year_id' => $data->academicYearId,
             'term_id' => $data->termId,
+            'scope_filter' => $data->scopeFilter,
             'status' => 'computing',
             'computed_by' => $data->computedByUserId,
         ]);
@@ -223,7 +228,23 @@ final class ComputeBillingRunAction extends Action
             return Student::query()->whereIn('id', $data->studentIds)->get();
         }
 
-        return Student::query()->where('school_id', $data->schoolId)->where('status', 'active')->get();
+        // `enrolled` is a normal admission's ongoing status for its whole
+        // stay — `CreateStudentAction` never sets `active` on a fresh
+        // admission, only `ReadmitStudentAction` does, after a prior
+        // withdrawal. A bare `where('status', 'active')` here silently
+        // billed zero regular newly-admitted students in production (only
+        // ever invisible because every existing test supplies an explicit
+        // `studentIds` override, bypassing this query entirely) — this
+        // reuses the exact "currently a real, billable student" status
+        // set `SiblingDiscountEvaluator` (Book K FIN-07) already
+        // established for the same Finance-module purpose.
+        $query = Student::query()->where('school_id', $data->schoolId)->whereIn('status', ['enrolled', 'active', 'suspended']);
+
+        foreach ($data->scopeFilter ?? [] as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        return $query->get();
     }
 
     private function prorationFactorFor(Student $student, Term $term): string

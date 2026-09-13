@@ -94,9 +94,16 @@ final class FeeStructureResolver
     }
 
     /**
+     * Public (2026-09-13) so `CountLearnersMatchingRulesAction` can
+     * compute the same per-learner attribute set this class itself
+     * resolves against — needed for `Finance\Fees\StructureBuilder`'s
+     * live "matches N learners" count (Book B FIN-02 §7's own
+     * "highest-value UX detail") against a candidate rule set that
+     * isn't saved as real `FeeStructureRule` rows yet.
+     *
      * @return array<string, mixed>
      */
-    private function attributesFor(Student $student, Term $term, CarbonInterface $on, ?int $subjectCountOverride = null): array
+    public function attributesFor(Student $student, Term $term, CarbonInterface $on, ?int $subjectCountOverride = null): array
     {
         return [
             'section' => $student->section?->code,
@@ -126,20 +133,37 @@ final class FeeStructureResolver
      */
     private function ruleMatches(FeeStructureRule $rule, array $attributes): bool
     {
-        if ($rule->attribute === 'custom_field') {
+        return $this->rawRuleMatches(
+            ['attribute' => $rule->attribute, 'operator' => $rule->operator, 'value' => $rule->value],
+            $attributes,
+        );
+    }
+
+    /**
+     * The same matching logic `resolve()` uses per persisted
+     * `FeeStructureRule`, exposed for a candidate rule that has no row
+     * yet — `CountLearnersMatchingRulesAction`'s live match count.
+     *
+     * @param  array{attribute: string, operator: string, value: mixed}  $rule
+     * @param  array<string, mixed>  $attributes
+     */
+    public function rawRuleMatches(array $rule, array $attributes): bool
+    {
+        if ($rule['attribute'] === 'custom_field') {
             return false;
         }
 
-        $actual = $attributes[$rule->attribute] ?? null;
+        $actual = $attributes[$rule['attribute']] ?? null;
+        $value = $rule['value'];
 
-        return match ($rule->operator) {
-            'equals' => (string) $actual === (string) $rule->value,
-            'in' => in_array((string) $actual, array_map('strval', (array) $rule->value), true),
-            'not_in' => ! in_array((string) $actual, array_map('strval', (array) $rule->value), true),
+        return match ($rule['operator']) {
+            'equals' => (string) $actual === (string) $value,
+            'in' => in_array((string) $actual, array_map('strval', (array) $value), true),
+            'not_in' => ! in_array((string) $actual, array_map('strval', (array) $value), true),
             'exists' => $actual !== null,
             'between' => is_numeric($actual)
-                && (float) $actual >= (float) ($rule->value[0] ?? PHP_INT_MIN)
-                && (float) $actual <= (float) ($rule->value[1] ?? PHP_INT_MAX),
+                && (float) $actual >= (float) ($value[0] ?? PHP_INT_MIN)
+                && (float) $actual <= (float) ($value[1] ?? PHP_INT_MAX),
             default => false,
         };
     }

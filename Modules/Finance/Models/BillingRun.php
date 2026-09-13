@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Modules\Core\Domain\Concerns\BelongsToSchool;
 use Modules\Core\Domain\Concerns\HasUlid;
+use Modules\Core\Models\Term;
 use Modules\Finance\Database\Factories\BillingRunFactory;
 
 /**
@@ -88,5 +89,13 @@ class BillingRun extends Model
     public function computedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'computed_by');
+    }
+
+    /**
+     * @return BelongsTo<Term, $this>
+     */
+    public function term(): BelongsTo
+    {
+        return $this->belongsTo(Term::class);
     }
 }

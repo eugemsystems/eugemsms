@@ -143,6 +143,21 @@
                                     <a href="{{ route('finance.cost-centres.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.cost-centres.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-building-line"></i> {{ __('Cost centres') }}
                                     </a>
+                                    <a href="{{ route('finance.fees.components', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.fees.components') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-price-tag-3-line"></i> {{ __('Fee components') }}
+                                    </a>
+                                    <a href="{{ route('finance.fees.structures', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.fees.structures') || request()->routeIs('finance.fees.structure-builder.*') || request()->routeIs('finance.fees.structure-versions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Fee structures') }}
+                                    </a>
+                                    <a href="{{ route('finance.fees.ad-hoc-charge', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.fees.ad-hoc-charge') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-add-line"></i> {{ __('Ad hoc charge') }}
+                                    </a>
+                                    <a href="{{ route('finance.fees.simulator', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.fees.simulator') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calculator-line"></i> {{ __('Fee simulator') }}
+                                    </a>
+                                    <a href="{{ route('finance.billing.history', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.billing.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bill-line"></i> {{ __('Billing runs') }}
+                                    </a>
                                     <a href="{{ route('finance.currency.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.index') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-coins-line"></i> {{ __('Currencies') }}
                                     </a>

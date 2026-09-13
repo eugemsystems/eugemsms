@@ -16,6 +16,7 @@ use Modules\Core\Domain\Concerns\BelongsToSchool;
 use Modules\Core\Domain\Concerns\HasUlid;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\PeriodGuard;
+use Modules\Core\Models\Term;
 use Modules\Finance\Database\Factories\LearnerFeeAssignmentFactory;
 use Modules\People\Models\Student;
 
@@ -109,6 +110,14 @@ class LearnerFeeAssignment extends Model
     public function structure(): BelongsTo
     {
         return $this->belongsTo(FeeStructure::class, 'structure_id');
+    }
+
+    /**
+     * @return BelongsTo<Term, $this>
+     */
+    public function term(): BelongsTo
+    {
+        return $this->belongsTo(Term::class);
     }
 
     /**

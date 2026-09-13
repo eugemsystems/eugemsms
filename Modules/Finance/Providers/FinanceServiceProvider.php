@@ -120,6 +120,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
         Route::middleware('web')->group(function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/ledger.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/currency.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/billing.php');
         });
     }
 
@@ -129,8 +130,9 @@ class FinanceServiceProvider extends ModuleServiceProvider
      * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
      * cases the module code, so `'FINANCE'` here produces names like
      * `finance.account.view`, matching this book's own spec exactly.
-     * FIN-01's and FIN-06's permissions are registered so far; FIN-02
-     * through FIN-05 add their own as each module's admin UI is built.
+     * FIN-01's, FIN-06's, and FIN-02's permissions are registered so
+     * far; FIN-03 through FIN-05 add their own as each module's admin
+     * UI is built.
      */
     private function registerPermissions(): void
     {
@@ -154,6 +156,18 @@ class FinanceServiceProvider extends ModuleServiceProvider
             'rate.capture' => ['description' => 'Capture a new exchange rate.'],
             'rate.approve' => ['description' => 'Approve or reject a pending exchange rate.', 'dangerous' => true],
             'fx.revalue' => ['description' => 'Run or reverse a period-end FX revaluation.', 'dangerous' => true],
+            'fee_component.view' => ['description' => 'View the fee component catalogue.'],
+            'fee_component.manage' => ['description' => 'Create and edit fee components.'],
+            'fee_structure.view' => ['description' => 'View fee structures, versions, and the fee simulator.'],
+            'fee_structure.manage' => ['description' => 'Create and revise fee structures.'],
+            'fee_structure.approve' => ['description' => 'Activate a fee structure, superseding whichever version was active.', 'dangerous' => true],
+            'billing.view' => ['description' => 'View billing run history.'],
+            'billing.run' => ['description' => 'Compute a billing run and view its preview.'],
+            'billing.approve' => ['description' => 'Approve a computed billing run.', 'dangerous' => true],
+            'billing.commit' => ['description' => 'Commit an approved billing run, raising invoices and posting journals.', 'dangerous' => true],
+            'ad_hoc.create' => ['description' => 'Raise an ad hoc charge for a learner or a class.'],
+            'ad_hoc.approve' => ['description' => 'Approve an ad hoc charge above the approval threshold.', 'dangerous' => true],
+            'fee.view' => ['description' => 'View a learner\'s fee assignment, lines, and resolution trace.'],
         ]);
     }
 
