@@ -8,9 +8,16 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
+use Modules\Core\Console\Commands\ApplyBackupRetentionCommand;
+use Modules\Core\Console\Commands\CheckScheduledTaskFreshnessCommand;
+use Modules\Core\Console\Commands\CreateScheduledBackupCommand;
 use Modules\Core\Console\Commands\InstallCommand;
 use Modules\Core\Console\Commands\InstallStatusCommand;
 use Modules\Core\Console\Commands\InstallVerifyCommand;
+use Modules\Core\Console\Commands\RunHealthChecksCommand;
+use Modules\Core\Console\Commands\RunIntegrityChecksCommand;
+use Modules\Core\Console\Commands\RunRestoreTestCommand;
+use Modules\Core\Console\Commands\SchedulerHeartbeatCommand;
 use Modules\Core\Console\Commands\SeedZimbabweCommand;
 use Modules\Core\Console\Commands\SyncPermissionsCommand;
 use Modules\Core\Console\Commands\UpgradeCommand;
@@ -127,6 +134,13 @@ class CoreServiceProvider extends ModuleServiceProvider
         UpgradeCommand::class,
         SeedZimbabweCommand::class,
         SyncPermissionsCommand::class,
+        SchedulerHeartbeatCommand::class,
+        RunHealthChecksCommand::class,
+        RunIntegrityChecksCommand::class,
+        CreateScheduledBackupCommand::class,
+        ApplyBackupRetentionCommand::class,
+        RunRestoreTestCommand::class,
+        CheckScheduledTaskFreshnessCommand::class,
     ];
 
     public function register(): void
@@ -396,6 +410,66 @@ class CoreServiceProvider extends ModuleServiceProvider
             scheduleExpression: '* * * * *',
             description: 'Proves the scheduler is running at all — watched by the scheduler_last_run health check.',
             alertOnFailure: false,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.run_health_checks',
+            moduleCode: 'CORE-12',
+            name: 'Run Health Checks',
+            command: 'serp:run-health-checks',
+            scheduleExpression: '*/5 * * * *',
+            description: 'Runs every registered, available system health check.',
+            alertIfNotRunWithinMinutes: 15,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.check_scheduled_task_freshness',
+            moduleCode: 'CORE-12',
+            name: 'Check Scheduled Task Freshness',
+            command: 'serp:check-scheduled-task-freshness',
+            scheduleExpression: '0 * * * *',
+            description: 'Alerts on any enabled scheduled task that has not run within its expected window.',
+            alertIfNotRunWithinMinutes: 120,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.run_integrity_checks',
+            moduleCode: 'CORE-08',
+            name: 'Run Integrity Checks',
+            command: 'serp:run-integrity-checks',
+            scheduleExpression: '0 2 * * *',
+            description: 'Runs every registered, available integrity check for every active school.',
+            alertIfNotRunWithinMinutes: 1500,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.create_backup',
+            moduleCode: 'CORE-13',
+            name: 'Create Scheduled Backup',
+            command: 'serp:create-backup',
+            scheduleExpression: '0 1 * * *',
+            description: 'Takes a full (database + files) system backup — BR-CORE-13-001 requires at least daily.',
+            alertIfNotRunWithinMinutes: 1500,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.apply_backup_retention',
+            moduleCode: 'CORE-13',
+            name: 'Apply Backup Retention',
+            command: 'serp:apply-backup-retention',
+            scheduleExpression: '30 1 * * *',
+            description: 'Expires backups outside the grandfather-father-son retention policy — BR-CORE-13-005.',
+            alertIfNotRunWithinMinutes: 1500,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'core.run_restore_test',
+            moduleCode: 'CORE-13',
+            name: 'Run Restore Test',
+            command: 'serp:run-restore-test',
+            scheduleExpression: '0 3 * * 0',
+            description: '"A backup that has never been test-restored is not a backup" — BR-CORE-13-003 requires at least weekly.',
+            alertIfNotRunWithinMinutes: 11520,
         ));
     }
 
