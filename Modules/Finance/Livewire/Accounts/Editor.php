@@ -58,6 +58,8 @@ final class Editor extends Component
 
     public ?string $currency = null;
 
+    public ?string $systemKey = null;
+
     public function mount(School $school, ?Account $account = null): void
     {
         $this->loadSchool($school);
@@ -75,6 +77,7 @@ final class Editor extends Component
             $this->subledgerType = $account->subledger_type;
             $this->requiresCostCentre = $account->requires_cost_centre;
             $this->currency = $account->currency;
+            $this->systemKey = $account->system_key;
         }
     }
 
@@ -88,6 +91,7 @@ final class Editor extends Component
             'parentId' => ['nullable', 'integer'],
             'subledgerType' => ['nullable', 'in:learner,guardian,supplier,staff'],
             'currency' => ['nullable', 'string', 'size:3'],
+            'systemKey' => ['nullable', 'string', 'max:60'],
         ]);
 
         try {
@@ -112,6 +116,8 @@ final class Editor extends Component
                     isPostable: $this->isPostable,
                     isControlAccount: $this->isControlAccount,
                     subledgerType: $this->subledgerType !== '' ? $this->subledgerType : null,
+                    isSystem: $this->systemKey !== null && $this->systemKey !== '',
+                    systemKey: $this->systemKey !== '' ? $this->systemKey : null,
                     currency: $this->currency !== '' ? $this->currency : null,
                     requiresCostCentre: $this->requiresCostCentre,
                 ));

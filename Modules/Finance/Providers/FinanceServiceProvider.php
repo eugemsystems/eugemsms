@@ -190,6 +190,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/currency.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/billing.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/debtors.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/till.php');
         });
     }
 
@@ -199,9 +200,9 @@ class FinanceServiceProvider extends ModuleServiceProvider
      * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
      * cases the module code, so `'FINANCE'` here produces names like
      * `finance.account.view`, matching this book's own spec exactly.
-     * FIN-01, FIN-02, FIN-03, and FIN-06's permissions are registered
-     * so far; FIN-04/FIN-05 add their own as each module's admin UI is
-     * built.
+     * FIN-01, FIN-02, FIN-03, FIN-04, and FIN-06's permissions are
+     * registered so far; FIN-05 adds its own as that module's admin UI
+     * is built.
      */
     private function registerPermissions(): void
     {
@@ -256,6 +257,16 @@ class FinanceServiceProvider extends ModuleServiceProvider
             'refund.approve' => ['description' => 'Approve and post a requested refund.', 'dangerous' => true],
             'liability.manage' => ['description' => 'Set up who pays what share of a learner\'s fees.'],
             'report_gate.override' => ['description' => 'Override the report-card release balance gate for one learner.', 'dangerous' => true],
+            'till.operate' => ['description' => 'Open a till, capture receipts, and perform the blind cash-up.'],
+            'till.supervise' => ['description' => 'Sign off a till variance beyond tolerance.', 'dangerous' => true],
+            'till.view' => ['description' => 'View till session history and daily banking.'],
+            'receipt.create' => ['description' => 'Capture a receipt at an open till.'],
+            'receipt.view' => ['description' => 'View receipts.'],
+            'receipt.void' => ['description' => 'Void a receipt.', 'dangerous' => true],
+            'receipt.reallocate' => ['description' => 'Reallocate a receipt across a learner\'s invoices.', 'dangerous' => true],
+            'suspense.view' => ['description' => 'View the suspense workbench.'],
+            'suspense.manage' => ['description' => 'Match and resolve suspense items.'],
+            'report.collections' => ['description' => 'View the collections dashboard.'],
         ]);
     }
 

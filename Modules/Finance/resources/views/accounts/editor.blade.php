@@ -93,6 +93,17 @@
                         </div>
                     </div>
 
+                    @if ($editingAccountId === null)
+                        <div class="col-md-4">
+                            <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control @error('systemKey') is-invalid @enderror" id="systemKey" wire:model="systemKey" placeholder=" ">
+                                <label for="systemKey">{{ __('System key (optional)') }}</label>
+                                @error('systemKey') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="form-text">{{ __('Marks this as a system account other modules look up by key — e.g. rounding, suspense, uncleared_cheque, cash_over_short, credit_balance.') }}</div>
+                        </div>
+                    @endif
+
                     <div class="col-12 d-flex flex-wrap gap-4">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" role="switch" id="isPostable" wire:model="isPostable">

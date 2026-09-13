@@ -212,6 +212,24 @@
                                     <a href="{{ route('finance.integrity.balances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.integrity.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shield-check-line"></i> {{ __('Balance integrity') }}
                                     </a>
+                                    <a href="{{ route('finance.till.open', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.open') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-cash-line"></i> {{ __('Open till') }}
+                                    </a>
+                                    <a href="{{ route('finance.till.sessions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.sessions') || request()->routeIs('finance.till.cash-up') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Till sessions') }}
+                                    </a>
+                                    <a href="{{ route('finance.till.variance-approval', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.variance-approval') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-star-line"></i> {{ __('Variance approval') }}
+                                    </a>
+                                    <a href="{{ route('finance.till.banking', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.banking') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-line"></i> {{ __('Daily banking') }}
+                                    </a>
+                                    <a href="{{ route('finance.suspense.workbench', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.suspense.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-question-line"></i> {{ __('Suspense workbench') }}
+                                    </a>
+                                    <a href="{{ route('finance.reports.collections', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.collections') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-coin-line"></i> {{ __('Collections') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>
