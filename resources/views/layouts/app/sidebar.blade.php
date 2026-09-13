@@ -137,12 +137,57 @@
                             </a>
                             <div class="collapse {{ $financeGroupActive ? 'show' : '' }}" id="sidebar-group-finance">
                                 <div class="app-sidebar-subnav">
+                                    {{--
+                                        Grouped by Book B module (2026-09-13, user-reported:
+                                        "the items under finance are a lot and huge we have
+                                        to group them") — every link stays visible whenever
+                                        the outer Finance group is open (no nested collapse),
+                                        just labelled by section so a bursar can scan to the
+                                        right area instead of one 28-link flat list. New
+                                        Finance screens should be added under the matching
+                                        section below, not appended to the bottom.
+                                    --}}
+                                    <div class="app-sidebar-heading">{{ __('General ledger') }}</div>
                                     <a href="{{ route('finance.accounts.tree', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.accounts.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-list-check-2"></i> {{ __('Chart of accounts') }}
                                     </a>
                                     <a href="{{ route('finance.cost-centres.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.cost-centres.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-building-line"></i> {{ __('Cost centres') }}
                                     </a>
+                                    <a href="{{ route('finance.journals.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.journals.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Journals') }}
+                                    </a>
+                                    <a href="{{ route('finance.posting-rules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.posting-rules.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-route-line"></i> {{ __('Posting rules') }}
+                                    </a>
+                                    <a href="{{ route('finance.reports.trial-balance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.trial-balance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-chart-line"></i> {{ __('Trial balance') }}
+                                    </a>
+                                    <a href="{{ route('finance.integrity.balances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.integrity.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Balance integrity') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Currency') }}</div>
+                                    <a href="{{ route('finance.currency.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-coins-line"></i> {{ __('Currencies') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.rates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.rates') || request()->routeIs('finance.currency.capture-rate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-exchange-line"></i> {{ __('Exchange rates') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.approve-rate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.approve-rate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-circle-line"></i> {{ __('Approve rates') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.simulate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.simulate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-line-chart-line"></i> {{ __('Rate simulator') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.revaluation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.revaluation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-refresh-line"></i> {{ __('FX revaluation') }}
+                                    </a>
+                                    <a href="{{ route('finance.currency.conversion-log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.conversion-log') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Conversion log') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Fees & billing') }}</div>
                                     <a href="{{ route('finance.fees.components', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.fees.components') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-price-tag-3-line"></i> {{ __('Fee components') }}
                                     </a>
@@ -158,6 +203,8 @@
                                     <a href="{{ route('finance.billing.history', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.billing.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-bill-line"></i> {{ __('Billing runs') }}
                                     </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Invoicing & debtors') }}</div>
                                     <a href="{{ route('finance.invoices.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.invoices.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-file-list-3-line"></i> {{ __('Invoices') }}
                                     </a>
@@ -182,36 +229,8 @@
                                     <a href="{{ route('finance.waivers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.waivers.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-hand-coin-line"></i> {{ __('Waivers & write-offs') }}
                                     </a>
-                                    <a href="{{ route('finance.currency.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.index') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-coins-line"></i> {{ __('Currencies') }}
-                                    </a>
-                                    <a href="{{ route('finance.currency.rates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.rates') || request()->routeIs('finance.currency.capture-rate') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-exchange-line"></i> {{ __('Exchange rates') }}
-                                    </a>
-                                    <a href="{{ route('finance.currency.approve-rate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.approve-rate') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-checkbox-circle-line"></i> {{ __('Approve rates') }}
-                                    </a>
-                                    <a href="{{ route('finance.currency.simulate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.simulate') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-line-chart-line"></i> {{ __('Rate simulator') }}
-                                    </a>
-                                    <a href="{{ route('finance.currency.revaluation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.revaluation') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-refresh-line"></i> {{ __('FX revaluation') }}
-                                    </a>
-                                    <a href="{{ route('finance.currency.conversion-log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.conversion-log') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-history-line"></i> {{ __('Conversion log') }}
-                                    </a>
-                                    <a href="{{ route('finance.journals.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.journals.*') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-book-2-line"></i> {{ __('Journals') }}
-                                    </a>
-                                    <a href="{{ route('finance.posting-rules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.posting-rules.*') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-route-line"></i> {{ __('Posting rules') }}
-                                    </a>
-                                    <a href="{{ route('finance.reports.trial-balance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.*') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-file-chart-line"></i> {{ __('Trial balance') }}
-                                    </a>
-                                    <a href="{{ route('finance.integrity.balances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.integrity.*') ? 'active' : '' }}" wire:navigate>
-                                        <i class="ri ri-shield-check-line"></i> {{ __('Balance integrity') }}
-                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Till & receipting') }}</div>
                                     <a href="{{ route('finance.till.open', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.open') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-cash-line"></i> {{ __('Open till') }}
                                     </a>
