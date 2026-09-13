@@ -1,5 +1,25 @@
 @props(['illustration' => 'login', 'title' => null])
 
+{{--
+    Every auth screen (login, register, 2FA challenge, password
+    reset/confirm, email verification) is deliberately plain Blade +
+    a native <form method="POST">, not a Livewire component — see
+    Book A CORE-05's own reasoning on the (now-removed) Login component's
+    old docblock. But several of them still use Alpine (`x-data`) for
+    client-side-only behaviour: the passkey "sign in" button
+    (<x-passkey-verify>) and the 2FA screen's auto-advancing digit boxes
+    and recovery-code toggle. Livewire bundles Alpine and injects it
+    automatically, but ONLY on a request that actually rendered a
+    Livewire component (`SupportAutoInjectedAssets::shouldInjectLivewireAssets()`)
+    — none of these pages do, so without this, `x-data`/`x-on`/`x-show`
+    are silently inert everywhere on this layout: the 2FA boxes never
+    auto-advance (2026-09-13, user-reported: "I have to click each box"),
+    and the passkey button does nothing. `forceAssetInjection()` is
+    Livewire's own public API for exactly this — a page using its Alpine
+    bundle without an actual Livewire component on it.
+--}}
+@php \Livewire\Livewire::forceAssetInjection() @endphp
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>

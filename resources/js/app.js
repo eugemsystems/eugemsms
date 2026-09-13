@@ -95,6 +95,31 @@ document.addEventListener('click', (event) => {
 });
 
 /**
+ * Sidebar nav groups behave as an accordion: opening one collapses any
+ * other group already open, rather than letting several stack up at
+ * once (2026-09-13, user-reported). Bootstrap's own `data-bs-parent`
+ * accordion wiring needs every pane to share one literal parent
+ * container, which these groups don't (they're interleaved with plain
+ * `@if`-gated links, not siblings inside one wrapper) — this listens
+ * for Bootstrap's own `show.bs.collapse` event instead and hides every
+ * other open `.collapse` under `.app-sidebar-nav` when one opens,
+ * which works regardless of DOM structure.
+ */
+document.addEventListener('show.bs.collapse', (event) => {
+    const nav = event.target.closest('.app-sidebar-nav');
+
+    if (!nav) {
+        return;
+    }
+
+    nav.querySelectorAll(':scope > .app-sidebar-group > .collapse.show').forEach((openPane) => {
+        if (openPane !== event.target) {
+            window.bootstrap.Collapse.getOrCreateInstance(openPane, { toggle: false }).hide();
+        }
+    });
+});
+
+/**
  * Password visibility toggle used across auth forms
  * (`<span data-password-toggle="#field-id">`).
  */
