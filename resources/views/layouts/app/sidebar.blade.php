@@ -158,6 +158,30 @@
                                     <a href="{{ route('finance.billing.history', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.billing.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-bill-line"></i> {{ __('Billing runs') }}
                                     </a>
+                                    <a href="{{ route('finance.invoices.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.invoices.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Invoices') }}
+                                    </a>
+                                    <a href="{{ route('finance.credit-notes.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.credit-notes.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-reduce-line"></i> {{ __('Credit notes') }}
+                                    </a>
+                                    <a href="{{ route('finance.statements.generate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.statements.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Statements') }}
+                                    </a>
+                                    <a href="{{ route('finance.reports.aged-debtors', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.aged-debtors') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-time-line"></i> {{ __('Aged debtors') }}
+                                    </a>
+                                    <a href="{{ route('finance.debtors.workbench', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.debtors.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-phone-line"></i> {{ __('Debtor workbench') }}
+                                    </a>
+                                    <a href="{{ route('finance.reminders.schedules', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reminders.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Reminder schedules') }}
+                                    </a>
+                                    <a href="{{ route('finance.payment-plans.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.payment-plans.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-check-line"></i> {{ __('Payment plans') }}
+                                    </a>
+                                    <a href="{{ route('finance.waivers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.waivers.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-coin-line"></i> {{ __('Waivers & write-offs') }}
+                                    </a>
                                     <a href="{{ route('finance.currency.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.currency.index') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-coins-line"></i> {{ __('Currencies') }}
                                     </a>

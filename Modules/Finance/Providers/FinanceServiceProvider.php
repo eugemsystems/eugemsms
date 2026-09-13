@@ -9,13 +9,19 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Academic\Domain\Events\SubjectEnrolmentAdded;
 use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
+use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
+use Modules\Core\Domain\DataObjects\Scheduling\ScheduledTaskDefinitionData;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
+use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
+use Modules\Finance\Console\Commands\CheckPaymentPlanBreachesCommand;
+use Modules\Finance\Console\Commands\SendFeeRemindersCommand;
 use Modules\Finance\Domain\Contracts\CurrencyConverter;
 use Modules\Finance\Domain\Contracts\DiscountResolver;
 use Modules\Finance\Domain\Listeners\EndAwardsOnLearnerWithdrawnListener;
@@ -38,6 +44,7 @@ use Modules\Finance\Models\BankStatementLine;
 use Modules\Finance\Models\BillingRun;
 use Modules\Finance\Models\CostCentre;
 use Modules\Finance\Models\CreditNote;
+use Modules\Finance\Models\DebtorChaseNote;
 use Modules\Finance\Models\DiscountAward;
 use Modules\Finance\Models\DiscountScheme;
 use Modules\Finance\Models\ExchangeRate;
@@ -45,6 +52,7 @@ use Modules\Finance\Models\ExchangeRateSource;
 use Modules\Finance\Models\FeeComponent;
 use Modules\Finance\Models\FeeStructure;
 use Modules\Finance\Models\FeeStructureItem;
+use Modules\Finance\Models\FeeWaiver;
 use Modules\Finance\Models\FxRevaluation;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\InvoiceLine;
@@ -54,11 +62,15 @@ use Modules\Finance\Models\LearnerFeeAssignment;
 use Modules\Finance\Models\LearnerFeeLine;
 use Modules\Finance\Models\PaymentGateway;
 use Modules\Finance\Models\PaymentIntent;
+use Modules\Finance\Models\PaymentPlan;
 use Modules\Finance\Models\PostingRule;
 use Modules\Finance\Models\Receipt;
 use Modules\Finance\Models\ReceiptAllocation;
 use Modules\Finance\Models\ReceiptTender;
 use Modules\Finance\Models\ReconciliationRun;
+use Modules\Finance\Models\ReminderSchedule;
+use Modules\Finance\Models\ReminderSent;
+use Modules\Finance\Models\ReportGateOverride;
 use Modules\Finance\Models\SchemeBudgetEnvelope;
 use Modules\Finance\Models\ScholarshipApplication;
 use Modules\Finance\Models\SchoolCurrency;
@@ -66,6 +78,7 @@ use Modules\Finance\Models\SuspenseItem;
 use Modules\Finance\Models\Till;
 use Modules\Finance\Models\TillSession;
 use Modules\People\Domain\Events\LearnerWithdrawn;
+use Modules\People\Models\Guardian;
 use Modules\People\Models\Student;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
@@ -74,6 +87,11 @@ class FinanceServiceProvider extends ModuleServiceProvider
     protected string $name = 'Finance';
 
     protected string $nameLower = 'finance';
+
+    protected array $commands = [
+        SendFeeRemindersCommand::class,
+        CheckPaymentPlanBreachesCommand::class,
+    ];
 
     public function register(): void
     {
@@ -100,6 +118,56 @@ class FinanceServiceProvider extends ModuleServiceProvider
         $this->registerCloseChecklistItems();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
+        $this->registerScheduledTasks();
+        $this->registerNotificationKeys();
+    }
+
+    /**
+     * Book B FIN-03 §4/BR-FIN-03-015/017. Finance's first two entries
+     * on Book A CORE-12's scheduled-task registry — see
+     * `CoreServiceProvider::registerScheduledTasks()`'s own docblock
+     * for why `routes/console.php` derives the actual cron schedule
+     * from this registry rather than a second hand-kept list.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'finance.send_fee_reminders',
+            moduleCode: 'FIN-03',
+            name: 'Send Fee Reminders',
+            command: 'serp:send-fee-reminders',
+            scheduleExpression: '0 7 * * *',
+            description: 'Sends every reminder-ladder rung due to fire, across every school.',
+            alertIfNotRunWithinMinutes: 1560,
+        ));
+
+        ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
+            key: 'finance.check_payment_plan_breaches',
+            moduleCode: 'FIN-03',
+            name: 'Check Payment Plan Breaches',
+            command: 'serp:check-payment-plan-breaches',
+            scheduleExpression: '0 2 * * *',
+            description: 'Marks an active payment plan breached once an instalment is overdue past the grace period.',
+            alertIfNotRunWithinMinutes: 1560,
+        ));
+    }
+
+    /**
+     * Book B FIN-03 §4/BR-FIN-03-015, registered the same way Book D
+     * ACA-04 registers its own first real notification-bus caller — see
+     * `AcademicServiceProvider::registerNotificationKeys()`'s own
+     * docblock for the full wiring checklist this follows.
+     */
+    private function registerNotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'finance.fee_reminder',
+            variables: ['guardian.name', 'invoice.number', 'invoice.balance', 'invoice.currency', 'invoice.due_date'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'fee_responsible',
+            isUrgent: false,
+            isTransactional: false,
+        ));
     }
 
     /**
@@ -121,6 +189,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/ledger.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/currency.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/billing.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/debtors.php');
         });
     }
 
@@ -130,9 +199,9 @@ class FinanceServiceProvider extends ModuleServiceProvider
      * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
      * cases the module code, so `'FINANCE'` here produces names like
      * `finance.account.view`, matching this book's own spec exactly.
-     * FIN-01's, FIN-06's, and FIN-02's permissions are registered so
-     * far; FIN-03 through FIN-05 add their own as each module's admin
-     * UI is built.
+     * FIN-01, FIN-02, FIN-03, and FIN-06's permissions are registered
+     * so far; FIN-04/FIN-05 add their own as each module's admin UI is
+     * built.
      */
     private function registerPermissions(): void
     {
@@ -168,6 +237,25 @@ class FinanceServiceProvider extends ModuleServiceProvider
             'ad_hoc.create' => ['description' => 'Raise an ad hoc charge for a learner or a class.'],
             'ad_hoc.approve' => ['description' => 'Approve an ad hoc charge above the approval threshold.', 'dangerous' => true],
             'fee.view' => ['description' => 'View a learner\'s fee assignment, lines, and resolution trace.'],
+            'invoice.view' => ['description' => 'View invoices and invoice lines.'],
+            'invoice.issue' => ['description' => 'Reissue an invoice after voiding one.', 'dangerous' => true],
+            'invoice.void' => ['description' => 'Void an issued invoice.', 'dangerous' => true],
+            'credit_note.create' => ['description' => 'Raise a credit note.'],
+            'credit_note.approve' => ['description' => 'Approve a credit note above the approval threshold.', 'dangerous' => true],
+            'statement.generate' => ['description' => 'Generate a learner or guardian statement for any date range.'],
+            'report.debtors' => ['description' => 'View the aged debtors report.'],
+            'debtor.manage' => ['description' => 'Use the debtor workbench and record chase notes.'],
+            'reminder.manage' => ['description' => 'Manage the fee reminder ladder.'],
+            'payment_plan.create' => ['description' => 'Propose a payment plan.'],
+            'payment_plan.approve' => ['description' => 'Approve, cancel, or record instalment payments on a payment plan.', 'dangerous' => true],
+            'waiver.request' => ['description' => 'Request a fee waiver.'],
+            'waiver.approve' => ['description' => 'Approve or reject a requested fee waiver.', 'dangerous' => true],
+            'write_off.request' => ['description' => 'Request a fee write-off.'],
+            'write_off.approve' => ['description' => 'Approve or reject a requested fee write-off.', 'dangerous' => true],
+            'refund.request' => ['description' => 'Request a refund against a learner\'s credit balance.'],
+            'refund.approve' => ['description' => 'Approve and post a requested refund.', 'dangerous' => true],
+            'liability.manage' => ['description' => 'Set up who pays what share of a learner\'s fees.'],
+            'report_gate.override' => ['description' => 'Override the report-card release balance gate for one learner.', 'dangerous' => true],
         ]);
     }
 
@@ -475,6 +563,65 @@ class FinanceServiceProvider extends ModuleServiceProvider
         // CreditNoteLine is deliberately absent — same reasoning as
         // FeeStructureRule: no `school_id` of its own, always reached
         // through its owning CreditNote.
+
+        TenantModelRegistry::register(FeeWaiver::class, function (School $school): FeeWaiver {
+            $year = AcademicYear::factory()->for($school)->create();
+            $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
+
+            return FeeWaiver::factory()->create([
+                'school_id' => $school->id,
+                'term_id' => $term->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(
+            PaymentPlan::class,
+            fn (School $school): PaymentPlan => PaymentPlan::factory()->create([
+                'school_id' => $school->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+                'party_id' => Guardian::factory()->for($school)->create()->id,
+            ]),
+        );
+
+        // PaymentPlanInstalment is deliberately absent — same reasoning
+        // as FeeStructureRule/CreditNoteLine: no `school_id` of its own,
+        // always reached through its owning PaymentPlan.
+
+        TenantModelRegistry::register(
+            ReminderSchedule::class,
+            fn (School $school): ReminderSchedule => ReminderSchedule::factory()->for($school)->create(),
+        );
+
+        TenantModelRegistry::register(ReminderSent::class, function (School $school): ReminderSent {
+            $schedule = ReminderSchedule::factory()->for($school)->create();
+            $invoice = Invoice::factory()->for($school)->create();
+
+            return ReminderSent::factory()->create([
+                'school_id' => $school->id,
+                'schedule_id' => $schedule->id,
+                'invoice_id' => $invoice->id,
+            ]);
+        });
+
+        TenantModelRegistry::register(
+            DebtorChaseNote::class,
+            fn (School $school): DebtorChaseNote => DebtorChaseNote::factory()->create([
+                'school_id' => $school->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+            ]),
+        );
+
+        TenantModelRegistry::register(ReportGateOverride::class, function (School $school): ReportGateOverride {
+            $year = AcademicYear::factory()->for($school)->create();
+            $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
+
+            return ReportGateOverride::factory()->create([
+                'school_id' => $school->id,
+                'student_id' => Student::factory()->for($school)->create()->id,
+                'term_id' => $term->id,
+            ]);
+        });
 
         TenantModelRegistry::register(Till::class, function (School $school): Till {
             $cashAccount = Account::factory()->for($school)->create();
