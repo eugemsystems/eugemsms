@@ -19,6 +19,7 @@ use Modules\Core\Console\Commands\RunHealthChecksCommand;
 use Modules\Core\Console\Commands\RunIntegrityChecksCommand;
 use Modules\Core\Console\Commands\RunRestoreTestCommand;
 use Modules\Core\Console\Commands\SchedulerHeartbeatCommand;
+use Modules\Core\Console\Commands\SeedDemoDatasetCommand;
 use Modules\Core\Console\Commands\SeedZimbabweCommand;
 use Modules\Core\Console\Commands\SyncPermissionsCommand;
 use Modules\Core\Console\Commands\UpgradeCommand;
@@ -135,6 +136,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         InstallStatusCommand::class,
         UpgradeCommand::class,
         SeedZimbabweCommand::class,
+        SeedDemoDatasetCommand::class,
         SyncPermissionsCommand::class,
         SchedulerHeartbeatCommand::class,
         RunHealthChecksCommand::class,
