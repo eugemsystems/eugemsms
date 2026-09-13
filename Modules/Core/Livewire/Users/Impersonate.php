@@ -67,12 +67,16 @@ use Modules\Core\Models\ImpersonationSession;
  *
  * BR-CORE-05-018 (financial mutation / permission change / bulk export
  * blocked while impersonating) is enforced by `ImpersonationGuard`, called
- * from within each blocked operation's own Action once those Actions
- * exist — there is no request-lifecycle wiring yet that resolves "the
- * currently active `ImpersonationSession` for this request" automatically
- * (no middleware sets it, no context singleton holds it). Building that
- * is out of scope here; this screen only starts/ends the audit row and
- * the session-swap.
+ * via `Action::assertNotImpersonating()` from within each blocked
+ * operation's own Action. `SetImpersonationContext` middleware (applied
+ * globally in `bootstrap/app.php`, reading the same `session('impersonation_session_id')`
+ * this screen sets) resolves "the currently active `ImpersonationSession`
+ * for this request" into `ImpersonationContext` automatically — 2026-09-13,
+ * filling the gap this docblock used to flag as unbuilt. Not every
+ * financial-mutation/bulk-export Action across every module calls
+ * `assertNotImpersonating()` yet (`GenerateContractExitExportAction` is
+ * the first) — that remains a tracked, ongoing rollout, not a missing
+ * mechanism.
  */
 #[Title('Impersonation console')]
 #[Layout('layouts.app')]

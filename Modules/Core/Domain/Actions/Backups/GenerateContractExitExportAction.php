@@ -10,6 +10,7 @@ use Modules\Core\Domain\Actions\Files\UploadFileAction;
 use Modules\Core\Domain\DataObjects\Audit\RecordSecurityEventData;
 use Modules\Core\Domain\DataObjects\Backups\GenerateContractExitExportData;
 use Modules\Core\Domain\DataObjects\Files\UploadFileData;
+use Modules\Core\Domain\Support\Auth\ImpersonationGuard;
 use Modules\Core\Domain\Support\Backups\TenantDataDumper;
 use Modules\Core\Domain\Support\Imports\CsvWriter;
 use Modules\Core\Models\File;
@@ -30,6 +31,10 @@ use ZipArchive;
  * its own `contract_exit_export` category rather than a bespoke
  * location, so it inherits signed-URL delivery, the sensitive-category
  * access log, and storage-quota accounting for free.
+ *
+ * BR-CORE-05-018: an impersonator can never walk away with a school's
+ * entire dataset — this is the clearest "bulk export" this codebase has,
+ * so it's the first to call `assertNotImpersonating()`.
  */
 final class GenerateContractExitExportAction extends Action
 {
@@ -44,6 +49,8 @@ final class GenerateContractExitExportAction extends Action
 
     public function execute(GenerateContractExitExportData $data): File
     {
+        $this->assertNotImpersonating(ImpersonationGuard::BULK_EXPORT, 'generate a contract-exit export');
+
         $tables = $this->tenantDataDumper->dumpTables($data->schoolId);
         $files = $this->tenantDataDumper->dumpFiles($data->schoolId);
 

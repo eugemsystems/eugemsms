@@ -6,6 +6,8 @@ namespace Modules\Core\Domain\Actions;
 
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Domain\Support\Auth\ImpersonationGuard;
+use Modules\Core\Domain\Support\ImpersonationContext;
 
 /**
  * Every business operation in sERP is a single-method class extending this
@@ -57,5 +59,23 @@ abstract class Action
         }
 
         return DB::transaction($callback);
+    }
+
+    /**
+     * BR-CORE-05-018. Call from the top of `execute()` on any action that
+     * is a financial mutation or a bulk export — `ImpersonationGuard`'s own
+     * three categories (`FINANCIAL_MUTATION`, `PERMISSION_CHANGE`,
+     * `BULK_EXPORT`). `ImpersonationContext` is a request-scoped context
+     * singleton, not `session()`/`request()`/`auth()` directly — the same
+     * sanctioned indirection `SchoolContext`/`SessionContext` already use
+     * from inside `SwitchActiveSchoolAction`/`SwitchSessionAction`, set by
+     * `SetImpersonationContext` middleware (applied globally, no route
+     * needs to remember to ask for it). Only ever `null` (no active
+     * impersonation) for the overwhelming majority of calls, in which case
+     * this is a no-op.
+     */
+    protected function assertNotImpersonating(string $category, string $description): void
+    {
+        app(ImpersonationGuard::class)->assertPermitted(ImpersonationContext::current(), $category, $description);
     }
 }

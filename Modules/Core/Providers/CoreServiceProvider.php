@@ -56,6 +56,7 @@ use Modules\Core\Domain\Support\Documents\DefaultTemplateFilters;
 use Modules\Core\Domain\Support\Documents\HtmlDocumentRenderer;
 use Modules\Core\Domain\Support\Files\NullVirusScanner;
 use Modules\Core\Domain\Support\Files\SignedFileUrlGenerator;
+use Modules\Core\Domain\Support\ImpersonationContextManager;
 use Modules\Core\Domain\Support\Install\CalendarSeedPack;
 use Modules\Core\Domain\Support\Install\HttpLicenceClient;
 use Modules\Core\Domain\Support\Install\PendingSeedPack;
@@ -151,6 +152,7 @@ class CoreServiceProvider extends ModuleServiceProvider
 
         $this->app->singleton(SchoolContextManager::class);
         $this->app->singleton(SessionContextManager::class);
+        $this->app->singleton(ImpersonationContextManager::class);
 
         $this->app->bind(LicenceClient::class, HttpLicenceClient::class);
         $this->app->bind(BackupProvider::class, PreUpgradeBackupProvider::class);

@@ -1,13 +1,18 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Modules\Core\Domain\Actions\Auth\EndImpersonationAction;
 use Modules\Core\Domain\Actions\Auth\StartImpersonationAction;
+use Modules\Core\Domain\Actions\Backups\GenerateContractExitExportAction;
 use Modules\Core\Domain\DataObjects\Auth\EndImpersonationData;
 use Modules\Core\Domain\DataObjects\Auth\StartImpersonationData;
+use Modules\Core\Domain\DataObjects\Backups\GenerateContractExitExportData;
 use Modules\Core\Domain\Exceptions\ImpersonationNotPermittedException;
 use Modules\Core\Domain\Exceptions\ReasonRequiredException;
 use Modules\Core\Domain\Support\Auth\ImpersonationGuard;
+use Modules\Core\Domain\Support\ImpersonationContext;
+use Modules\Core\Models\School;
 
 it('starts a time-boxed impersonation session with a reason and ticket reference (BR-CORE-05-017)', function (): void {
     $engineer = User::factory()->create();
@@ -83,4 +88,65 @@ it('does not block a read-only action while impersonating', function (): void {
     app(ImpersonationGuard::class)->assertPermitted($session, 'view_record', 'view a receipt');
 
     expect(true)->toBeTrue();
+});
+
+it('resolves the active impersonation session into ImpersonationContext from a real request (SetImpersonationContext)', function (): void {
+    $engineer = User::factory()->create();
+    $bursar = User::factory()->create();
+
+    $session = app(StartImpersonationAction::class)->execute(new StartImpersonationData(
+        impersonatorId: $engineer->id,
+        impersonatedId: $bursar->id,
+        reason: 'Investigating a stuck receipt.',
+        ticketReference: 'SUP-1',
+    ));
+
+    $this->actingAs($bursar)
+        ->withSession(['impersonator_id' => $engineer->id, 'impersonation_session_id' => $session->id])
+        ->get(route('dashboard'));
+
+    expect(ImpersonationContext::current()?->id)->toBe($session->id);
+});
+
+it('leaves ImpersonationContext empty for an ordinary, non-impersonated request', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('dashboard'));
+
+    expect(ImpersonationContext::current())->toBeNull();
+});
+
+it('blocks GenerateContractExitExportAction while impersonating, via Action::assertNotImpersonating (BR-CORE-05-018)', function (): void {
+    $engineer = User::factory()->create();
+    $bursar = User::factory()->create();
+    $school = School::factory()->create();
+
+    $session = app(StartImpersonationAction::class)->execute(new StartImpersonationData(
+        impersonatorId: $engineer->id,
+        impersonatedId: $bursar->id,
+        reason: 'Investigating a stuck receipt.',
+        ticketReference: 'SUP-1',
+    ));
+
+    ImpersonationContext::set($session);
+
+    expect(fn () => app(GenerateContractExitExportAction::class)->execute(new GenerateContractExitExportData(
+        schoolId: $school->id,
+        requestedByUserId: $bursar->id,
+    )))->toThrow(ImpersonationNotPermittedException::class);
+
+    ImpersonationContext::clear();
+});
+
+it('still generates a contract-exit export normally when nobody is impersonating', function (): void {
+    Storage::fake('local');
+    $user = User::factory()->create();
+    $school = School::factory()->create();
+
+    $file = app(GenerateContractExitExportAction::class)->execute(new GenerateContractExitExportData(
+        schoolId: $school->id,
+        requestedByUserId: $user->id,
+    ));
+
+    expect($file->category)->toBe('contract_exit_export');
 });

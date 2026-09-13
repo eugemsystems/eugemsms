@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Core\Domain\Exceptions\SerpException;
 use Modules\Core\Http\Middleware\EnsureTwoFactorIsEnrolled;
+use Modules\Core\Http\Middleware\SetImpersonationContext;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // mandatory-2FA-but-unenrolled user can't reach anything by
         // going around a specific module's own middleware list — the
         // middleware itself is what decides who it actually applies to.
-        $middleware->web(append: [EnsureTwoFactorIsEnrolled::class]);
+        $middleware->web(append: [EnsureTwoFactorIsEnrolled::class, SetImpersonationContext::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
