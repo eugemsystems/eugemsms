@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Finance\Providers;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Academic\Domain\Events\SubjectEnrolmentAdded;
 use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -95,6 +98,57 @@ class FinanceServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerEventListeners();
         $this->registerCloseChecklistItems();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Mirrors `CoreServiceProvider::boot()`'s own `Livewire::addLocation()`
+     * call — required the moment a module has its own class literally
+     * named `Index` (`Journals\Index`, `CostCentres\Index`,
+     * `PostingRules\Index` here): Livewire's implicit-binding-substitution
+     * step re-derives a canonical component name from the class before
+     * the controller runs, strips the trailing `.index` segment, and
+     * needs a registered class location to resolve that shortened name
+     * back to a real class. See that method's docblock for the full
+     * "Unable to find component" failure this prevents.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Finance\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/ledger.php');
+        });
+    }
+
+    /**
+     * Book B FIN-01 §10. Registered via the same
+     * `PermissionRegistry::register($moduleCode, [...])` mechanism
+     * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
+     * cases the module code, so `'FINANCE'` here produces names like
+     * `finance.account.view`, matching this book's own spec exactly.
+     * Only FIN-01's permissions are registered so far; FIN-02 through
+     * FIN-06 add their own as each module's admin UI is built.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('FINANCE', [
+            'account.view' => ['description' => 'View the chart of accounts and account ledgers.'],
+            'account.manage' => ['description' => 'Create, edit, and deactivate accounts.'],
+            'cost_centre.view' => ['description' => 'View cost centres.'],
+            'cost_centre.manage' => ['description' => 'Create and edit cost centres.'],
+            'journal.view' => ['description' => 'View journals and journal lines.'],
+            'journal.create_manual' => ['description' => 'Create a manual journal entry (draft, pending approval).'],
+            'journal.approve' => ['description' => 'Approve a draft manual journal, posting it.'],
+            'journal.reverse' => ['description' => 'Reverse a posted journal.', 'dangerous' => true],
+            'journal.reverse_cross_period' => ['description' => 'Reverse a journal into a different, already-closed period.', 'dangerous' => true],
+            'posting_rule.view' => ['description' => 'View posting rules.'],
+            'posting_rule.manage' => ['description' => 'Edit which accounts a financial event posts to.', 'dangerous' => true],
+            'report.trial_balance' => ['description' => 'View the trial balance report.'],
+            'integrity.view' => ['description' => 'View cached-vs-source balance verification and trigger a rebuild.'],
+            'opening_balance.import' => ['description' => 'Import opening balances as posted journals.', 'dangerous' => true],
+        ]);
     }
 
     /**

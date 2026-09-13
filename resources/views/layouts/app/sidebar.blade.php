@@ -128,6 +128,38 @@
                         </div>
                     @endif
 
+                    @if ($sessionsSchool)
+                        @php $financeGroupActive = request()->routeIs('finance.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $financeGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-finance" aria-expanded="{{ $financeGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-finance">
+                                <i class="ri ri-scales-3-line"></i> {{ __('Finance') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $financeGroupActive ? 'show' : '' }}" id="sidebar-group-finance">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('finance.accounts.tree', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.accounts.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Chart of accounts') }}
+                                    </a>
+                                    <a href="{{ route('finance.cost-centres.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.cost-centres.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Cost centres') }}
+                                    </a>
+                                    <a href="{{ route('finance.journals.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.journals.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Journals') }}
+                                    </a>
+                                    <a href="{{ route('finance.posting-rules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.posting-rules.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-route-line"></i> {{ __('Posting rules') }}
+                                    </a>
+                                    <a href="{{ route('finance.reports.trial-balance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-chart-line"></i> {{ __('Trial balance') }}
+                                    </a>
+                                    <a href="{{ route('finance.integrity.balances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.integrity.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Balance integrity') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
                     </a>
