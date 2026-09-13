@@ -301,6 +301,9 @@
                                 <a href="{{ route('scheduling.maintenance') }}" class="nav-link {{ request()->routeIs('scheduling.maintenance') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-tools-line"></i> {{ __('Maintenance mode') }}
                                 </a>
+                                <a href="{{ route('scheduling.demo-data') }}" class="nav-link {{ request()->routeIs('scheduling.demo-data') ? 'active' : '' }}" wire:navigate>
+                                    <i class="ri ri-seedling-line"></i> {{ __('Demo data') }}
+                                </a>
                                 <a href="{{ route('backups.index') }}" class="nav-link {{ request()->routeIs('backups.index') || request()->routeIs('backups.show') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-hard-drive-2-line"></i> {{ __('Backups') }}
                                 </a>

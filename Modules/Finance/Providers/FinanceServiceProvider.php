@@ -21,6 +21,14 @@ use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Console\Commands\CheckPaymentPlanBreachesCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceAllCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceCurrencyCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceDebtorsCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceFeesCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceLedgerCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceSchoolSetupCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceTillCommand;
+use Modules\Finance\Console\Commands\Seeders\SeedFinanceUsersCommand;
 use Modules\Finance\Console\Commands\SendFeeRemindersCommand;
 use Modules\Finance\Domain\Contracts\CurrencyConverter;
 use Modules\Finance\Domain\Contracts\DiscountResolver;
@@ -91,6 +99,14 @@ class FinanceServiceProvider extends ModuleServiceProvider
     protected array $commands = [
         SendFeeRemindersCommand::class,
         CheckPaymentPlanBreachesCommand::class,
+        SeedFinanceSchoolSetupCommand::class,
+        SeedFinanceUsersCommand::class,
+        SeedFinanceLedgerCommand::class,
+        SeedFinanceCurrencyCommand::class,
+        SeedFinanceFeesCommand::class,
+        SeedFinanceDebtorsCommand::class,
+        SeedFinanceTillCommand::class,
+        SeedFinanceAllCommand::class,
     ];
 
     public function register(): void

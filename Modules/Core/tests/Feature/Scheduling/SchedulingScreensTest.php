@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Modules\Core\Livewire\Scheduling\DemoData;
 use Modules\Core\Livewire\Scheduling\FailedJobs;
 use Modules\Core\Livewire\Scheduling\Health;
 use Modules\Core\Livewire\Scheduling\Maintenance;
@@ -17,6 +18,7 @@ use Modules\Core\Livewire\Scheduling\Tasks;
 use Modules\Core\Models\JobProgress;
 use Modules\Core\Models\ScheduledTask;
 use Modules\Core\Models\ScheduledTaskRun;
+use Modules\Core\Models\School;
 use Modules\Core\Models\SystemHealthCheck;
 
 function insertFailedJob(): string
@@ -153,4 +155,24 @@ it('toggles maintenance mode on and off with a bypass secret', function (): void
     $component->call('disable')->assertSet('isDown', false);
 
     expect(app()->maintenanceMode()->active())->toBeFalse();
+});
+
+it('runs the finance school-setup seeder from the demo data screen', function (): void {
+    Livewire::test(DemoData::class)
+        ->set('code', 'DDTEST')
+        ->set('students', 12)
+        ->call('run', 'finance-school-setup')
+        ->assertSet('lastRanOk', true);
+
+    expect(School::withoutGlobalScopes()->where('code', 'DDTEST')->exists())->toBeTrue();
+})->group('slow');
+
+it('refuses to run a seeder outside local/staging/testing', function (): void {
+    app()['env'] = 'production';
+
+    try {
+        Livewire::test(DemoData::class)->assertForbidden();
+    } finally {
+        app()['env'] = 'testing';
+    }
 });

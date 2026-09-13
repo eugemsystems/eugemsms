@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Core\Livewire\Scheduling\DemoData;
 use Modules\Core\Livewire\Scheduling\FailedJobs;
 use Modules\Core\Livewire\Scheduling\Health;
 use Modules\Core\Livewire\Scheduling\Maintenance;
@@ -23,4 +24,5 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('scheduling/failed-jobs', FailedJobs::class)->name('scheduling.failed-jobs');
     Route::livewire('scheduling/progress', Progress::class)->name('scheduling.progress');
     Route::livewire('scheduling/maintenance', Maintenance::class)->name('scheduling.maintenance');
+    Route::livewire('scheduling/demo-data', DemoData::class)->name('scheduling.demo-data');
 });
