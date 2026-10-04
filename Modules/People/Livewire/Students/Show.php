@@ -30,8 +30,9 @@ use Modules\People\Models\StudentGuardian;
  * Academic (enrolment + billing-attribute history), Financial
  * (`Invoice.balance_minor`, grouped by currency — never a `student`
  * subledger balance, same trap `.ai/rules/finance.md` already
- * documents), and Guardians (read-only; `PPL-03` owns managing these,
- * no admin UI for that yet either).
+ * documents), and Guardians (read-only here; linking/unlinking and
+ * rights live on `People\Students\Guardians`, reached via this tab's
+ * own "Manage guardians" button).
  */
 #[Title('Student profile')]
 #[Layout('layouts.app')]

@@ -117,6 +117,9 @@
                                     <a href="{{ route('people.students.duplicates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.students.duplicates') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-fingerprint-line"></i> {{ __('Duplicate scan') }}
                                     </a>
+                                    <a href="{{ route('people.guardians.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-parent-line"></i> {{ __('Guardians') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

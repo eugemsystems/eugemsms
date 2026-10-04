@@ -128,8 +128,10 @@
         </div>
     @elseif ($activeTab === 'guardians')
         <div class="card">
-            <div class="card-header">{{ __('Linked guardians') }}</div>
-            <p class="text-body-secondary small px-3 pt-3 mb-0">{{ __('Read-only here — managing guardians is PPL-03\'s own screen, not yet built.') }}</p>
+            <div class="card-header d-flex align-items-center justify-content-between">
+                {{ __('Linked guardians') }}
+                <a href="{{ route('people.students.guardians', [$school, $student]) }}" class="btn btn-sm btn-outline-primary" wire:navigate>{{ __('Manage guardians') }}</a>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
                     <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Relationship') }}</th><th>{{ __('Roles') }}</th></tr></thead>

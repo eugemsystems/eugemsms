@@ -97,6 +97,9 @@ class PeopleServiceProvider extends ModuleServiceProvider
             'students.change_status' => ['description' => 'Change a learner\'s status (suspend, withdraw, readmit, graduate).'],
             'students.change_billing_attribute' => ['description' => 'Change a learner\'s enrolment type, residency, grade level, class, section, or pathway.', 'dangerous' => true],
             'students.merge' => ['description' => 'Scan for possible duplicate learner records.', 'dangerous' => true],
+            'guardians.view' => ['description' => 'View the guardian directory and profiles.'],
+            'guardians.create' => ['description' => 'Register a new guardian.'],
+            'guardians.manage_relationships' => ['description' => 'Link or unlink a guardian from a learner and set their rights.', 'dangerous' => true],
         ]);
     }
 
@@ -110,6 +113,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
 
         Route::middleware('web')->group(function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/students.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/guardians.php');
         });
     }
 

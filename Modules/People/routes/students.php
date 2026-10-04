@@ -8,6 +8,7 @@ use Modules\People\Livewire\Students\ChangeStatus;
 use Modules\People\Livewire\Students\Create as StudentsCreate;
 use Modules\People\Livewire\Students\Duplicates;
 use Modules\People\Livewire\Students\Edit as StudentsEdit;
+use Modules\People\Livewire\Students\Guardians as StudentsGuardians;
 use Modules\People\Livewire\Students\Index as StudentsIndex;
 use Modules\People\Livewire\Students\Show as StudentsShow;
 
@@ -23,4 +24,5 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/people')->name
     Route::livewire('students/{student}/edit', StudentsEdit::class)->name('students.edit');
     Route::livewire('students/{student}/change-attribute', ChangeAttribute::class)->name('students.change-attribute');
     Route::livewire('students/{student}/change-status', ChangeStatus::class)->name('students.change-status');
+    Route::livewire('students/{student}/guardians', StudentsGuardians::class)->name('students.guardians');
 });

@@ -129,8 +129,8 @@ follows the same order.
 | Module | Screens | Status |
 |---|---|---|
 | PPL-01 | Student Information System | 🟡 partial (see note) |
-| PPL-03 | Guardian, Family & Fee Liability | ⬜ ← next up |
-| PPL-02 | Admissions & Enrolment CRM | ⬜ |
+| PPL-03 | Guardian, Family & Fee Liability | 🟡 partial (see note) |
+| PPL-02 | Admissions & Enrolment CRM | ⬜ ← next up |
 | PPL-04 | Staff & Human Resources | ⬜ |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
@@ -147,6 +147,23 @@ schooling, Siblings, a real Timeline tab, Class/House allocation, Bulk
 operations, ID cards, Merge duplicates. See `.ai/rules/people.md`'s own
 "PPL-01's admin UI pass found four tables..." note before touching any of
 these — they need new backend work, not a UI retrofit.
+
+**PPL-03 note.** Built: Guardian directory, profile (linked learners +
+active fee-liability rules, both read-only with links out), Create
+(individual or organisation guardian — create-only, no update action
+exists), and the student-scoped relationship editor
+(`People\Students\Guardians`, replacing `People\Students\Show`'s old
+"Guardians" tab placeholder) backed by `LinkGuardianToStudentAction`/
+`DeactivateStudentGuardianAction`, including the last-fee-responsible-
+guardian refusal (BR-PPL-03-004/022). **Already existed, discovered
+during this pass**: the spec's own "Liability designer" screen was
+built during the FIN-03 pass as `Finance\Liabilities\Editor`
+(`finance.liabilities.editor`) — PPL-03's UI links out to it rather
+than duplicating it. **Deliberately not built**, because the backend
+for them doesn't exist at all (verified: no migration) — Households,
+Sponsorships (index + detail), Portal access, Contact update queue,
+Duplicate review, Verification. See `.ai/rules/people.md` before
+touching any of these.
 
 ### Book D — Academic Core — ⬜ not started
 ACA-01, ACA-02, ACA-04, ACA-05. `Modules/Academic/Livewire/` does not exist yet.
