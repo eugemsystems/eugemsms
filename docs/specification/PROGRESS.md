@@ -476,9 +476,106 @@ every case the model/migration/factory existed but only
 one. See `.ai/rules/boarding.md` for the full list of what was built,
 deferred, and found.
 
-### Book G — Welfare & Pastoral — ⬜ not started
-BRD-06–BRD-08 (safeguarding — remember the inverted-access rule from
-`CLAUDE.md` applies to this UI too). `Modules/Welfare/Livewire/` does not exist yet.
+### Book G — Welfare & Pastoral — 🟡 in progress
+
+| Module | Screens | Status |
+|---|---|---|
+| BRD-06 | Health, Clinic & Sanatorium 🔒 | 🟡 partial (see note) |
+| BRD-07 | Discipline, Conduct & Behaviour | 🟡 partial (see note) |
+| BRD-08 | Counselling & Safeguarding 🔒🔒 | 🟡 partial (see note) |
+
+**BRD-06 note 🔒.** Built (`Livewire/Health/`, 13 screens): `Record`
+(folds "Clinical record" + "Condition register" — Tier 3, gated through
+`ResolveMedicalTierAction` itself, not merely the permission flag),
+`CarePlan` (Tier 2 — only `public_summary` ever reaches its condition
+picker, never `name`/`diagnosis_notes`), `Alerts` (Tier 2 board, same
+Tier-2-only field discipline), `SickBay` (folds "Observations"),
+`MedicationRound` (the one-tap record — every consent/expiry/witness
+refusal shown is `AdministerMedicationAction`'s own, never a client-side
+guess), `Prescriptions`, `Consents`, `Immunisations`, `Incidents`,
+`Referrals` (folds make → return → charge), `Stock` (folds "Controlled
+register" — the same catalogue, filtered), `Outbreak` (new, aggregate-
+only read, no Action backs it — safe since it never selects a
+per-learner clinical field), `Screenings`. **Deliberately not built**:
+a `Consultations` screen — no Action anywhere creates a `Consultation`
+row (verified: the model/migration/factory exist, but zero Actions
+reference `Consultation::create`), the same "model exists, no Action
+ever wrote one" gap prior books hit for other tables; documented rather
+than patched with a new Action, since clinical consultation capture
+wasn't asked for and the screen list was already large. See
+`.ai/rules/welfare.md`.
+
+**BRD-07 note.** Built (`Livewire/Behaviour/`, `Sanctions/`,
+`Detentions/`, `Committee/`, `Appeals/`, `Leadership/`, 14 screens):
+`Behaviour\{Categories,Record,Learner,Board,Review,Rules,Analytics}`,
+`Sanctions\{Types,Index,Issue}`, `Detentions\Register`,
+`Committee\Hearing`, `Appeals\Index`, `Leadership\Index`. `Learner`
+folds in "Conduct grades" (the computed grade is just that student's
+own current-term balance). `Board`/`Review`/`Learner` all mask a
+safeguarding-paused (`is_confidential`) record's category/points,
+showing only "under review" — verified by a dedicated test.
+`Categories`' deactivate button surfaces
+`DeactivateBehaviourCategoryAction`'s own refusal to empty the last
+active trigger category, verified by a dedicated test. `Sanctions\Issue`
+surfaces `IssueSanctionAction`'s own committee/boarding-arrangement
+refusals as toasts, never a silent create. **Deliberately not built**:
+a sports-fixture clash check for detentions — no fixture/timetable
+table exists yet (`OPS-07`), matching `ScheduleDetentionAction`'s own
+documented gap.
+
+**BRD-08 note 🔒🔒 — read before touching anything in this module.**
+Built (`Livewire/Safeguarding/`, `Livewire/Counselling/`, 9 screens):
+`Safeguarding\{Report,Triage,Cases,CaseDetail,Grants,Vulnerable,
+Reviews,Audit}`, `Counselling\Diary`. Named `CaseDetail`, not the
+spec's own bare `Case` — `case` is a PHP reserved keyword (the same
+trap `PPL-04`'s `Exit` already hit). `CaseDetail::mount()` is the ONLY
+place any screen reads case content, and it does so by calling
+`ViewSafeguardingCaseAction::execute()` exactly once — vendor/
+impersonation hard-excluded first (closed over a real gap found during
+this pass: during impersonation `Auth::user()` resolves to the
+*impersonated* user, so an ordinary permission check alone does not
+stop a vendor engineer impersonating a legitimately-permissioned staff
+member — `ImpersonationContext::current()` must be read and passed to
+the Action explicitly, which `CaseDetail`/`Grants` now both do, and a
+new `BlocksVendorAndImpersonation` trait does the same plain-403
+version for every other screen in this module that touches a concern,
+case-adjacent dashboard, or counselling session with no single case to
+hand the Action). `Cases` (the list) is deliberately conservative: it
+shows only `case_reference`/student/`status`, filtered to the lead's
+full view or a granted user's own cases — never `category`/
+`risk_level`/`summary`, which stay behind the one audited
+`ViewSafeguardingCaseAction` call on `CaseDetail`. `Grants` additionally
+confirms the actor IS the lead (not merely has a grant) before allowing
+any grant/revoke, since `GrantCaseAccessAction` doesn't re-derive that
+itself. **No delete control exists anywhere in this module's screens or
+views for a concern or a case — verified by a dedicated test that
+scans every file in `Livewire/Safeguarding/` and
+`resources/views/safeguarding/` for the string.** `Report` supports
+both named and anonymous submission (the anonymous path stores no
+reporter id — structurally, not merely by omission) plus a token
+follow-up lookup. `Reviews` is deliberately more conservative than
+strictly required: a risk assessment's own `risk_level`/`rationale`
+never reach it, only the bare `case_id` reference and due date, because
+BR-BRD-08-005 says "every read... reads, not just writes" with no lead
+carve-out and this dashboard has nowhere to log a per-row read.
+`Counselling\Diary` is filtered to the signed-in counsellor's own
+`counsellor_staff_id` only — a lead-wide view across counsellors was
+deliberately not built (BR-BRD-08-015's own "not to the head by
+default" plus no audited per-session read path existing to build it
+safely on). **Judgment calls made under genuine uncertainty, not
+guesses**: (1) `Safeguarding\Triage` reads `SafeguardingConcern.description`
+directly, gated only by `safeguarding.lead`/`.deputy_lead` — no
+"ViewSafeguardingConcernAction" exists in the domain layer the way
+`ViewSafeguardingCaseAction` exists for cases, and the spec's own
+screen-access column names the role directly for pre-case concerns
+("Triage queue | safeguarding lead"), unlike a case's per-grant model —
+treated as the sanctioned enforcement for concerns specifically,
+documented inline in `Triage`'s own docblock; (2) `CaseDetail` treats
+reading a case's own entries/risk-assessments/referrals as covered by
+the one case-level audited read rather than one audited read per row,
+since no per-entry read Action exists — if ever judged too loose, add
+a per-entry audit call, don't loosen the case-level check. See
+`.ai/rules/welfare.md` for the full reasoning on both.
 
 ### Book H1 — Procurement, Stores, Assets, Budgets — ⬜ not started
 FIN-08–FIN-11 all live in **`Modules/Stores`** (verified: every FIN-08–11

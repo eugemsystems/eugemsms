@@ -30,3 +30,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Finance/Domain/Support/*.php | .ai/rules/support.md |
 | Modules/*/tests/** | .ai/rules/tests.md |
 | resources/views/** | .ai/rules/views.md |
+| Modules/Welfare/** | .ai/rules/welfare.md |

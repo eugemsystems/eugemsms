@@ -513,6 +513,140 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $welfareGroupActive = request()->routeIs('welfare.health.*') || request()->routeIs('welfare.behaviour.*') || request()->routeIs('welfare.sanctions.*') || request()->routeIs('welfare.detentions.*') || request()->routeIs('welfare.committee.*') || request()->routeIs('welfare.appeals.*') || request()->routeIs('welfare.leadership.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $welfareGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-welfare" aria-expanded="{{ $welfareGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-welfare">
+                                <i class="ri ri-heart-pulse-line"></i> {{ __('Welfare') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $welfareGroupActive ? 'show' : '' }}" id="sidebar-group-welfare">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Health & clinic') }} 🔒</div>
+                                    <a href="{{ route('welfare.health.alerts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.alerts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Alert board') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.sick-bay', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.sick-bay') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hotel-bed-line"></i> {{ __('Sick bay') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.medication-round', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.medication-round') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-capsule-line"></i> {{ __('Medication round') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.prescriptions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.prescriptions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Prescriptions') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.consents', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.consents') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Consents') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.immunisations', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.immunisations') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-syringe-line"></i> {{ __('Immunisations') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.incidents', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.incidents') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-first-aid-kit-line"></i> {{ __('Incidents') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.referrals', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.referrals') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shuttle-line"></i> {{ __('External referrals') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.stock', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.stock') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Clinic stock') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.outbreak', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.outbreak') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-virus-line"></i> {{ __('Outbreak monitor') }}
+                                    </a>
+                                    <a href="{{ route('welfare.health.screenings', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.health.screenings') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-eye-line"></i> {{ __('Screenings') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Discipline & conduct') }}</div>
+                                    <a href="{{ route('welfare.behaviour.record', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.record') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-add-line"></i> {{ __('Record behaviour') }}
+                                    </a>
+                                    <a href="{{ route('welfare.behaviour.board', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.board') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-line"></i> {{ __('Behaviour board') }}
+                                    </a>
+                                    <a href="{{ route('welfare.behaviour.review', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.review') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Review queue') }}
+                                    </a>
+                                    <a href="{{ route('welfare.behaviour.categories', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.categories') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-price-tag-3-line"></i> {{ __('Categories') }}
+                                    </a>
+                                    <a href="{{ route('welfare.behaviour.rules', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.rules') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-settings-3-line"></i> {{ __('Trigger rules') }}
+                                    </a>
+                                    <a href="{{ route('welfare.behaviour.analytics', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.behaviour.analytics') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-line"></i> {{ __('Analytics') }}
+                                    </a>
+                                    <a href="{{ route('welfare.sanctions.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.sanctions.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hammer-line"></i> {{ __('Sanctions') }}
+                                    </a>
+                                    <a href="{{ route('welfare.sanctions.issue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.sanctions.issue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-gavel-line"></i> {{ __('Issue sanction') }}
+                                    </a>
+                                    <a href="{{ route('welfare.sanctions.types', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.sanctions.types') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-settings-line"></i> {{ __('Sanction types') }}
+                                    </a>
+                                    <a href="{{ route('welfare.detentions.register', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.detentions.register') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-time-line"></i> {{ __('Detention register') }}
+                                    </a>
+                                    <a href="{{ route('welfare.committee.hearing', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.committee.hearing') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-3-line"></i> {{ __('Disciplinary committee') }}
+                                    </a>
+                                    <a href="{{ route('welfare.appeals.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.appeals.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-branch-line"></i> {{ __('Appeals') }}
+                                    </a>
+                                    <a href="{{ route('welfare.leadership.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.leadership.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-medal-line"></i> {{ __('Student leadership') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{--
+                            Safeguarding is deliberately its own, visually
+                            distinct top-level entry, not nested inside the
+                            Welfare group above — Book G BRD-08 §2 ⭐⭐: the
+                            one module where role grants candidacy only,
+                            never access, and even the platform's own Super
+                            Admin has no implicit view. The red styling and
+                            lock icon are intentional, not decorative — this
+                            is the single most safety-critical link in the
+                            admin console and must never blend into routine
+                            pastoral admin.
+                        --}}
+                        @php $safeguardingGroupActive = request()->routeIs('welfare.safeguarding.*') || request()->routeIs('welfare.counselling.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link text-danger fw-bold {{ $safeguardingGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-safeguarding" aria-expanded="{{ $safeguardingGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-safeguarding">
+                                <i class="ri ri-shield-keyhole-line"></i> {{ __('Safeguarding') }} 🔒🔒
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $safeguardingGroupActive ? 'show' : '' }}" id="sidebar-group-safeguarding">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('welfare.safeguarding.report', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.report') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-megaphone-line"></i> {{ __('Report a concern') }}
+                                    </a>
+                                    <a href="{{ route('welfare.safeguarding.triage', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.triage') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stethoscope-line"></i> {{ __('Triage queue') }}
+                                    </a>
+                                    <a href="{{ route('welfare.safeguarding.cases', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.cases') || request()->routeIs('welfare.safeguarding.case') || request()->routeIs('welfare.safeguarding.grants') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-folder-lock-line"></i> {{ __('Cases') }}
+                                    </a>
+                                    <a href="{{ route('welfare.safeguarding.vulnerable', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.vulnerable') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-plant-line"></i> {{ __('Vulnerable register') }}
+                                    </a>
+                                    <a href="{{ route('welfare.safeguarding.reviews', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.reviews') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-check-line"></i> {{ __('Overdue reviews') }}
+                                    </a>
+                                    <a href="{{ route('welfare.safeguarding.audit', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.safeguarding.audit') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-shield-2-line"></i> {{ __('Audit review') }}
+                                    </a>
+                                    <a href="{{ route('welfare.counselling.diary', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('welfare.counselling.diary') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-chat-heart-line"></i> {{ __('Counselling diary') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">

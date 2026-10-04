@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Welfare\Providers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\IntegrityCheckRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -151,6 +154,91 @@ class WelfareServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerIntegrityChecks();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Book G admin-UI pass. Unlike every other module in this codebase,
+     * these permissions are deliberately NOT registered under a single
+     * `WELFARE` module code — the backend Actions built in the earlier
+     * pass already call `$user->hasPermissionTo('health.clinical.view')`,
+     * `hasPermissionTo('safeguarding.emergency_access')`, etc. as LITERAL,
+     * unprefixed strings copied straight from the spec (see
+     * `ResolveMedicalTierAction`, `ViewSafeguardingCaseAction`), and
+     * `Role::givePermissionTo()`'s own vendor-exclusion guard and
+     * `SyncPermissionCatalogueAction`'s Super-Admin auto-grant skip both
+     * match on a literal `safeguarding.` prefix (confirmed by
+     * `SyncPermissionCatalogueActionTest`'s own fixture, which registers
+     * under module code `SAFEGUARDING` to get permission name
+     * `safeguarding.case.view`). Registering everything under `WELFARE`
+     * would produce `welfare.health.clinical.view` /
+     * `welfare.safeguarding.emergency_access`, which would silently
+     * never match those Action-layer checks. So this registers three
+     * separate module codes — `HEALTH`, `BEHAVIOUR`, `SAFEGUARDING` —
+     * each producing exactly the permission names the spec and the
+     * Actions already use.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('HEALTH', [
+            'actionable.view' => ['description' => 'View Tier 2 care plans, alerts, and dietary-relevant summaries.'],
+            'clinical.view' => ['description' => 'View Tier 3 clinical records, consultations, and immunisations.', 'dangerous' => true],
+            'clinical.manage' => ['description' => 'Declare, verify, and manage medical conditions and screenings.', 'dangerous' => true],
+            'admission.manage' => ['description' => 'Admit, observe, and discharge sick bay patients.'],
+            'medication.administer' => ['description' => 'Administer medication on the medication round.', 'dangerous' => true],
+            'medication.manage' => ['description' => 'Manage prescriptions.', 'dangerous' => true],
+            'consent.manage' => ['description' => 'Grant and withdraw medical consents.'],
+            'incident.report' => ['description' => 'Report a health incident.'],
+            'incident.review' => ['description' => 'Review reported health incidents.'],
+            'referral.manage' => ['description' => 'Make and resolve external referrals.'],
+            'stock.manage' => ['description' => 'Manage clinic stock.'],
+            'stock.controlled' => ['description' => 'Receive and view the controlled-medication register.', 'dangerous' => true],
+            'report.view' => ['description' => 'View health analytics (outbreak monitor).'],
+        ]);
+
+        PermissionRegistry::register('BEHAVIOUR', [
+            'view' => ['description' => 'View behaviour records, points, and conduct grades.'],
+            'record' => ['description' => 'Record a behaviour incident (merit or demerit).'],
+            'review' => ['description' => 'Review records flagged for head/HOD review.'],
+            'manage' => ['description' => 'Manage behaviour categories and trigger rules.', 'dangerous' => true],
+            'sanction.view' => ['description' => 'View sanctions.'],
+            'sanction.issue' => ['description' => 'Issue a sanction.', 'dangerous' => true],
+            'sanction.approve' => ['description' => 'Approve a pending sanction.', 'dangerous' => true],
+            'detention.manage' => ['description' => 'Schedule detentions and record attendance.'],
+            'committee.convene' => ['description' => 'Record a disciplinary committee hearing.', 'dangerous' => true],
+            'appeal.manage' => ['description' => 'Lodge and decide appeals.'],
+            'leadership.manage' => ['description' => 'Appoint and revoke student leadership roles.'],
+            'report.view' => ['description' => 'View behaviour analytics.'],
+        ]);
+
+        PermissionRegistry::register('SAFEGUARDING', [
+            'report' => ['description' => 'Report a safeguarding concern. Every staff member holds this.'],
+            'lead' => ['description' => 'Act as the designated safeguarding lead.', 'dangerous' => true],
+            'deputy_lead' => ['description' => 'Act as the designated deputy safeguarding lead.', 'dangerous' => true],
+            'case.view' => ['description' => 'Candidacy to be granted access to a safeguarding case — never sufficient on its own.', 'dangerous' => true],
+            'case.contribute' => ['description' => 'Candidacy to contribute an entry to a case once granted access.', 'dangerous' => true],
+            'grant.manage' => ['description' => 'Grant and revoke per-case access. Lead only.', 'dangerous' => true],
+            'emergency_access' => ['description' => 'Break-glass access to any case — alerts the lead and head on every use.', 'dangerous' => true],
+            'counselling.record' => ['description' => 'Record counselling sessions.'],
+            'audit.review' => ['description' => 'Review the hardened safeguarding audit stream. Lead and governor only.', 'dangerous' => true],
+            'vulnerable.manage' => ['description' => 'Manage the vulnerable learner register.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `BoardingServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Welfare\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/health.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/behaviour.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/safeguarding.php');
+        });
     }
 
     /**
