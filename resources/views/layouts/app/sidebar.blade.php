@@ -249,6 +249,29 @@
                                     <a href="{{ route('finance.reports.collections', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.collections') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-hand-coin-line"></i> {{ __('Collections') }}
                                     </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Gateways & reconciliation') }}</div>
+                                    <a href="{{ route('finance.gateways.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.gateways.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-card-line"></i> {{ __('Payment gateways') }}
+                                    </a>
+                                    <a href="{{ route('finance.gateways.intents', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.gateways.intents') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-exchange-dollar-line"></i> {{ __('Payment intents') }}
+                                    </a>
+                                    <a href="{{ route('finance.gateways.webhooks', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.gateways.webhooks') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-webhook-line"></i> {{ __('Webhook log') }}
+                                    </a>
+                                    <a href="{{ route('finance.bank.accounts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.bank.accounts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-2-line"></i> {{ __('Bank accounts') }}
+                                    </a>
+                                    <a href="{{ route('finance.bank.import', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.bank.import') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-upload-2-line"></i> {{ __('Import statement') }}
+                                    </a>
+                                    <a href="{{ route('finance.reconciliation.dashboard', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reconciliation.dashboard') || request()->routeIs('finance.bank.matching') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-merge-line"></i> {{ __('Reconciliation') }}
+                                    </a>
+                                    <a href="{{ route('finance.reconciliation.exceptions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reconciliation.exceptions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-error-warning-line"></i> {{ __('Exceptions') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

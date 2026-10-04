@@ -207,6 +207,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/billing.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/debtors.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/till.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/gateways.php');
         });
     }
 
@@ -216,9 +217,8 @@ class FinanceServiceProvider extends ModuleServiceProvider
      * `CoreServiceProvider` uses — `SyncPermissionCatalogueAction` lower-
      * cases the module code, so `'FINANCE'` here produces names like
      * `finance.account.view`, matching this book's own spec exactly.
-     * FIN-01, FIN-02, FIN-03, FIN-04, and FIN-06's permissions are
-     * registered so far; FIN-05 adds its own as that module's admin UI
-     * is built.
+     * FIN-01, FIN-02, FIN-03, FIN-04, FIN-05, and FIN-06's permissions
+     * are registered so far.
      */
     private function registerPermissions(): void
     {
@@ -283,6 +283,14 @@ class FinanceServiceProvider extends ModuleServiceProvider
             'suspense.view' => ['description' => 'View the suspense workbench.'],
             'suspense.manage' => ['description' => 'Match and resolve suspense items.'],
             'report.collections' => ['description' => 'View the collections dashboard.'],
+            'gateway.view' => ['description' => 'View payment gateways, intents, and the webhook log.'],
+            'gateway.manage' => ['description' => 'Register and edit payment gateways, including credentials.', 'dangerous' => true],
+            'gateway.force_settle' => ['description' => 'Force-settle a payment intent without gateway confirmation.', 'dangerous' => true],
+            'bank.view' => ['description' => 'View bank accounts and statements.'],
+            'bank.manage' => ['description' => 'Create and edit bank accounts.'],
+            'bank.reconcile' => ['description' => 'Import bank statements and match statement lines.'],
+            'reconciliation.view' => ['description' => 'View and run the four-way reconciliation.'],
+            'reconciliation.resolve' => ['description' => 'Resolve a reconciliation exception.', 'dangerous' => true],
         ]);
     }
 

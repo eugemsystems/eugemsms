@@ -1202,4 +1202,173 @@ cashier's or a specific tender type's totals.
 
 ---
 
-*(Book B — Payment Gateways & Bank Reconciliation — is not built yet. Online payments, gateway configuration, and bank statement matching will be documented here once that's ready.)*
+## Gateways & reconciliation
+
+A note before you start: only one test/sandbox payment provider ("Fake") is
+wired up so far — ContiPay, Pesepay, and Paynow are the real providers the
+system is designed for, but none of them is connected yet. Nothing here will
+take real money until a real provider is added.
+
+### Payment gateways
+
+**What it's for.** Registering and configuring which online payment
+providers this school accepts, and which GL accounts their settlements and
+fees post to.
+
+**When to use it.** Setting up online payments for the first time, rotating
+a provider's credentials, or checking whether a provider is currently
+responding ("Test connection").
+
+**Fields:**
+- **Driver** — which payment provider. Only "Fake" is available until a real
+  provider is connected.
+- **Name** — a label for this gateway (e.g. "ContiPay — Main").
+- **Credentials** — the provider's own API key/secret. Stored encrypted;
+  never shown again once saved. Leave blank when editing to keep the
+  existing value.
+- **Supported methods / currencies** — which payment methods (EcoCash,
+  Visa, ZIPIT, …) and currencies this gateway can actually process.
+- **Settlement account** — the GL account money from this gateway lands in.
+- **Fee expense account** — the GL account the provider's own transaction
+  fee is charged to.
+- **Fee type / value / cap** — how the provider's fee is calculated, for
+  your own reference (a percentage or a flat amount, optionally capped).
+- **Sandbox mode** — leave this on until you have real production
+  credentials. A sandbox gateway is clearly labelled everywhere it appears.
+- **Default gateway** — the one offered first when more than one is active.
+  Only one gateway can be the default at a time.
+
+"Test connection" pings the provider and records whether it's currently
+responding — useful before telling parents a payment method is available.
+
+### Payment intents
+
+**What it's for.** Every online payment attempt, successful or not — what
+was initiated, by whom, for how much, and its current status.
+
+**When to use it.** Checking on a parent's "my payment didn't go through"
+query, or manually nudging a stuck payment.
+
+**Fields (actions):**
+- **Poll** — ask the provider directly what actually happened to this
+  payment. Use this if a payment seems stuck in "pending" — most payments
+  settle automatically, but polling forces an immediate check.
+- **Force settle** — mark a payment as paid without the provider confirming
+  it. This is a last resort, locked behind its own separate permission —
+  only use it when you are certain the money has genuinely arrived (e.g. the
+  provider's own dashboard confirms it, but the automatic notification never
+  reached this system).
+
+### Webhook log
+
+**What it's for.** A raw record of every notification a payment provider has
+sent this system — the underlying evidence behind every payment intent's
+status. If a provider ever disputes what it sent, this is what settles it.
+
+**When to use it.** Investigating why a payment didn't update automatically.
+
+**Fields (actions):**
+- **View payload** — see exactly what the provider sent, headers and body,
+  unedited.
+- **Reprocess** — for a webhook that failed to process (and whose signature
+  was genuinely valid) — re-run it now that whatever was missing the first
+  time (usually: the matching payment record) exists. This never re-sends
+  anything to the provider; it only re-reads what they already sent.
+
+### Bank accounts
+
+**What it's for.** The school's real-world bank accounts, each linked to
+its own account in the chart of accounts.
+
+**When to use it.** Setting up a bank account before you can import its
+statements.
+
+**Fields:**
+- **Bank / account name / number / branch** — exactly as they appear on the
+  bank's own statement.
+- **Currency** and **account type** (current, nostro, FCA, savings).
+- **GL account** — the chart-of-accounts account this bank account's
+  balance is tracked against.
+
+### Import statement
+
+**What it's for.** Bringing a bank statement (as a CSV export from your
+bank) into the system, ready for matching against receipts.
+
+**When to use it.** Whenever you have a new statement to reconcile —
+typically monthly, or whenever your bank makes one available.
+
+**Fields:**
+- **Bank account**, **statement period**, and **opening/closing balance** —
+  exactly as shown on the statement itself.
+- **File** — the CSV export from your bank.
+- **Column mapping** — once a file is uploaded, tell the system which
+  column in YOUR bank's export is the date, description, reference, debit,
+  and credit. Every bank formats this differently, so this has to be set
+  per import (though it's usually the same for the same bank each time).
+
+Any line whose reference exactly matches an existing receipt number is
+matched automatically the moment you import. Everything else goes to the
+matching workbench next.
+
+### Matching workbench
+
+**What it's for.** Working through a statement's lines that weren't
+automatically matched — confirming by hand which receipt (if any) a bank
+line corresponds to.
+
+**When to use it.** Right after importing a statement, to clear anything the
+automatic reference match missed.
+
+**Fields (actions):**
+- **Match** — shows candidate receipts of the same amount and currency,
+  within a few days of the bank line's own date, each with a suggested
+  match strength. You pick the right one and confirm — the system never
+  matches this for you.
+- **To suspense** — for a credit with no plausible matching receipt at all
+  (an unidentified deposit). This creates a real suspense receipt rather
+  than leaving the money off the books; it then shows up in the Suspense
+  workbench (Till & receipting) to be identified later, same as a till
+  deposit would.
+
+### Reconciliation
+
+**What it's for.** The daily cross-check between what the payment gateway
+says it settled, what was actually banked, and what's on the books — the
+control that turns "we think the money arrived" into "we can prove it."
+Nothing here fixes itself; every mismatch becomes an exception for a person
+to work through.
+
+**When to use it.** Run it regularly (daily is the intent) for each active
+gateway and bank account.
+
+**Fields:**
+- **Scope** — gateway only, bank only, or both together.
+- **Run date** and **currency**.
+- **Gateway settlements** — until a real payment provider with its own
+  settlement report is connected, there's no automatic feed of what the
+  gateway itself says it settled. Copy these rows (reference, amount, fee)
+  from the provider's own portal before running a gateway-scope
+  reconciliation.
+
+A run shows as **clean** (nothing to do) or **exceptions** (see below).
+
+### Exceptions
+
+**What it's for.** Every mismatch a reconciliation run has found, each
+needing a human decision — never auto-resolved.
+
+**When to use it.** After every reconciliation run that comes back with
+exceptions.
+
+**Fields (actions):**
+- **Convert to suspense** — only offered for an unmatched bank credit with
+  no receipt behind it at all; creates a suspense receipt and closes the
+  exception in one step.
+- **Resolve** — close any exception with a note explaining what you found
+  (e.g. "gateway reporting delay, payment confirmed arrived" or "duplicate
+  entry, reversed"). This note is permanent — write enough that someone
+  reading it in a year understands what happened.
+
+A reconciliation run is only marked fully reviewed once every one of its
+exceptions has been closed this way.
