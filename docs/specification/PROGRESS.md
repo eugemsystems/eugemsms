@@ -577,10 +577,121 @@ since no per-entry read Action exists — if ever judged too loose, add
 a per-entry audit call, don't loosen the case-level check. See
 `.ai/rules/welfare.md` for the full reasoning on both.
 
-### Book H1 — Procurement, Stores, Assets, Budgets — ⬜ not started
+### Book H1 — Procurement, Stores, Assets, Budgets — 🟡 in progress
 FIN-08–FIN-11 all live in **`Modules/Stores`** (verified: every FIN-08–11
 migration's own docblock attributes to it), not `Modules/Finance`.
-`Modules/Stores/Livewire/` does not exist yet.
+
+| Module | Screens | Status |
+|---|---|---|
+| FIN-09 | Inventory, Stores & Requisitions ⭐ | 🟡 partial (see note) |
+| FIN-08 | Procurement, Suppliers & AP 🇿🇼 | 🟡 partial (see note) |
+| FIN-10 | Fixed Assets & Depreciation | 🟡 partial (see note) |
+| FIN-11 | Budgeting & Commitment Accounting ⭐ | 🟡 partial (see note) |
+
+**FIN-09 note ⭐.** Built (`Livewire/{Stores,Items,Stock,Receipts,
+Requisitions,Transfers,StockTake,Anomalies,Reports}/`, 16 screens):
+`Stores\Index`, `Items\Index` (also stands in for the spec's separate
+"Item editor" — no `UpdateInventoryItemAction` exists), `Stock\{OnHand,
+ItemLedger,Expiry,SellToLearner}`, `Receipts\Create`, `Requisitions\
+{Create,Issue,ReturnItems}` (named `ReturnItems`, not the spec's own
+bare `Return` — `return` is a PHP reserved keyword, the same trap
+`PPL-04`'s `Exit`/`BRD-08`'s `Case` already hit), `Transfers\Index`
+(dispatch+receive+discrepancy, one screen), `StockTake\{Count,
+Variance}` (blind count sheet built exclusively from
+`GetBlindCountSheetAction`'s own `BlindCountLine` DTO, which has no
+field to carry `system_quantity` even if the screen tried — verified
+by a dedicated test), `Anomalies\Index` (folds baseline computation in
+alongside detection and investigation), `Reports\{Valuation,
+Consumption}`. A dedicated test reproduces AC-FIN-09-001 itself
+through the admin screens (two lots at $0.80/$0.95, 150-unit issue,
+one $127.50 journal). **Deliberately not built**: a dedicated screen
+for `RebuildStockBalanceAction` as a dispatchable job trigger (folded
+into `Stock\OnHand` as a per-item "Rebuild" button instead) and any
+scheduled-command wiring for the expiry/reorder/anomaly checks (the
+Actions are real and run on-demand from their own screens; the cron
+entries are a documented backend gap per `StoresServiceProvider`'s own
+docblock). **New gap-filling Action**: `RecordStockTakeVarianceReasonAction`
+— `StockTake\Variance`'s own "save reason" control originally wrote
+`StockTakeLine::update()` directly; no Action anywhere in the domain
+layer ever set just that one field even though
+`ApproveStockTakeVarianceAction` requires it before approval. Caught
+by `ActionPatternEnforcementTest` (BR-GLOBAL-005) on the first
+whole-app test run, fixed with the narrowest possible Action rather
+than widening the CI rule.
+
+**FIN-08 note 🇿🇼.** Built (`Livewire/Procurement/{Suppliers,
+Requisitions,Quotations,Orders,Receipts,Invoices,Payments,Reports}/`,
+12 screens): `Suppliers\{Index,Show,BankChange,Clearances}`
+(`BankChange` stages a proposed change in cache keyed by supplier,
+since no `supplier_bank_change_requests` table exists in the domain
+layer — `ChangeSupplierBankDetailsAction` itself is what refuses a
+same-user request+approve, this screen only avoids letting one form
+double as its own approval button), `Requisitions\Index` (budget
+indicator read from `budget_check_result`/`budget_available_minor`,
+real values the Action already recorded), `Quotations\Compare`
+(request→record→award, one screen), `Orders\Index` (folds the spec's
+separate "Create order" screen in — create+list+approve+cancel+
+close-short, with a live budget-impact preview), `Receipts\Create`
+(GRN), `Invoices\Register` (🇿🇼 the non-fiscal-VAT-exposure banner is
+computed independently in the screen as an advisory, matching
+`RegisterSupplierInvoiceAction`'s own stored `input_vat_claimable`
+figure — never a substitute for it), `Invoices\MatchReview` (named
+`MatchReview`, not the spec's own bare `Match` — `match` is a PHP
+reserved keyword), `Payments\Run`, `Reports\Index` (folds the spec's
+four separate report screens — Aging, Unclaimable VAT, Withholding,
+Spend — into one tabbed screen). A dedicated test proves withholding
+applies at the configured rate with no tax clearance on file
+(AC-FIN-08-001). **Deliberately not built**: a Contracts screen — no
+`CreateSupplierContractAction` exists anywhere in the domain layer
+(verified by grep; the model/migration/factory exist, but only
+`StoresServiceProvider`'s own tenancy-isolation-test factory call ever
+creates a row), the same "model exists, no Action ever wrote one" gap
+prior books have hit for other tables.
+
+**FIN-10 note.** Built (`Livewire/Assets/{Register,Depreciation,
+Verification,Disposal,Insurance,Reports}/`, 8 screens): `Register\
+{Index,Show}` (`Index` also stands in for the spec's separate "Create
+asset" screen — `CapitalizeAssetAction` is the one entry point for
+every capitalisation source; `Show` folds in the spec's separate
+"Transfer" screen as one more action-bar card), `Depreciation\Run`
+(preview→approve→post), `Verification\{Round,Discrepancies}` (`Round`
+creates one row per active asset up front so a never-scanned asset
+stays visibly pending, never silently absent), `Disposal\Create`,
+`Insurance\Index`, `Reports\Reconciliation`. A dedicated test proves a
+not-found asset cannot be written off by the same user who recorded
+the failed scan, and CAN be by a different one (BR-FIN-10-012,
+AC-FIN-10-005). **Deliberately not built**: no automatic
+capitalisation listener for `FIN-08`'s `CapitalPurchaseReceived`/
+`FIN-09`'s `ItemCapitalisationDue` — both events fire for real but
+have no subscriber yet, a documented backend gap
+(`StoresServiceProvider`'s own docblock, not this pass's to fabricate
+an `asset_category_id` column unreviewed).
+
+**FIN-11 note ⭐.** Built (`Livewire/Budget/{Builder,Consolidation,
+Variance,Commitments,Virement,Forecast}/`, 6 screens): `Builder\Index`
+(folds the spec's separate "Departmental submission" screen in — both
+read/write the same `SubmitBudgetLineAction`, differing only by which
+cost centres a `budget.submit`-only viewer may touch), `Consolidation\
+Review`, `Variance\Dashboard` (⭐ "Recalculate actuals" is the ONLY
+control that ever changes `actual_minor`, and it only ever re-sums
+real `journal_lines` — BR-FIN-11-008), `Commitments\Index` (read-only),
+`Virement\Create` (request+approve, one screen), `Forecast\Index`
+(folds the spec's three separate Fee income/Cash flow/Scenarios
+screens into one `forecast_type`-tagged form). A dedicated test
+exercises the real cross-module wiring end to end: approving a
+purchase order through `Procurement\Orders\Index` immediately drops
+the linked budget line's `available_minor` by the order total, through
+the actual `PurchaseOrderApproved` → `CreateBudgetCommitmentOnPurchaseOrderApprovedListener`
+event chain, not a simulated call (AC-FIN-11-001). **Deliberately not
+built**: the real enrolment-/collection-rate-driven forecast
+projection math — `CreateForecastAction` stores a caller-supplied
+`projections` payload as a labelled scenario, matching its own
+documented scope boundary (BR-FIN-11-013/014's real `FIN-02`
+integration is not built).
+
+See `.ai/rules/stores.md` for the full reasoning, the permission
+module-code split (`INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET`, not one
+`STORES` call), and testing gotchas found along the way.
 
 ### Book H2 — Operations & Estates — ⬜ not started
 Verified module ownership (one Laravel module each): OPS-01 → `Transport`,

@@ -27,6 +27,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/People/** | .ai/rules/people.md |
 | Modules/*/Providers/*ServiceProvider.php | .ai/rules/providers.md |
 | Modules/*/resources/views/** | .ai/rules/resources-views.md |
+| Modules/Stores/** | .ai/rules/stores.md |
 | Modules/Finance/Domain/Support/*.php | .ai/rules/support.md |
 | Modules/*/tests/** | .ai/rules/tests.md |
 | resources/views/** | .ai/rules/views.md |

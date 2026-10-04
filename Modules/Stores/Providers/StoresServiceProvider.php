@@ -6,9 +6,12 @@ namespace Modules\Stores\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Boarding\Domain\Support\StoreIssuanceProvider;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -181,6 +184,97 @@ class StoresServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerEventListeners();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Book H1 admin-UI pass. Four separate module codes — `INVENTORY`,
+     * `PROCUREMENT`, `ASSETS`, `BUDGET` — not one `STORES` call, the
+     * same reasoning `WelfareServiceProvider` documents for its own
+     * three-way split: the spec's own §9 permission lists for FIN-09/
+     * FIN-08/FIN-10/FIN-11 already name four distinct top-level
+     * namespaces (`inventory.*`/`procurement.*`/`assets.*`/`budget.*`),
+     * and `PermissionRegistry::register($moduleCode, [...])` always
+     * synthesizes `strtolower($moduleCode).'.'.$path` — registering
+     * everything under `STORES` would have produced
+     * `stores.inventory.store.view` etc., matching nothing any screen
+     * in this module actually checks.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('INVENTORY', [
+            'store.view' => ['description' => 'View stores.'],
+            'store.manage' => ['description' => 'Create and manage stores.', 'dangerous' => true],
+            'item.view' => ['description' => 'View the inventory item catalogue.'],
+            'item.manage' => ['description' => 'Create and manage inventory items.'],
+            'stock.view' => ['description' => 'View stock on hand, the item ledger, valuation and consumption reports.'],
+            'receipt.create' => ['description' => 'Receive stock into a store.'],
+            'requisition.create' => ['description' => 'Request a store requisition.'],
+            'requisition.approve' => ['description' => 'Approve a store requisition.', 'dangerous' => true],
+            'issue' => ['description' => 'Issue, return, sell, or transfer stock.', 'dangerous' => true],
+            'transfer.manage' => ['description' => 'Dispatch and receive inter-store transfers.'],
+            'stocktake.count' => ['description' => 'Start a stock take and submit a blind count.'],
+            'stocktake.approve' => ['description' => 'Approve a stock take variance.', 'dangerous' => true],
+            'adjustment.post' => ['description' => 'Write off expired stock.', 'dangerous' => true],
+            'anomaly.review' => ['description' => 'Review and investigate consumption anomalies.'],
+            'report.view' => ['description' => 'View inventory reports.'],
+        ]);
+
+        PermissionRegistry::register('PROCUREMENT', [
+            'supplier.view' => ['description' => 'View suppliers, aging, and performance.'],
+            'supplier.manage' => ['description' => 'Create suppliers and manage blacklisting.'],
+            'supplier.approve' => ['description' => 'Approve a new supplier.', 'dangerous' => true],
+            'supplier.bank_change' => ['description' => 'Request or approve a supplier bank detail change.', 'dangerous' => true],
+            'requisition.create' => ['description' => 'Request a purchase requisition.'],
+            'requisition.approve' => ['description' => 'Approve a purchase requisition.', 'dangerous' => true],
+            'quotation.manage' => ['description' => 'Request, record, and award quotations.'],
+            'order.view' => ['description' => 'View purchase orders.'],
+            'order.create' => ['description' => 'Create a purchase order.'],
+            'order.approve' => ['description' => 'Approve, cancel, or close a purchase order short.', 'dangerous' => true],
+            'grn.create' => ['description' => 'Record a goods received note.'],
+            'invoice.register' => ['description' => 'Register a supplier invoice.'],
+            'invoice.approve' => ['description' => 'Approve a supplier invoice for payment.', 'dangerous' => true],
+            'payment.create' => ['description' => 'Record a supplier payment run.', 'dangerous' => true],
+            'report.view' => ['description' => 'View procurement reports — aging, VAT exposure, withholding, spend.'],
+        ]);
+
+        PermissionRegistry::register('ASSETS', [
+            'view' => ['description' => 'View the asset register.'],
+            'manage' => ['description' => 'Capitalise and edit assets.'],
+            'depreciation.run' => ['description' => 'Preview, approve, and post a depreciation run.', 'dangerous' => true],
+            'transfer' => ['description' => 'Transfer an asset between cost centres.'],
+            'verify' => ['description' => 'Run and record physical asset verification.'],
+            'dispose' => ['description' => 'Dispose of an asset.', 'dangerous' => true],
+            'insurance.manage' => ['description' => 'Record and manage insurance policies.'],
+            'report.view' => ['description' => 'View asset reconciliation.'],
+        ]);
+
+        PermissionRegistry::register('BUDGET', [
+            'manage' => ['description' => 'Create and revise budgets for the whole school.', 'dangerous' => true],
+            'submit' => ['description' => "Submit a department's own budget lines."],
+            'consolidate' => ['description' => 'Consolidate and approve a budget.', 'dangerous' => true],
+            'view' => ['description' => 'View the variance dashboard and commitment register.'],
+            'virement.request' => ['description' => 'Request or approve a virement between budget lines.'],
+            'forecast.view' => ['description' => 'View forecast scenarios.'],
+            'forecast.manage' => ['description' => 'Create forecast scenarios.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `BoardingServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Stores\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/inventory.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/procurement.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/assets.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/budget.php');
+        });
     }
 
     /**

@@ -647,6 +647,144 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $storesGroupActive = request()->routeIs('stores.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $storesGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-stores" aria-expanded="{{ $storesGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-stores">
+                                <i class="ri ri-store-2-line"></i> {{ __('Stores & Procurement') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $storesGroupActive ? 'show' : '' }}" id="sidebar-group-stores">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Inventory & stores') }} ⭐</div>
+                                    <a href="{{ route('stores.inventory.stores.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stores.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-home-gear-line"></i> {{ __('Stores') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.items.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.items.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-barcode-box-line"></i> {{ __('Item master') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stock.on-hand', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stock.on-hand') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Stock on hand') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stock.item-ledger', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stock.item-ledger') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Item ledger') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.receipts.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.receipts.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-inbox-archive-line"></i> {{ __('Receive stock') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.requisitions.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.requisitions.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-add-line"></i> {{ __('New requisition') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.requisitions.issue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.requisitions.issue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-send-plane-line"></i> {{ __('Issue requisitions') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.requisitions.return', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.requisitions.return') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-arrow-go-back-line"></i> {{ __('Returns') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.transfers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.transfers.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-swap-line"></i> {{ __('Transfers') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stocktake.count', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stocktake.count') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-3"></i> {{ __('Stock take — count') }} ⭐
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stocktake.variance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stocktake.variance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-3-line"></i> {{ __('Stock take variance') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stock.expiry', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stock.expiry') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-timer-flash-line"></i> {{ __('Expiry monitor') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.anomalies.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.anomalies.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-radar-line"></i> {{ __('Anomalies') }} ⭐
+                                    </a>
+                                    <a href="{{ route('stores.inventory.stock.sell-to-learner', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.stock.sell-to-learner') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-t-shirt-line"></i> {{ __('Sell to learner') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.reports.valuation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.reports.valuation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-coins-line"></i> {{ __('Valuation report') }}
+                                    </a>
+                                    <a href="{{ route('stores.inventory.reports.consumption', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.inventory.reports.consumption') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-2-line"></i> {{ __('Consumption report') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Procurement & AP') }} 🇿🇼</div>
+                                    <a href="{{ route('stores.procurement.suppliers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.suppliers.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-truck-line"></i> {{ __('Suppliers') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.suppliers.clearances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.suppliers.clearances') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Tax clearances') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.requisitions.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.requisitions.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-line"></i> {{ __('Purchase requisitions') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.quotations.compare', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.quotations.compare') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-compare-line"></i> {{ __('Quotations') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.orders.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.orders.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shopping-cart-2-line"></i> {{ __('Purchase orders') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.receipts.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.receipts.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-inbox-unarchive-line"></i> {{ __('Goods receipt') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.invoices.register', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.invoices.register') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Register invoice') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.invoices.match', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.invoices.match') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-merge-line"></i> {{ __('Match review') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.payments.run', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.payments.run') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-card-line"></i> {{ __('Payment run') }}
+                                    </a>
+                                    <a href="{{ route('stores.procurement.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.reports.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pie-chart-line"></i> {{ __('Procurement reports') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Fixed assets') }}</div>
+                                    <a href="{{ route('stores.assets.register.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.register.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-archive-drawer-line"></i> {{ __('Asset register') }}
+                                    </a>
+                                    <a href="{{ route('stores.assets.depreciation.run', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.depreciation.run') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-line-chart-line"></i> {{ __('Depreciation run') }}
+                                    </a>
+                                    <a href="{{ route('stores.assets.verification.round', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.verification.round') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-qr-scan-line"></i> {{ __('Verification') }} ⭐
+                                    </a>
+                                    <a href="{{ route('stores.assets.verification.discrepancies', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.verification.discrepancies') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-error-warning-line"></i> {{ __('Discrepancies') }}
+                                    </a>
+                                    <a href="{{ route('stores.assets.disposal.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.disposal.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-delete-bin-6-line"></i> {{ __('Disposal') }}
+                                    </a>
+                                    <a href="{{ route('stores.assets.insurance.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.insurance.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-umbrella-line"></i> {{ __('Insurance') }}
+                                    </a>
+                                    <a href="{{ route('stores.assets.reports.reconciliation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.assets.reports.reconciliation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-line"></i> {{ __('Reconciliation') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Budgeting') }} ⭐</div>
+                                    <a href="{{ route('stores.budget.builder.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.builder.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Budget builder') }}
+                                    </a>
+                                    <a href="{{ route('stores.budget.consolidation.review', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.consolidation.review') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Consolidation') }}
+                                    </a>
+                                    <a href="{{ route('stores.budget.variance.dashboard', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.variance.dashboard') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-3-line"></i> {{ __('Variance dashboard') }}
+                                    </a>
+                                    <a href="{{ route('stores.budget.commitments.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.commitments.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-lock-2-line"></i> {{ __('Commitments') }}
+                                    </a>
+                                    <a href="{{ route('stores.budget.virement.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.virement.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-exchange-funds-line"></i> {{ __('Virement') }}
+                                    </a>
+                                    <a href="{{ route('stores.budget.forecast.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.budget.forecast.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-compass-3-line"></i> {{ __('Forecasts') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">
