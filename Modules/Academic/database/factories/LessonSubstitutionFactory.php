@@ -21,14 +21,22 @@ class LessonSubstitutionFactory extends Factory
 
     public function definition(): array
     {
-        $school = School::factory();
-        $year = AcademicYear::factory()->for($school);
-        $term = Term::factory()->for($school)->for($year, 'academicYear');
+        // $term is referenced twice below (directly, and inside the
+        // nested TimetableSlot factory's own state override) — the
+        // same `TimetableSlotFactory`-documented gotcha: a lazy Factory
+        // instance referenced twice in one definition() is resolved
+        // independently each time, not deduped, which previously
+        // created two different `terms` rows for the same
+        // (school_id, academic_year_id, number) and tripped its own
+        // unique constraint. Created eagerly here for the same reason.
+        $school = School::factory()->create();
+        $year = AcademicYear::factory()->for($school)->create();
+        $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
 
         return [
-            'school_id' => $school,
-            'term_id' => $term,
-            'timetable_slot_id' => TimetableSlot::factory()->for($school)->state(['term_id' => $term]),
+            'school_id' => $school->id,
+            'term_id' => $term->id,
+            'timetable_slot_id' => TimetableSlot::factory()->for($school)->state(['term_id' => $term->id]),
             'substitution_date' => now()->toDateString(),
             'absent_staff_id' => Staff::factory()->for($school),
             'reason' => 'sick',

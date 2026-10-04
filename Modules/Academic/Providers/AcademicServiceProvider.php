@@ -263,6 +263,36 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'result.amend_published' => ['description' => 'Amend a mark on an already-published assessment, recomputing class and level positions.', 'dangerous' => true],
             'result.compute' => ['description' => 'Run the results computation and position-recomputation pipeline for a class; publish an assessment.'],
             'result.comment' => ['description' => 'Add an entry to the results comment bank.'],
+
+            // Book E ACA-03 — Timetable & Scheduling Engine.
+            'timetable.view' => ['description' => 'View timetables, clashes, and schedule views.'],
+            'timetable.manage' => ['description' => 'Manage period structures, venues, constraints, exceptions, and the exam slot planner.'],
+            'timetable.generate' => ['description' => 'Create a draft timetable and run generation against it.'],
+            'timetable.edit' => ['description' => 'Manually place a lesson in the timetable grid editor.', 'dangerous' => true],
+            'timetable.publish' => ['description' => 'Publish a timetable and generate its attendance sessions.', 'dangerous' => true],
+            'timetable.cover_manage' => ['description' => 'Suggest and assign cover for an absent teacher\'s lessons.'],
+
+            // Book E ACA-06 — School-Based Projects & Legacy CALA.
+            'projects.view' => ['description' => 'View project briefs, the progress tracker, and the CALA archive.'],
+            'projects.manage' => ['description' => 'Create project briefs, rubrics, and exempt a learner\'s project.'],
+            'projects.approve' => ['description' => 'HOD-approve and issue a project brief.'],
+            'projects.mark' => ['description' => 'Mark a submitted project against its rubric.'],
+            'projects.moderate' => ['description' => 'Moderate a marked project.'],
+            'projects.verify' => ['description' => 'HOD-verify a marked or moderated project.'],
+            'projects.amend_verified' => ['description' => 'Amend a verified project\'s mark — requires a recorded CORE-07 approval.', 'dangerous' => true],
+
+            // Book E ACA-07 — Examinations Administration.
+            'exams.view' => ['description' => 'View examination sessions, papers, and published results.'],
+            'exams.manage' => ['description' => 'Manage examination sessions, papers, candidates, seating, and invigilation.'],
+            'exams.paper_manage' => ['description' => 'Set, vet, seal, and release a secure examination paper.', 'dangerous' => true],
+            'exams.script_manage' => ['description' => 'Collect and hand over examination script batches.'],
+            'exams.mark' => ['description' => 'Enter an examination mark.'],
+            'exams.moderate' => ['description' => 'Enter a third mark on variance review, and moderate an examination mark.'],
+            'exams.arrangements_manage' => ['description' => 'Record and approve a candidate\'s special arrangement.'],
+            'exams.malpractice_view' => ['description' => 'View malpractice incidents — confidential, head/deputy/exams officer only.', 'dangerous' => true],
+            'exams.malpractice_manage' => ['description' => 'Report a malpractice incident and decide its outcome.', 'dangerous' => true],
+            'exams.results_process' => ['description' => 'Process examination results into the ACA-05 aggregation pipeline.'],
+            'exams.results_publish' => ['description' => 'Publish examination results to learners and guardians.', 'dangerous' => true],
         ]);
     }
 
@@ -279,6 +309,9 @@ class AcademicServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/enrolment.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/attendance.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/assessment.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/timetable.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/projects.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/exams.php');
         });
     }
 

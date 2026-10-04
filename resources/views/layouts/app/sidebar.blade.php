@@ -270,6 +270,121 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $academicDepthGroupActive = request()->routeIs('academic.timetable.*') || request()->routeIs('academic.projects.*') || request()->routeIs('academic.exams.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $academicDepthGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-academic-depth" aria-expanded="{{ $academicDepthGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-academic-depth">
+                                <i class="ri ri-calendar-todo-line"></i> {{ __('Academic Depth') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $academicDepthGroupActive ? 'show' : '' }}" id="sidebar-group-academic-depth">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Timetable') }}</div>
+                                    <a href="{{ route('academic.timetable.structures', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.structures') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-line"></i> {{ __('Period structures') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.venues', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.venues') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Venues') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.constraints', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.constraints') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-line"></i> {{ __('Constraints') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.requirements', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.requirements') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check"></i> {{ __('Requirements') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.generate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.generate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-magic-line"></i> {{ __('Generate') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.clashes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.clashes') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-error-warning-line"></i> {{ __('Clash inspector') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.views', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.views') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-table-line"></i> {{ __('Views') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.cover', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.cover') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-follow-line"></i> {{ __('Daily cover') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.exceptions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.exceptions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-close-circle-line"></i> {{ __('Exceptions') }}
+                                    </a>
+                                    <a href="{{ route('academic.timetable.exam-planner', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.timetable.exam-planner') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-flag-2-line"></i> {{ __('Exam slot planner') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Projects (SBP/CALA)') }}</div>
+                                    <a href="{{ route('academic.projects.instruments', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.instruments') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-settings-4-line"></i> {{ __('Instruments') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.briefs', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.briefs') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Briefs') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.rubrics', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.rubrics') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-ruler-2-line"></i> {{ __('Rubrics') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.approve', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.approve') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stamp-line"></i> {{ __('Brief approval') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.tracker', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.tracker') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-progress-4-line"></i> {{ __('Progress tracker') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.mark', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.mark') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-edit-2-line"></i> {{ __('Mark') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.moderate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.moderate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-3-line"></i> {{ __('Moderate') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.verify', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.verify') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Verify') }}
+                                    </a>
+                                    <a href="{{ route('academic.projects.cala-archive', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.projects.cala-archive') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-archive-line"></i> {{ __('CALA archive') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Examinations') }}</div>
+                                    <a href="{{ route('academic.exams.sessions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.sessions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Sessions') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.papers', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.papers') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Papers') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.paper-vault', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.paper-vault') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-lock-2-line"></i> {{ __('Secure paper vault') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.candidates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.candidates') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-line"></i> {{ __('Candidates') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.seating', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.seating') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-layout-grid-line"></i> {{ __('Seating plan') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.invigilation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.invigilation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-eye-line"></i> {{ __('Invigilation') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.scripts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.scripts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-shield-2-line"></i> {{ __('Script tracking') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.mark-entry', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.mark-entry') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-edit-line"></i> {{ __('Mark entry') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.variance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.variance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-compare-line"></i> {{ __('Variance review') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.moderate', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.moderate') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-line"></i> {{ __('Moderate') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.arrangements', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.arrangements') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-wheelchair-line"></i> {{ __('Special arrangements') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.malpractice', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.malpractice') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Malpractice') }}
+                                    </a>
+                                    <a href="{{ route('academic.exams.results', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.exams.results') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-trophy-line"></i> {{ __('Results') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">

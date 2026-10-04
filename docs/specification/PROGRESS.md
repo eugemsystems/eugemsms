@@ -257,8 +257,97 @@ computes the shortfall itself and shows it as a non-blocking advisory.
 See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — ⬜ not started
-ACA-03, ACA-06, ACA-07.
+### Book E — Academic Depth — 🟡 in progress
+
+| Module | Screens | Status |
+|---|---|---|
+| ACA-03 | Timetable & Scheduling Engine | 🟡 partial (see note) |
+| ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial (see note) |
+| ACA-07 | Examinations Administration | 🟡 partial (see note) |
+
+**ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
+(create-only, bundles the slot set, like `CreatePeriodStructureAction`
+itself does), `Venues`, `Constraints`, `Requirements` (read-only,
+`BuildTimetableRequirementsAction`'s own list plus a feasibility
+heuristic this screen computes itself — no Action produces one),
+`Generate` (folds in the spec's own missing "create a timetable" step —
+see the new `CreateTimetableAction` below — then runs
+`GenerateTimetableAction` synchronously; no live progress/score curve/
+cancel, since the action itself is a synchronous, deliberately
+simplified greedy pass, not a queued annealing job), `Editor` (a plain
+add-one-slot form, not drag-and-drop — `CreateTimetableSlotAction`'s
+real four-level clash check still runs server-side and refuses with
+the conflict named), `Clashes` (runs the real `TimetableClashDetector`),
+`Views` (one filtered table standing in for the spec's five separate
+by-class/teacher/venue/learner/department views; "printable" stops at
+the browser's own print dialog — no export Action exists), `Publish`
+(blocked while hard violations exist, then a separate explicit
+attendance-session-generation call), `Cover` (daily substitutions,
+`SuggestCoverAction`'s ranked suggestions, one-click assign),
+`Exceptions`, `ExamPlanner` (disruption report).
+**New gap-filling Action**: `CreateTimetableAction` — no Action
+anywhere created the parent `Timetable` row before this pass (every
+test fixture used the factory directly); added create-only, mirroring
+the ACA-01 catalogue precedent from the Book D pass.
+**Deliberately not built**: the spec's own drag-and-drop grid with a
+live-updating clash panel, queued generation with a cancellable
+progress bar and a real simulated-annealing score curve (the backend
+action itself doesn't implement these — see its own docblock), and any
+PDF/export generation for timetable views. See `.ai/rules/academic.md`.
+
+**ACA-06 note.** Built (`Livewire/Projects/`, 10 screens):
+`Instruments`, `Briefs` (folds the spec's separate library+editor
+screens into one, like `Curriculum\Frameworks`), `Rubrics` (criteria
+weight-sum-to-100% guard), `Approve` (one lifecycle screen hosting both
+HOD approve and issue), `Tracker` (progress grid + chase list +
+`ExemptLearnerProjectAction`'s exemption action), `Mark` (marking queue,
+criterion-by-criterion, no evidence viewer alongside the rubric — this
+pass's screens are staff-marking-focused, not a document viewer),
+`Moderate`, `Verify`, `Amend` (mirrors `Marks\Amend`'s own
+`approved: true` boundary — no CORE-07 workflow wired up here either),
+`CalaArchive` (read-only). **Deliberately not built**: Portfolio
+compilation and the national submission export — no Action exists for
+either (confirmed by grep); learner-facing milestone/evidence
+submission has no admin screen since the spec itself places that
+interaction on the mobile app/portal, not the staff console.
+See `.ai/rules/academic.md`.
+
+**ACA-07 note.** Built (`Livewire/Exams/`, 13 screens): `Sessions`
+(+ the new gap-filling `AdvanceExaminationSessionStatusAction`, below),
+`Papers` (live weight-% advisory), `PaperVault` (vet → seal → release
+lifecycle + access log — `ReleaseExaminationPaperAction`'s own
+no-override-for-anyone gate is exactly what AC-ACA-07-001 tests;
+encryption-at-rest and visible watermarking are backend-documented
+gaps, not built), `Candidates` (derive from enrolments, confirm),
+`Seating` (auto-allocate; also stands in for the spec's separate
+"Attendance sheets" screen — same seating + special-arrangement data,
+one more column), `Invigilation` (subject-teacher exclusion, override
+checkbox), `Scripts` (collect/handover, discrepancy alerts), `MarkEntry`
+(blind double marking — structurally blind, since the Action itself
+never returns the other marker's value), `Variance` (third marking),
+`Moderate`, `Arrangements` (record/approve), `Malpractice` (confidential
+— gated behind its own dedicated permissions, not the general
+`exams.manage`), `Results` (process → publish, staged).
+**New gap-filling Action**: `AdvanceExaminationSessionStatusAction` — a
+small, forward-only status transition; nothing in the domain layer
+ever moved a fresh session from `planning` to `in_progress`, which
+`ProcessExaminationResultsAction` requires before it will run.
+**Real bug found and fixed during this pass, not just documented**:
+seven screens across all three ACA-07/06 modules originally passed
+`Auth::id()` (a `users.id`) into an Action parameter documented and
+typed as a `staff.id` (`ApproveProjectBriefAction`, `MarkProjectAction`,
+`ModerateProjectAction`, `VetExaminationPaperAction`,
+`EnterExamMarkAction`, `EnterThirdExamMarkAction`,
+`ModerateExamMarkAction`), plus two more that passed a `staff.id` where
+`HandoverScriptBatchData`/`CollectScriptBatchData` expected a
+`recordedByUserId`. Every one is now resolved via
+`Staff::where('user_id', Auth::id())` with an explicit "no staff record
+linked" refusal if it comes back null, never a silent wrong-id write —
+caught by this pass's own tests, not by a type error, since both ids
+are plain `int`. **Deliberately not built**: `CMP-01`'s candidate-set
+export interface, performance analysis/distributions (no Action
+computes one), and `FIN-02` entry-fee billing — all confirmed backend
+gaps. See `.ai/rules/academic.md`.
 
 ### Book F — Boarding & Welfare — ⬜ not started
 BRD-01–BRD-05. `Modules/Boarding/Livewire/` does not exist yet.
