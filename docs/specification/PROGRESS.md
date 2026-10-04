@@ -349,8 +349,132 @@ export interface, performance analysis/distributions (no Action
 computes one), and `FIN-02` entry-fee billing — all confirmed backend
 gaps. See `.ai/rules/academic.md`.
 
-### Book F — Boarding & Welfare — ⬜ not started
-BRD-01–BRD-05. `Modules/Boarding/Livewire/` does not exist yet.
+### Book F — Boarding & Welfare — 🟡 in progress
+
+| Module | Screens | Status |
+|---|---|---|
+| BRD-01 | Hostel, Room & Bed Allocation | 🟡 partial (see note) |
+| BRD-02 | Roll Call & Movement ⭐ | 🟡 partial (see note) |
+| BRD-03 | Exeat, Leave & Visitor Management ⭐ | 🟡 partial (see note) |
+| BRD-04 | Catering, Menus & Kitchen | 🟡 partial (see note) |
+| BRD-05 | Laundry & Linen | 🟡 partial (see note) |
+
+**BRD-01 note.** Built (`Livewire/Hostels/`, `Allocation/`, `Inspections/`,
+`Damages/` — 9 screens): `Hostels\{Structure,Show}`, `Allocation\{Board,
+Run,Waitlist,Constraints,Incompatibilities}`, `Inspections\Index`,
+`Damages\Index`. `Allocation\Board` is a plain occupied/free bed table
+(not the spec's own drag-to-move visual grid — the same trade-off
+`ACA-03 Timetable\Editor` already made) but also stands in for the
+spec's separate "Bed availability" report; `Board` folds in the spec's
+own "Learner allocation" screen too (move/end actions operate directly
+on the selected bed's current occupant). **Gender segregation has no
+UI bypass anywhere** — `AllocateBedAction`/`MoveLearnerAction`/
+`RunBulkAllocationAction` throw `GenderMismatchException` unconditionally
+and no screen offers an override control, verified by a dedicated test.
+**Three new, small, gap-filling Actions** (`CreateHostelWingAction`,
+`CreateAllocationConstraintAction`, `CreateLearnerIncompatibilityAction`)
+— mirroring the ACA-01 precedent, the backend had models/migrations/
+factories for `hostel_wings`, `allocation_constraints`, and
+`learner_incompatibilities` but no Action anywhere ever created a row
+(verified by grep; every existing row came from `TenantModelRegistry`'s
+own factory call). `Allocation\Constraints`'s dropdown deliberately
+excludes `gender_match` as a configurable option — that constraint is
+enforced unconditionally in the Action layer, never read from this
+table. `Allocation\Incompatibilities` enforces the confidential-reason
+tiered-visibility rule server-side: a confidential row's `reason` is
+replaced with `[restricted]` before the view ever sees it, for a viewer
+without `boarding.incompatibility.manage`.
+
+**BRD-02 note ⭐.** Built (`Livewire/RollCall/`, `Movement/`,
+`Occupancy/` — 8 screens): `RollCall\{Take,Board,Incidents,Incident,
+Escalation}`, `Movement\{Log,Checkpoints}`, `Occupancy\Live`. `Escalation`
+folds in the spec's separate "Roll call points" screen (no such screen
+exists in the spec's own table — a point always references a profile).
+`Board` also stands in for "Roll call history" (a date picker over the
+same table). **The escalation ladder is built to the letter**:
+acknowledging a step never stops the clock (`AdvanceEscalationLadderAction`
+runs independently on elapsed time from `first_missed_at`), and a step
+flagged `requires_action_record` cannot be satisfied by acknowledgement
+alone — verified by a dedicated test that acknowledges step 1, attempts
+to record an empty action, confirms it's refused, then confirms a real
+free-text action record succeeds. A second test confirms
+`MissingLearnerIncident::delete()` throws at the model's own database-
+grant-enforcing `booted()` hook, for any caller. `AdvanceEscalationLadderAction`/
+`CheckRollCallMissedAction` have no scheduled-command wiring yet (per
+their own docblocks) — `Incidents`'s "Check ladder" button and
+`RollCall\Board`'s own read are the honest on-demand stand-ins.
+**New gap-filling Action**: `CreateMovementCheckpointAction` (same
+"no Action ever created one" gap as BRD-01's wing/constraint/
+incompatibility rows).
+
+**BRD-03 note ⭐.** Built (`Livewire/Exeats/`, `Gate/`, `Visitors/` —
+11 screens): `Exeats\{Index,Show,Approvals,Overdue,Types}`,
+`Gate\{Terminal,Attempts}`, `Visitors\{Terminal,Log,Blacklist,
+VisitingDays}`. `Exeats\Index` folds in the unbuilt guardian-portal
+request form (staff-recorded via `request_source = phone_recorded`,
+matching BR-BRD-03-001's own exception). `Exeats\Types` folds in the
+spec's separate "Exeat quotas" screen as a read-only roll-up (no Action
+pre-sets a quota ahead of a request — `ExeatQuota` rows are created
+on-demand inside `RequestExeatAction` itself). **The gate terminal is
+the single most safety-critical screen in this pass**: the result
+renders as one word, large and colour-coded — `RELEASE` or
+`DO NOT RELEASE` — exactly per spec, with zero override control,
+because `RecordDepartureAction` itself has none. Verified by two
+dedicated tests: an adult not named on the exeat is refused
+(`no_right`, logged permanently to an append-only `collection_attempts`
+row that itself refuses `delete()`), and a court-restricted guardian is
+refused (`court_restriction`) even though they are named on the exeat
+and hold a standing collection right — the restriction overrides every
+other flag, per BR-BRD-03-013. A third test confirms a blacklisted
+visitor is refused at `SignInVisitorAction` itself with no
+`visitor_logs` row ever created for the attempt.
+
+**BRD-04 note.** Built (`Livewire/Catering/` — 5 screens):
+`MenuCycles` (folds in the spec's separate "Menu planner" — pick a
+cycle, set each day's recipes, the same fold `Curriculum\Frameworks`
+uses for its own banner), `Recipes`, `ServicePlan` (⭐ folds in the
+spec's separate "Requisition & issue" screen — in this codebase's
+sanctioned planning-only mode, §0.3, there is no real stock to issue/
+return, so the fold costs nothing), `ServingTerminal`, `Dietary`.
+**The per-capita scaling is real and verified**: a dedicated test
+allocates two boarders, completes a roll call marking one present and
+one missing, plans a lunch service, and confirms `nominal_boarders`
+stays 2 while `present_boarders` is 1 — servings are computed from the
+live roll, never the allocated-bed count (BR-BRD-04-001). A second test
+confirms a life-threatening dietary alert is recorded unverified, then
+verified only through the explicit nurse-verification step
+(BR-BRD-04-010) — recording one never marks it verified by itself.
+Cost columns read `unavailable`, never `0`, in this planning-only mode
+(`NullStoreIssuanceProvider`). **Deliberately not built**: Cost
+analytics/Wastage report (no real costing data exists while `FIN-09`
+is unbuilt — building a trend screen over `null` values would be
+decorative), `PublicMenu` (a learner/guardian portal screen, not an
+admin console concern, matching ACA-06's own precedent for deferring
+portal-facing screens), and a dedicated meal-attendance capture UI
+(`catering.meal_attendance_capture` defaults off; the default path —
+`CloseMealServiceAction`'s own `actual_served` field — is what
+`ServicePlan` already uses).
+
+**BRD-05 note.** Built (`Livewire/Linen/`, `Laundry/` — 5 screens):
+`Linen\{Items,Issue,Clearance}`, `Laundry\{Cycles,Missing}`. `Linen\Issue`
+folds in the spec's separate "Learner items" screen (picking a learner
+already shows their full item list) and hosts the damage/lost
+report-then-approve lifecycle inline. **Clearance blocking is real and
+verified**: a dedicated test issues an item, confirms `Linen\Clearance`
+blocks (`CheckLinenClearanceAction`'s own query), returns the item via
+`ReturnIssuedItemAction`, and confirms clearance then clears
+(AC-BRD-05-001). `CheckLinenClearanceAction` remains deliberately NOT
+wired into `WithdrawStudentAction` in this pass, per that action's own
+docblock.
+
+**Backend gaps found during this pass, all documented in-code**: no
+Action anywhere created `hostel_wings`, `allocation_constraints`,
+`learner_incompatibilities`, or `movement_checkpoints` rows before this
+pass's four small gap-filling Actions (see BRD-01/02 notes above) — in
+every case the model/migration/factory existed but only
+`TenantModelRegistry`'s own tenancy-isolation-test fixture ever created
+one. See `.ai/rules/boarding.md` for the full list of what was built,
+deferred, and found.
 
 ### Book G — Welfare & Pastoral — ⬜ not started
 BRD-06–BRD-08 (safeguarding — remember the inverted-access rule from

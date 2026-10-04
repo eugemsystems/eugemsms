@@ -385,6 +385,134 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $boardingGroupActive = request()->routeIs('boarding.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $boardingGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-boarding" aria-expanded="{{ $boardingGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-boarding">
+                                <i class="ri ri-hotel-line"></i> {{ __('Boarding') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $boardingGroupActive ? 'show' : '' }}" id="sidebar-group-boarding">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Hostels & allocation') }}</div>
+                                    <a href="{{ route('boarding.hostels.structure', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.hostels.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-2-line"></i> {{ __('Hostel structure') }}
+                                    </a>
+                                    <a href="{{ route('boarding.allocation.board', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.allocation.board') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-layout-grid-line"></i> {{ __('Occupancy board') }}
+                                    </a>
+                                    <a href="{{ route('boarding.allocation.run', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.allocation.run') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-play-circle-line"></i> {{ __('Bulk allocation run') }}
+                                    </a>
+                                    <a href="{{ route('boarding.allocation.waitlist', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.allocation.waitlist') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-ordered"></i> {{ __('Waiting list') }}
+                                    </a>
+                                    <a href="{{ route('boarding.allocation.constraints', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.allocation.constraints') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-ruler-line"></i> {{ __('Allocation constraints') }}
+                                    </a>
+                                    <a href="{{ route('boarding.allocation.incompatibilities', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.allocation.incompatibilities') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-unfollow-line"></i> {{ __('Incompatibilities') }}
+                                    </a>
+                                    <a href="{{ route('boarding.inspections.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.inspections.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-clipboard-line"></i> {{ __('Inspections') }}
+                                    </a>
+                                    <a href="{{ route('boarding.damages.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.damages.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hammer-line"></i> {{ __('Damages') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Roll call & movement') }}</div>
+                                    <a href="{{ route('boarding.rollcall.take', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.rollcall.take') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-multiple-line"></i> {{ __('Take roll call') }}
+                                    </a>
+                                    <a href="{{ route('boarding.rollcall.board', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.rollcall.board') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-line"></i> {{ __('Roll call board') }}
+                                    </a>
+                                    <a href="{{ route('boarding.rollcall.incidents', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.rollcall.incidents') || request()->routeIs('boarding.rollcall.incident') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Incident console') }}
+                                    </a>
+                                    <a href="{{ route('boarding.rollcall.escalation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.rollcall.escalation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-branch-line"></i> {{ __('Escalation & points') }}
+                                    </a>
+                                    <a href="{{ route('boarding.movement.log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.movement.log') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-route-line"></i> {{ __('Movement log') }}
+                                    </a>
+                                    <a href="{{ route('boarding.movement.checkpoints', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.movement.checkpoints') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-map-pin-line"></i> {{ __('Checkpoints') }}
+                                    </a>
+                                    <a href="{{ route('boarding.occupancy.live', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.occupancy.live') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pulse-line"></i> {{ __('Live occupancy') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Exeats, gate & visitors') }}</div>
+                                    <a href="{{ route('boarding.exeats.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.exeats.index') || request()->routeIs('boarding.exeats.show') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-door-open-line"></i> {{ __('Exeat requests') }}
+                                    </a>
+                                    <a href="{{ route('boarding.exeats.approvals', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.exeats.approvals') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-circle-line"></i> {{ __('Approval queue') }}
+                                    </a>
+                                    <a href="{{ route('boarding.exeats.overdue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.exeats.overdue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-time-line"></i> {{ __('Overdue returns') }}
+                                    </a>
+                                    <a href="{{ route('boarding.exeats.types', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.exeats.types') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-settings-line"></i> {{ __('Exeat types & quotas') }}
+                                    </a>
+                                    <a href="{{ route('boarding.gate.terminal', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.gate.terminal') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Gate terminal') }}
+                                    </a>
+                                    <a href="{{ route('boarding.gate.attempts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.gate.attempts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-fingerprint-line"></i> {{ __('Collection attempts') }}
+                                    </a>
+                                    <a href="{{ route('boarding.visitors.terminal', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.visitors.terminal') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-line"></i> {{ __('Visitor terminal') }}
+                                    </a>
+                                    <a href="{{ route('boarding.visitors.log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.visitors.log') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-line"></i> {{ __('Visitor log') }}
+                                    </a>
+                                    <a href="{{ route('boarding.visitors.blacklist', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.visitors.blacklist') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-forbid-line"></i> {{ __('Blacklist') }}
+                                    </a>
+                                    <a href="{{ route('boarding.visitors.visiting-days', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.visitors.visiting-days') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Visiting days') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Catering & kitchen') }}</div>
+                                    <a href="{{ route('boarding.catering.menu-cycles', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.menu-cycles') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-restaurant-line"></i> {{ __('Menu cycles') }}
+                                    </a>
+                                    <a href="{{ route('boarding.catering.recipes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.recipes') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Recipes') }}
+                                    </a>
+                                    <a href="{{ route('boarding.catering.service-plan', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.service-plan') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calculator-line"></i> {{ __('Daily service plan') }}
+                                    </a>
+                                    <a href="{{ route('boarding.catering.serving-terminal', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.serving-terminal') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scan-line"></i> {{ __('Serving terminal') }}
+                                    </a>
+                                    <a href="{{ route('boarding.catering.dietary', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.dietary') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-heart-pulse-line"></i> {{ __('Dietary register') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Linen & laundry') }}</div>
+                                    <a href="{{ route('boarding.linen.items', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.linen.items') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shirt-line"></i> {{ __('Item catalogue') }}
+                                    </a>
+                                    <a href="{{ route('boarding.linen.issue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.linen.issue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-exchange-line"></i> {{ __('Issue & return') }}
+                                    </a>
+                                    <a href="{{ route('boarding.linen.clearance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.linen.clearance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Clearance') }}
+                                    </a>
+                                    <a href="{{ route('boarding.laundry.cycles', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.laundry.cycles') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-loop-left-line"></i> {{ __('Laundry cycles') }}
+                                    </a>
+                                    <a href="{{ route('boarding.laundry.missing', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.laundry.missing') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-error-warning-line"></i> {{ __('Missing items') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">

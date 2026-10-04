@@ -6,6 +6,8 @@ namespace Modules\Boarding\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Boarding\Domain\Listeners\EndAllocationOnResidencyChangeListener;
 use Modules\Boarding\Domain\Support\EloquentLiveOccupancyProvider;
 use Modules\Boarding\Domain\Support\LiveOccupancyProvider;
@@ -51,6 +53,7 @@ use Modules\Boarding\Models\Visitor;
 use Modules\Boarding\Models\VisitorLogEntry;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -183,6 +186,76 @@ class BoardingServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerEventListeners();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Book F admin-UI pass — the subset of each module's own §7/§8
+     * permission list this pass's screens actually check, registered
+     * via the same `PermissionRegistry::register($moduleCode, [...])`
+     * mechanism `PeopleServiceProvider`/`AcademicServiceProvider` use.
+     * The module code is `BOARDING`, so every synced permission name
+     * carries a `boarding.` prefix (e.g. `boarding.hostel.manage`).
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('BOARDING', [
+            'hostel.view' => ['description' => 'View hostels, rooms, beds, and occupancy.'],
+            'hostel.manage' => ['description' => 'Create and manage hostels, wings, rooms, and beds.'],
+            'allocation.view' => ['description' => 'View bed allocations, the occupancy board, and the waiting list.'],
+            'allocation.manage' => ['description' => 'Allocate, move, and end bed allocations; run bulk allocation.', 'dangerous' => true],
+            'incompatibility.manage' => ['description' => 'Record learner incompatibilities, including the confidential reason.', 'dangerous' => true],
+            'inspection.view' => ['description' => 'View room inspection history.'],
+            'inspection.manage' => ['description' => 'Record room inspections.'],
+            'damage.view' => ['description' => 'View reported hostel damage.'],
+            'damage.manage' => ['description' => 'Report hostel damage.'],
+            'damage.approve_charge' => ['description' => 'Approve or dispute a hostel damage charge.', 'dangerous' => true],
+            'rollcall.view' => ['description' => 'View roll call boards and history.'],
+            'rollcall.conduct' => ['description' => 'Take a roll call.'],
+            'rollcall.manage' => ['description' => 'Manage escalation profiles and roll call points.', 'dangerous' => true],
+            'incident.view' => ['description' => 'View missing-learner incidents.'],
+            'incident.action' => ['description' => 'Acknowledge an escalation step and record what was checked.', 'dangerous' => true],
+            'incident.close' => ['description' => 'Close a missing-learner incident.', 'dangerous' => true],
+            'movement.view' => ['description' => 'View the campus movement log.'],
+            'movement.manage' => ['description' => 'Record manual checkpoint movement and manage checkpoints.'],
+            'exeat.view' => ['description' => 'View exeat requests and detail.'],
+            'exeat.request' => ['description' => 'Request an exeat on a guardian\'s behalf (phone-recorded).'],
+            'exeat.approve' => ['description' => 'Approve or reject an exeat request.', 'dangerous' => true],
+            'exeat.manage' => ['description' => 'Manage exeat types.'],
+            'gate.operate' => ['description' => 'Operate the gate terminal — the collection authority check.', 'dangerous' => true],
+            'gate.view' => ['description' => 'View collection attempts.'],
+            'visitor.view' => ['description' => 'View the visitor log.'],
+            'visitor.manage' => ['description' => 'Sign visitors in and out; manage visiting days.'],
+            'visitor.blacklist' => ['description' => 'Blacklist a visitor.', 'dangerous' => true],
+            'linen.view' => ['description' => 'View the issuable-item catalogue and learner items.'],
+            'linen.manage' => ['description' => 'Issue, return, and reconcile linen and laundry.'],
+            'catering.menu.view' => ['description' => 'View menu cycles.'],
+            'catering.menu.manage' => ['description' => 'Manage menu cycles and recipes.'],
+            'catering.recipe.manage' => ['description' => 'Manage recipes.'],
+            'catering.service.view' => ['description' => 'View the daily service plan.'],
+            'catering.service.manage' => ['description' => 'Plan and close meal services.'],
+            'catering.serve' => ['description' => 'Operate the serving terminal.'],
+            'catering.dietary.view' => ['description' => 'View the dietary register.'],
+            'catering.dietary.manage' => ['description' => 'Record and verify dietary requirements.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Mirrors `PeopleServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Boarding\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/hostels.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/rollcall.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/exeats.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/catering.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/linen.php');
+        });
     }
 
     /**
