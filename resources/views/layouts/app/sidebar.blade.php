@@ -100,7 +100,7 @@
                     </div>
 
                     @if ($sessionsSchool)
-                        @php $studentsGroupActive = request()->routeIs('people.*'); @endphp
+                        @php $studentsGroupActive = request()->routeIs('people.students.*') || request()->routeIs('people.guardians.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $studentsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-students" aria-expanded="{{ $studentsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-students">
                                 <i class="ri ri-graduation-cap-line"></i> {{ __('Students') }}
@@ -119,6 +119,27 @@
                                     </a>
                                     <a href="{{ route('people.guardians.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-parent-line"></i> {{ __('Guardians') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        @php $admissionsGroupActive = request()->routeIs('people.admissions.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $admissionsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-admissions" aria-expanded="{{ $admissionsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-admissions">
+                                <i class="ri ri-door-open-line"></i> {{ __('Admissions') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $admissionsGroupActive ? 'show' : '' }}" id="sidebar-group-admissions">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('people.admissions.intakes.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.intakes.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Intakes') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.applications.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.applications.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Applications') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.applications.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.applications.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-add-line"></i> {{ __('New application') }}
                                     </a>
                                 </div>
                             </div>

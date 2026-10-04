@@ -100,6 +100,12 @@ class PeopleServiceProvider extends ModuleServiceProvider
             'guardians.view' => ['description' => 'View the guardian directory and profiles.'],
             'guardians.create' => ['description' => 'Register a new guardian.'],
             'guardians.manage_relationships' => ['description' => 'Link or unlink a guardian from a learner and set their rights.', 'dangerous' => true],
+            'admissions.intake_manage' => ['description' => 'Set up and manage admissions intakes.'],
+            'admissions.application_view' => ['description' => 'View the application pipeline and individual applications.'],
+            'admissions.application_create' => ['description' => 'Capture a new application.'],
+            'admissions.application_review' => ['description' => 'Progress an application through fee payment, decline, acceptance, and deposit.'],
+            'admissions.offer_make' => ['description' => 'Make or expire a place offer.', 'dangerous' => true],
+            'admissions.convert' => ['description' => 'Convert an accepted application into a learner record.', 'dangerous' => true],
         ]);
     }
 
@@ -114,6 +120,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
         Route::middleware('web')->group(function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/students.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/guardians.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/admissions.php');
         });
     }
 

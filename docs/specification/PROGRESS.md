@@ -130,8 +130,8 @@ follows the same order.
 |---|---|---|
 | PPL-01 | Student Information System | 🟡 partial (see note) |
 | PPL-03 | Guardian, Family & Fee Liability | 🟡 partial (see note) |
-| PPL-02 | Admissions & Enrolment CRM | ⬜ ← next up |
-| PPL-04 | Staff & Human Resources | ⬜ |
+| PPL-02 | Admissions & Enrolment CRM | 🟡 partial (see note) |
+| PPL-04 | Staff & Human Resources | ⬜ ← next up |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
 Guardians tabs), Create (with duplicate check), Edit, **Change billing
@@ -163,6 +163,17 @@ than duplicating it. **Deliberately not built**, because the backend
 for them doesn't exist at all (verified: no migration) — Households,
 Sponsorships (index + detail), Portal access, Contact update queue,
 Duplicate review, Verification. See `.ai/rules/people.md` before
+touching any of these.
+
+**PPL-02 note.** Built: Intakes (list+create), Applications (list —
+also stands in for the spec's separate Waitlist screen, Create — the
+staff-facing stand-in for the unbuilt public form, Show — one
+lifecycle screen hosting the whole fee/offer/decline/accept/deposit/
+expire action bar), and Convert (preflight, guardian-match preview,
+deposit-credit preview, one confirm). **Deliberately not built**,
+because the backend for them doesn't exist at all (verified: no
+migration) — Enquiries (the CRM kanban pipeline), Entrance exams,
+Interviews, Funnel analytics. See `.ai/rules/people.md` before
 touching any of these.
 
 ### Book D — Academic Core — ⬜ not started
