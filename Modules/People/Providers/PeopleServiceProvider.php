@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Academic\Models\Subject;
 use Modules\Comms\Models\CalendarEvent;
+use Modules\Core\Domain\DataObjects\Files\FileCategoryDefinition;
+use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
@@ -78,6 +80,20 @@ class PeopleServiceProvider extends ModuleServiceProvider
         $this->registerEventListeners();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
+        $this->registerFileCategories();
+    }
+
+    /**
+     * Book C PPL-04 §2/BR-PPL-04-018. Mirrors `IntelligenceServiceProvider::registerFileCategories()`'s
+     * own registration shape — `AddStaffDocumentAction` needs a real
+     * `files.id` to attach, and no category existed for one yet.
+     */
+    private function registerFileCategories(): void
+    {
+        FileCategoryRegistry::register(new FileCategoryDefinition(
+            'staff_document', 'Staff Document', 'PEOPLE',
+            ['application/pdf', 'image/jpeg', 'image/png'], 10 * 1024 * 1024, isSensitive: true,
+        ));
     }
 
     /**
@@ -106,6 +122,19 @@ class PeopleServiceProvider extends ModuleServiceProvider
             'admissions.application_review' => ['description' => 'Progress an application through fee payment, decline, acceptance, and deposit.'],
             'admissions.offer_make' => ['description' => 'Make or expire a place offer.', 'dangerous' => true],
             'admissions.convert' => ['description' => 'Convert an accepted application into a learner record.', 'dangerous' => true],
+            'staff.view' => ['description' => 'View the staff directory and profiles.'],
+            'staff.view_compensation' => ['description' => 'View a staff member\'s salary, banking, and statutory identifiers.', 'dangerous' => true],
+            'staff.create' => ['description' => 'Create a new staff record.'],
+            'staff.contract_manage' => ['description' => 'Create, renew, or terminate a staff contract.'],
+            'staff.establishment_manage' => ['description' => 'Manage departments and establishment posts.'],
+            'staff.allocate' => ['description' => 'Allocate or end a teacher\'s subject/class allocation.'],
+            'staff.leave_view' => ['description' => 'View and submit leave requests and balances.'],
+            'staff.leave_approve' => ['description' => 'Approve, reject, or manage leave types and balances.'],
+            'staff.duty_manage' => ['description' => 'Create duty rosters, generate assignments, and approve swaps.'],
+            'staff.appraisal_manage' => ['description' => 'Manage staff appraisals through their full cycle.'],
+            'staff.disciplinary_manage' => ['description' => 'Report, view, and advance staff disciplinary cases.', 'dangerous' => true],
+            'staff.document_manage' => ['description' => 'Add staff documents and review the compliance expiry dashboard.'],
+            'staff.exit_process' => ['description' => 'Initiate and process a staff member\'s exit.', 'dangerous' => true],
         ]);
     }
 
@@ -121,6 +150,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/students.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/guardians.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/admissions.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/staff.php');
         });
     }
 

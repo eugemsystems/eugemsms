@@ -131,7 +131,7 @@ follows the same order.
 | PPL-01 | Student Information System | 🟡 partial (see note) |
 | PPL-03 | Guardian, Family & Fee Liability | 🟡 partial (see note) |
 | PPL-02 | Admissions & Enrolment CRM | 🟡 partial (see note) |
-| PPL-04 | Staff & Human Resources | ⬜ ← next up |
+| PPL-04 | Staff & Human Resources | 🟡 partial (see note) |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
 Guardians tabs), Create (with duplicate check), Edit, **Change billing
@@ -175,6 +175,29 @@ because the backend for them doesn't exist at all (verified: no
 migration) — Enquiries (the CRM kanban pipeline), Entrance exams,
 Interviews, Funnel analytics. See `.ai/rules/people.md` before
 touching any of these.
+
+**PPL-04 note.** Built: `Staff\{Index,Show,Create,Contracts,
+Disciplinary,Compliance}`, `Staff\ExitProcessing` (not `Exit` —
+`exit` is a reserved PHP keyword and cannot name a class),
+`Establishment\Index`, `Allocation\TeacherMatrix`, `Leave\{Request,
+Approvals,Balances}`, `Duty\Rosters`, `Appraisal\{Index,Show}` — 27
+backend Actions' worth of screens, by far the largest module this
+pass has covered. Compensation fields (salary/banking) are absent
+from `Staff\Show`'s response entirely for a viewer without
+`people.staff.view_compensation` (AC-PPL-04-009); disciplinary case
+detail is only ever read through `ViewDisciplinaryCaseAction`, never
+a direct query (BR-PPL-04-020). **Deliberately not built**, because
+the backend for it doesn't exist at all (verified: no migration) —
+a Qualifications tab (`staff_qualifications`). Three screens
+deliberately simplified from the spec's own description (self-
+service folded into HR-facing capture, a pick-and-submit allocation
+form instead of a drag-and-drop grid, free-text appraisal notes
+instead of a structured rubric) — see `.ai/rules/people.md` for why
+each one was a reasonable cut, not a missed requirement. Book C's
+four modules (PPL-01/02/03/04) are now all built and each carries its
+own documented partial-coverage note — Book C stays 🟡 rather than
+✅ because every module genuinely has a real, named gap, not because
+anything is unfinished-by-oversight.
 
 ### Book D — Academic Core — ⬜ not started
 ACA-01, ACA-02, ACA-04, ACA-05. `Modules/Academic/Livewire/` does not exist yet.

@@ -144,6 +144,42 @@
                                 </div>
                             </div>
                         </div>
+
+                        @php $staffGroupActive = request()->routeIs('people.staff.*') || request()->routeIs('people.establishment.*') || request()->routeIs('people.allocation.*') || request()->routeIs('people.leave.*') || request()->routeIs('people.duty.*') || request()->routeIs('people.appraisal.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $staffGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-staff" aria-expanded="{{ $staffGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-staff">
+                                <i class="ri ri-team-line"></i> {{ __('Staff') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $staffGroupActive ? 'show' : '' }}" id="sidebar-group-staff">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('people.staff.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.staff.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Directory') }}
+                                    </a>
+                                    <a href="{{ route('people.staff.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.staff.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-add-line"></i> {{ __('New staff') }}
+                                    </a>
+                                    <a href="{{ route('people.establishment.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.establishment.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Establishment') }}
+                                    </a>
+                                    <a href="{{ route('people.allocation.matrix', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.allocation.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-grid-line"></i> {{ __('Allocation matrix') }}
+                                    </a>
+                                    <a href="{{ route('people.leave.balances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.leave.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-close-line"></i> {{ __('Leave') }}
+                                    </a>
+                                    <a href="{{ route('people.duty.rosters', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.duty.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-user-line"></i> {{ __('Duty rosters') }}
+                                    </a>
+                                    <a href="{{ route('people.appraisal.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.appraisal.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-star-line"></i> {{ __('Appraisals') }}
+                                    </a>
+                                    <a href="{{ route('people.staff.compliance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.staff.compliance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Compliance') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     @if ($sessionsSchool)
