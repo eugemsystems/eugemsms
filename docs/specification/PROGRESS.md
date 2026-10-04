@@ -199,8 +199,63 @@ own documented partial-coverage note — Book C stays 🟡 rather than
 ✅ because every module genuinely has a real, named gap, not because
 anything is unfinished-by-oversight.
 
-### Book D — Academic Core — ⬜ not started
-ACA-01, ACA-02, ACA-04, ACA-05. `Modules/Academic/Livewire/` does not exist yet.
+### Book D — Academic Core — 🟡 in progress
+
+| Module | Screens | Status |
+|---|---|---|
+| ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
+| ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial (see note) |
+| ACA-04 | Attendance | 🟡 partial (see note) |
+| ACA-05 | Assessment, Grading & Report Cards | 🟡 partial (see note) |
+
+**ACA-01 note.** Built: `Curriculum\{Frameworks,Subjects,Groups,Offerings,
+Pathways,SelectionRules,Prerequisites,Syllabi}` — all list+create.
+`SelectionRules` carries a live rule tester running the real
+`SubjectSelectionRuleEngine`; `Frameworks` carries the
+`requires_confirmation` banner (read live each render — no "marked
+reviewed" persistence column exists). **Four new, small, create-only
+Actions** (`CreateCurriculumFrameworkAction`/`CreateSubjectGroupAction`/
+`CreateSubjectAction`/`CreateSubjectSelectionRuleAction`) — the domain
+layer had models and factories for all four but no Action anywhere had
+ever created one (verified: every prior row came from a test/demo
+factory call). See `.ai/rules/academic.md`.
+
+**ACA-02 note ⭐.** Built: `Allocation\Classes`, `Enrolment\LearnerSubjects`
+⭐ (add/drop with effective date, dated history, live fee-impact preview
+through Finance's `PreviewIndicativeFeeAction`), `Groups\Index` (also
+stands in for the spec's "Subject registers"), `Groups\Allocate`,
+`Selection\Form` (staff-facing stand-in for the unbuilt public/portal
+form), `Selection\Approvals` (one lifecycle screen, guardian-approve/
+school-approve/reject), `Enrolment\BillingCheck` ⭐ (the part-time
+billing reconciliation screen). **Deliberately not built**: Bulk subject
+enrolment (no bulk domain Action exists). See `.ai/rules/academic.md`.
+
+**ACA-04 note.** Built: `Attendance\{Mark,Daily,Compliance,Chronic,
+ReasonCodes}`. `Mark` is `daily` mode only (period/subject modes need
+an `ACA-03` timetable slot this screen doesn't surface); amendment is
+folded into `Mark` itself rather than a separate route.
+**Deliberately not built**: Learner attendance heatmap, Class
+attendance report, Absence follow-up, Statutory register export (no
+export-generation Action exists). See `.ai/rules/academic.md`.
+
+**ACA-05 note.** Built: `Grading\Scales` (contiguity-validated band
+editor), `Assessment\Types`, `Assessment\Planner` (advisory live
+weight total), `Marks\Entry` ⭐ (folds in submit + publish — one
+lifecycle action bar), `Marks\Amend`, `Results\Compute` (the full
+aggregation → position-recompute pipeline per class, with its own
+weight-shortfall advisory report), `Results\Comments` (comment-bank
+management only — applying a comment to a specific result has no
+Action). **Deliberately not built, because the backend for them
+doesn't exist at all** (verified: no Action anywhere generates,
+withholds, publishes, or moderates a report card/transcript, confirmed
+in `AmendMarkAction`'s own docblock) — Moderation, Report card run,
+Withheld reports, Publication, Transcripts, Performance analytics. Also
+found: `AC-ACA-05-001`'s weight-shortfall **block** is not actually
+implemented anywhere in the domain layer despite being named as
+checked in two Actions' own docblocks — this pass's `Results\Compute`
+computes the shortfall itself and shows it as a non-blocking advisory.
+See `.ai/rules/academic.md` for this and the `students.status` /
+`CurriculumFrameworkFactory` default-code traps found along the way.
 
 ### Book E — Academic Depth — ⬜ not started
 ACA-03, ACA-06, ACA-07.

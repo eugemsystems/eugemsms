@@ -6,6 +6,8 @@ namespace Modules\Academic\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Academic\Domain\Events\SubjectEnrolmentAdded;
 use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
 use Modules\Academic\Domain\Listeners\AutoCreateProjectOnLateEnrolmentListener;
@@ -95,6 +97,7 @@ use Modules\Academic\Models\TimetableSlot;
 use Modules\Academic\Models\Venue;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -217,6 +220,66 @@ class AcademicServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerEventListeners();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Book D admin-UI pass §5/§6/§7/§8 — the subset of each book's own
+     * permission list this pass's screens actually exercise (report
+     * card generation/publication, moderation, and the rest of what
+     * `.ai/rules/academic.md` documents as deferred have no permission
+     * registered, since nothing checks them yet). Registered via the
+     * same `PermissionRegistry::register($moduleCode, [...])` mechanism
+     * `FinanceServiceProvider`/`PeopleServiceProvider` use — module code
+     * `ACADEMIC` here, so `curriculum.view` becomes `academic.curriculum.view`.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('ACADEMIC', [
+            'curriculum.view' => ['description' => 'View the curriculum catalogue — frameworks, subjects, groups, offerings, pathways, prerequisites, syllabi.'],
+            'curriculum.manage' => ['description' => 'Create curriculum frameworks, subjects, subject groups, level offerings, pathways, prerequisites, and syllabus entries.'],
+            'selection_rules.manage' => ['description' => 'Create subject selection rules — the subject-count limits that block or warn on a learner\'s choices.', 'dangerous' => true],
+            'enrolment.view' => ['description' => 'View a learner\'s subject enrolment, dated history, and the billing reconciliation report.'],
+            'enrolment.manage' => ['description' => 'Add or drop a learner\'s subject enrolment.'],
+            'allocation.manage' => ['description' => 'Allocate a learner to a form class for a term.'],
+            'group.view' => ['description' => 'View teaching groups (sets) for a subject.'],
+            'group.manage' => ['description' => 'Create teaching groups and move learners between sets.'],
+            'selection.submit' => ['description' => 'Submit a learner\'s subject selection on their behalf.'],
+            'selection.approve' => ['description' => 'Guardian- or school-approve, or reject, a submitted subject selection.'],
+            'attendance.view' => ['description' => 'View attendance registers, chronic absentee lists, and reason codes.'],
+            'attendance.mark' => ['description' => 'Mark a class register.'],
+            'attendance.manage' => ['description' => 'Manage attendance reason codes.'],
+            'attendance.amend' => ['description' => 'Amend an attendance record.'],
+            'attendance.amend_locked' => ['description' => 'Amend an attendance record after its session has locked.', 'dangerous' => true],
+            'attendance.view_compliance' => ['description' => 'View and recompute teacher marking compliance.'],
+            'grading.view' => ['description' => 'View grading scales and assessment types.'],
+            'grading.manage' => ['description' => 'Create grading scales and assessment types.'],
+            'assessment.view' => ['description' => 'View the assessment planner.'],
+            'assessment.manage' => ['description' => 'Create assessments on the planner.'],
+            'result.enter' => ['description' => 'Enter, submit, and publish assessment marks.'],
+            'result.view' => ['description' => 'View the comment bank.'],
+            'result.amend' => ['description' => 'Amend a mark on an assessment that has not yet published.', 'dangerous' => true],
+            'result.amend_published' => ['description' => 'Amend a mark on an already-published assessment, recomputing class and level positions.', 'dangerous' => true],
+            'result.compute' => ['description' => 'Run the results computation and position-recomputation pipeline for a class; publish an assessment.'],
+            'result.comment' => ['description' => 'Add an entry to the results comment bank.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `PeopleServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Academic\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/curriculum.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/enrolment.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/attendance.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/assessment.php');
+        });
     }
 
     /**

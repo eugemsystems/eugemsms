@@ -8,6 +8,7 @@
                 · {{ $student->gradeLevel?->name }}@if ($student->schoolClass) — {{ $student->schoolClass->name }}@endif
             </p>
         </div>
+        <a href="{{ route('academic.enrolment.subjects', [$school, $student]) }}" class="btn btn-outline-secondary" wire:navigate>{{ __('Subjects') }}</a>
         <a href="{{ route('people.students.change-status', [$school, $student]) }}" class="btn btn-outline-warning" wire:navigate>{{ __('Change status') }}</a>
         <a href="{{ route('people.students.change-attribute', [$school, $student]) }}" class="btn btn-outline-primary" wire:navigate>{{ __('Change billing attribute') }}</a>
         <a href="{{ route('people.students.edit', [$school, $student]) }}" class="btn btn-primary" wire:navigate>{{ __('Edit') }}</a>
