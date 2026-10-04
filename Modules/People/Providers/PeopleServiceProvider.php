@@ -6,8 +6,11 @@ namespace Modules\People\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Academic\Models\Subject;
 use Modules\Comms\Models\CalendarEvent;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -73,6 +76,41 @@ class PeopleServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerEventListeners();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Book C PPL-01 §10 — only the subset of the spec's own permission
+     * list that this pass's admin UI actually exercises (see
+     * `docs/specification/PROGRESS.md` and `.ai/rules/people.md` for
+     * what PPL-01's screens cover and what's deferred). Registered via
+     * the same `PermissionRegistry::register($moduleCode, [...])`
+     * mechanism `FinanceServiceProvider` uses.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('PEOPLE', [
+            'students.view' => ['description' => 'View the learner directory and profiles.'],
+            'students.create' => ['description' => 'Enrol a new learner.'],
+            'students.update' => ['description' => 'Edit a learner\'s non-billing profile fields.'],
+            'students.change_status' => ['description' => 'Change a learner\'s status (suspend, withdraw, readmit, graduate).'],
+            'students.change_billing_attribute' => ['description' => 'Change a learner\'s enrolment type, residency, grade level, class, section, or pathway.', 'dangerous' => true],
+            'students.merge' => ['description' => 'Scan for possible duplicate learner records.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Mirrors `FinanceServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\People\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/students.php');
+        });
     }
 
     /**

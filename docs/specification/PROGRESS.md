@@ -120,16 +120,33 @@ Plus a bursar-facing field-by-field guide at `docs/finance-admin-guide.md`
 (extended with every module as it ships) and the Finance sidebar grouped by
 module (commit `1c4f5b2`).
 
-### Book C — People & Organisation — ⬜ not started
+### Book C — People & Organisation — 🟡 in progress
+
+Backend build order was `PPL-01 → PPL-03 → PPL-02 → PPL-04` (Book C §0.2 —
+"without `PPL-03`, invoices have nobody to bill"); the admin-UI pass
+follows the same order.
 
 | Module | Screens | Status |
 |---|---|---|
-| PPL-01 | Student Information System | ⬜ |
+| PPL-01 | Student Information System | 🟡 partial (see note) |
+| PPL-03 | Guardian, Family & Fee Liability | ⬜ ← next up |
 | PPL-02 | Admissions & Enrolment CRM | ⬜ |
-| PPL-03 | Guardian, Family & Fee Liability | ⬜ |
 | PPL-04 | Staff & Human Resources | ⬜ |
 
-**← Next up.** `Modules/People/Livewire/` does not exist yet.
+**PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
+Guardians tabs), Create (with duplicate check), Edit, **Change billing
+attribute** (with a real live fee-impact preview, reusing FIN-02's own
+`FeeStructureResolver`/`FeeLineCalculator`), Change status (suspend/
+withdraw/readmit/graduate), and an on-demand Duplicate scanner. Also: a
+new `PreviewBillingAttributeChangeAction`, a real pre-existing bug fixed
+in `DetectPossibleDuplicatesAction` (date-of-birth matching was silently
+broken on every school), and two documented Livewire gotchas (see
+`.ai/rules/people.md`). **Deliberately not built**, because the backend
+for them doesn't exist at all (verified: no migration) — Documents, Prior
+schooling, Siblings, a real Timeline tab, Class/House allocation, Bulk
+operations, ID cards, Merge duplicates. See `.ai/rules/people.md`'s own
+"PPL-01's admin UI pass found four tables..." note before touching any of
+these — they need new backend work, not a UI retrofit.
 
 ### Book D — Academic Core — ⬜ not started
 ACA-01, ACA-02, ACA-04, ACA-05. `Modules/Academic/Livewire/` does not exist yet.

@@ -100,6 +100,29 @@
                     </div>
 
                     @if ($sessionsSchool)
+                        @php $studentsGroupActive = request()->routeIs('people.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $studentsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-students" aria-expanded="{{ $studentsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-students">
+                                <i class="ri ri-graduation-cap-line"></i> {{ __('Students') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $studentsGroupActive ? 'show' : '' }}" id="sidebar-group-students">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('people.students.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.students.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Directory') }}
+                                    </a>
+                                    <a href="{{ route('people.students.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.students.create') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-add-line"></i> {{ __('New student') }}
+                                    </a>
+                                    <a href="{{ route('people.students.duplicates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.students.duplicates') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-fingerprint-line"></i> {{ __('Duplicate scan') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">

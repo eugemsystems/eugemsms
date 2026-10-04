@@ -18,6 +18,13 @@ use Modules\People\Models\Student;
  * birth. Raises a review flag; **never** merges automatically — that is
  * `ACT-MergeDuplicateStudents`' job, heavily restricted and out of this
  * pass's scope.
+ *
+ * `students.date_of_birth` is declared `date()`, but a plain
+ * `where('date_of_birth', $date->toDateString())` never matched — see
+ * `.ai/rules/people.md`: the stored value round-trips as a full
+ * datetime string ("2015-03-10 00:00:00"), so an exact-string equals
+ * against a bare "Y-m-d" never hits. `whereDate()` compares the actual
+ * calendar date portably instead of the raw stored string.
  */
 final class DetectPossibleDuplicatesAction extends Action
 {
@@ -48,7 +55,7 @@ final class DetectPossibleDuplicatesAction extends Action
         foreach ($this->baseQuery($data)
             ->where('first_name', $data->firstName)
             ->where('last_name', $data->lastName)
-            ->where('date_of_birth', $data->dateOfBirth->toDateString())
+            ->whereDate('date_of_birth', $data->dateOfBirth->toDateString())
             ->get() as $match) {
             $candidates[$match->id] ??= new DuplicateCandidate($match->id, $match->admission_number, 'name_and_date_of_birth');
         }

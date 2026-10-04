@@ -67,6 +67,12 @@ use ReflectionProperty;
  * @property bool $has_safeguarding_flag
  * @property bool $is_vulnerable
  * @property string|null $rfid_tag
+ * @property string|null $address_line_1
+ * @property string|null $address_line_2
+ * @property string|null $suburb
+ * @property string|null $city
+ * @property string|null $province
+ * @property string|null $notes
  */
 class Student extends Model
 {
