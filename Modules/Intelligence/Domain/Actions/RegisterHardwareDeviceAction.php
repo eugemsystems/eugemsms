@@ -26,6 +26,10 @@ final class RegisterHardwareDeviceAction extends Action
      */
     public function execute(int $schoolId, string $deviceType, string $purpose, ?string $location = null, ?int $createdByUserId = null): array
     {
+        if (! in_array($deviceType, ['rfid_reader', 'biometric', 'qr_scanner', 'gate_terminal'], true)) {
+            throw new InvalidArgumentException("[{$deviceType}] is not a device type.");
+        }
+
         if (HardwareScanRouteRegistry::get($purpose) === null) {
             throw new InvalidArgumentException("Purpose '{$purpose}' has no registered scan route to authorise a device for.");
         }

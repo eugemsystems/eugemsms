@@ -1529,6 +1529,26 @@
                                         <i class="ri ri-equalizer-line"></i> {{ __('Indicator weights') }}
                                     </a>
 
+                                    <div class="app-sidebar-heading">{{ __('Integrations') }}</div>
+                                    <a href="{{ route('insights.integrations.clients', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.clients') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-key-2-line"></i> {{ __('API clients') }}
+                                    </a>
+                                    <a href="{{ route('insights.integrations.webhooks', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.webhooks') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-webhook-line"></i> {{ __('Webhooks') }}
+                                    </a>
+                                    <a href="{{ route('insights.integrations.webhooks.log', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.webhooks.log') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Delivery log') }}
+                                    </a>
+                                    <a href="{{ route('insights.integrations.sso', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.sso') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-user-line"></i> {{ __('SSO') }}
+                                    </a>
+                                    <a href="{{ route('insights.integrations.hardware', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.hardware') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-router-line"></i> {{ __('Hardware devices') }}
+                                    </a>
+                                    <a href="{{ route('insights.integrations.usage', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.integrations.usage') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-line"></i> {{ __('API usage') }}
+                                    </a>
+
                                     <div class="app-sidebar-heading">{{ __('Custom reports') }}</div>
                                     <a href="{{ route('insights.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.index', 'insights.reports.shared') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-file-chart-line"></i> {{ __('My reports') }}

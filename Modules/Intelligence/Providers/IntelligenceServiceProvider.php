@@ -120,6 +120,14 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             'configure' => ['description' => 'Re-weight or disable early-warning indicators and generate enrolment forecasts.'],
         ]);
 
+        PermissionRegistry::register('INTEGRATION', [
+            'manage' => ['description' => 'Issue, rotate and revoke third-party API keys.', 'dangerous' => true],
+            'view' => ['description' => 'View webhook deliveries and API usage for this school’s clients.'],
+            'webhook.manage' => ['description' => 'Create, enable and disable outbound webhook subscriptions.'],
+            'sso.manage' => ['description' => 'Configure SSO provisioning domains and credentials.', 'dangerous' => true],
+            'hardware.manage' => ['description' => 'Register hardware devices and rotate their credentials.'],
+        ]);
+
         PermissionRegistry::register('STAFF', [
             'wellbeing.view' => ['description' => 'View staff wellbeing indicators — only your own and your direct reports’, whatever else you hold.'],
         ]);

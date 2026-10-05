@@ -45,6 +45,28 @@ final class IssueApiClientAction extends Action
         int $rateLimitPerMinute = 60,
         ?int $createdByUserId = null,
     ): array {
+        if (trim($name) === '' || mb_strlen($name) > 150) {
+            throw new InvalidArgumentException('A client needs a name of up to 150 characters.');
+        }
+
+        if (! in_array($clientType, ['integration', 'hardware_device'], true)) {
+            throw new InvalidArgumentException("[{$clientType}] is not a client type.");
+        }
+
+        if ($scopedAbilities === []) {
+            throw new InvalidArgumentException('A client must be scoped to at least one ability.');
+        }
+
+        if ($rateLimitPerMinute < 1 || $rateLimitPerMinute > 10000) {
+            throw new InvalidArgumentException('The rate limit must be between 1 and 10,000 requests per minute.');
+        }
+
+        foreach ($ipAllowlist ?? [] as $entry) {
+            if (! self::isIpOrCidr($entry)) {
+                throw new InvalidArgumentException("[{$entry}] is not an IP address or CIDR range.");
+            }
+        }
+
         $validAbilities = [...self::GENERIC_ABILITIES, ...HardwareScanRouteRegistry::abilities()];
         $unlisted = array_diff($scopedAbilities, $validAbilities);
 
@@ -70,5 +92,18 @@ final class IssueApiClientAction extends Action
         event(new ApiClientIssued($client));
 
         return ['client' => $client, 'plaintextKey' => $plaintextKey];
+    }
+
+    private static function isIpOrCidr(string $entry): bool
+    {
+        [$address, $prefix] = array_pad(explode('/', $entry, 2), 2, null);
+
+        $isV4 = filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+
+        if (! $isV4 && filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
+            return false;
+        }
+
+        return $prefix === null || (ctype_digit($prefix) && (int) $prefix <= ($isV4 ? 32 : 128));
     }
 }

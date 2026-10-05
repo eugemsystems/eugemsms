@@ -1263,10 +1263,33 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
-| INT-04 | Public API, Webhooks & Integrations | ⬜ |
+| INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
 | SAA-01 | Licensing, Subscription & Entitlement | ⬜ |
 | SAA-02 | Vendor Control Centre | ⬜ |
 | SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**INT-04 note.** Built the spec's 6 screens — `Clients\Index`, `Webhooks\Index`,
+`Webhooks\Log`, `Sso\Index`, `Hardware\Index`, `Usage\Dashboard` — under
+`insights.integrations.*`, with permissions `integration.manage` (dangerous),
+`integration.view`, `integration.webhook.manage`, `integration.sso.manage`
+(dangerous), `integration.hardware.manage`. Keys, signing secrets and SSO
+credentials are shown once / write-only. Backend hardening: (1) webhook target
+SSRF — `WebhookTargetUrl` (https only, no private/loopback/link-local/reserved
+addresses, DNS-resolved addresses checked, no redirects) enforced on create and
+on every dispatch; (2) a subscription's client must be an active integration
+client of the same school; (3) `IssueApiClientAction` validates name, type,
+non-empty abilities, rate limit 1–10,000 and IP/CIDR allowlist; (4) new
+`RotateApiClientKeyAction`, `SetWebhookSubscriptionActiveAction` (re-enable resets
+failures), `SaveSsoProvisioningConfigAction`; (5) revoking a client switches off
+its webhooks. **Not built (documented gaps):** the public REST surface itself —
+`/api/v1/openapi.json`, `/api/v1/hardware/scan`, `/api/v1/hardware/{ulid}/heartbeat`,
+`/developers`, per-client rate-limit middleware (429 + Retry-After) and
+`api_usage_log` writes — so the usage dashboard is empty until those exist
+(BR-INT-04-003/010, AC-INT-04-001/005 are not yet exercisable end to end);
+no scheduler wiring for webhook retries or `MarkOfflineHardwareDevicesAction`
+(manual "flag silent devices" button instead); `ProvisionSsoStaffAccountAction`
+takes a free-text role name and is deliberately not exposed on any screen until
+an IdP sync exists to drive it and the role is restricted.
 
 **INT-03 note.** Built the spec's 6 screens — `EarlyWarning\Queue`,
 `StudentDetail`, `FeeRisk`, `Enrolment`, `StaffWellbeing`, `Weights` — under

@@ -18,6 +18,12 @@ use Modules\Intelligence\Livewire\Insights\Reports\ExecutionLog as ReportExecuti
 use Modules\Intelligence\Livewire\Insights\Reports\Index as ReportsIndex;
 use Modules\Intelligence\Livewire\Insights\Reports\Schedule as ReportSchedule;
 use Modules\Intelligence\Livewire\Insights\Reports\Shared as ReportsShared;
+use Modules\Intelligence\Livewire\Integrations\Clients\Index as IntegrationClients;
+use Modules\Intelligence\Livewire\Integrations\Hardware\Index as IntegrationHardware;
+use Modules\Intelligence\Livewire\Integrations\Sso\Index as IntegrationSso;
+use Modules\Intelligence\Livewire\Integrations\Usage\Dashboard as IntegrationUsage;
+use Modules\Intelligence\Livewire\Integrations\Webhooks\Index as IntegrationWebhooks;
+use Modules\Intelligence\Livewire\Integrations\Webhooks\Log as IntegrationWebhookLog;
 
 /**
  * Book J admin screens, school-scoped like every other module's own
@@ -48,5 +54,14 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/insights')->na
         Route::livewire('enrolment', EarlyWarningEnrolment::class)->name('enrolment');
         Route::livewire('staff-wellbeing', EarlyWarningStaffWellbeing::class)->name('staff-wellbeing');
         Route::livewire('weights', EarlyWarningWeights::class)->name('weights');
+    });
+
+    Route::prefix('integrations')->name('integrations.')->group(function (): void {
+        Route::livewire('clients', IntegrationClients::class)->name('clients');
+        Route::livewire('webhooks', IntegrationWebhooks::class)->name('webhooks');
+        Route::livewire('webhooks/log', IntegrationWebhookLog::class)->name('webhooks.log');
+        Route::livewire('sso', IntegrationSso::class)->name('sso');
+        Route::livewire('hardware', IntegrationHardware::class)->name('hardware');
+        Route::livewire('usage', IntegrationUsage::class)->name('usage');
     });
 });

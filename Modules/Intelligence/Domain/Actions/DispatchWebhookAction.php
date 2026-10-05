@@ -10,6 +10,7 @@ use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Support\Settings\ScopeChain;
 use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Intelligence\Domain\Events\WebhookAutoDisabled;
+use Modules\Intelligence\Domain\Support\WebhookTargetUrl;
 use Modules\Intelligence\Models\WebhookDelivery;
 use Modules\Intelligence\Models\WebhookSubscription;
 use Throwable;
@@ -52,7 +53,11 @@ final class DispatchWebhookAction extends Action
         $signature = hash_hmac('sha256', $body, (string) $subscription->signing_secret);
 
         try {
-            $response = Http::withHeaders(['X-SERP-Signature' => $signature])->post($subscription->target_url, $payload);
+            // Re-checked on every attempt (a name can start resolving internally) and
+            // redirects are never followed, so a public host cannot bounce the call inward.
+            WebhookTargetUrl::assertSafe($subscription->target_url);
+
+            $response = Http::withHeaders(['X-SERP-Signature' => $signature])->withoutRedirecting()->post($subscription->target_url, $payload);
             $succeeded = $response->successful();
             $responseStatus = $response->status();
         } catch (Throwable) {
