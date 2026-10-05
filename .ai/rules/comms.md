@@ -18,3 +18,9 @@ No view in this codebase uses `@can`; scoped (own/assigned/section/school) permi
 
 ## COM-02 Builder looks its rule up by ulid inside mount()
 Other modules (Welfare, Academic) bind the record as a route parameter and add an `abort_unless($model->school_id === $school->id, 404)`; both work. `Builder` instead takes the rule's ulid as a plain string and queries `AutomationRule::where('school_id', …)->where('ulid', …)->firstOrFail()` after `loadSchool()`, so the tenant scope applies and a cross-school ulid is a not-found. This was a precaution, not a verified binding bug. Name the held model property differently from the route parameter (`$automationRule`, not `$rule`).
+
+## Livewire public properties are client-tamperable — re-derive ids and rows server-side before a write
+`AttendanceReview` holds `$sessionId` and `$suggestions` as public properties, but a client can set any of them. `confirm()` therefore re-runs `PreviewAttendanceReconciliationAction` for the (school-scoped) meeting and takes only the teacher's chosen *statuses* from component state; the session id and each matched student id come from the server. Do the same wherever a screen writes to another module on the strength of ids it displayed.
+
+## addError() persists across Livewire requests — reset the bag when a method doesn't call validate()
+`validate()` clears the error bag; a method that only calls `addError()` does not, so a stale message survives a later successful call. Call `$this->resetErrorBag()` at the start of such methods (found when `AttendanceReview::confirm()` kept showing "choose a status" after a successful confirm).

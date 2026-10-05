@@ -1382,7 +1382,7 @@
 
                         {{--
                             Book I (Modules\Comms) admin screens. COM-01, COM-02,
-                            COM-03/04/05's admin screen and COM-06 are built so far; later COM modules add their own
+                            COM-03/04/05's admin screen, COM-06 and COM-07 are built so far; later COM modules add their own
                             headings inside this one group.
                         --}}
                         @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
@@ -1447,6 +1447,23 @@
                                     </a>
                                     <a href="{{ route('comms.events.checkin', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.events.checkin') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-qr-scan-2-line"></i> {{ __('Event check-in') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Virtual Meetings') }}</div>
+                                    <a href="{{ route('comms.meetings.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-vidicon-line"></i> {{ __('Meeting schedule') }}
+                                    </a>
+                                    <a href="{{ route('comms.meetings.consultations', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.consultations') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-voice-line"></i> {{ __('Consultation windows') }}
+                                    </a>
+                                    <a href="{{ route('comms.meetings.attendance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.attendance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-follow-line"></i> {{ __('Online attendance') }} ⭐
+                                    </a>
+                                    <a href="{{ route('comms.meetings.recordings', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.recordings') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-record-circle-line"></i> {{ __('Recordings') }}
+                                    </a>
+                                    <a href="{{ route('comms.meetings.providers', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.providers') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-plug-line"></i> {{ __('Meeting providers') }} ⚠⚠
                                     </a>
                                 </div>
                             </div>

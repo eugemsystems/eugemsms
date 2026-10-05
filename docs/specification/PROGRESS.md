@@ -1087,7 +1087,7 @@ new), alongside the whole-app suite.
 | COM-02 | Event-Driven Automation Rules | ✅ (`Livewire/Automation/`) |
 | COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ✅ admin screen only (`Livewire/Portal/Admin/`) — see note |
 | COM-06 | Calendar, Events & Notice Board | ✅ (`Livewire/{Calendar,Notices,Newsletters,Events}/`) |
-| COM-07 | Virtual Meetings | ⬜ |
+| COM-07 | Virtual Meetings | ✅ (`Livewire/{Meetings,Consultations}/`) |
 | COM-08 | Feedback & Complaints | ⬜ |
 
 **COM-01 note.** Built (`Livewire/Messaging/{Gateways,WhatsApp,Sms,Reports}/`,
@@ -1178,6 +1178,32 @@ its tokens and ticket scanning (API/mobile surfaces), and read-rate
 denominators on the notice board (the backend only approximates the
 audience size for narrow scopes). Comms module: 122 tests (61 backend +
 61 admin-UI), all green.
+
+**COM-07 note.** Built 5 screens, matching the spec's own §5 table:
+`Meetings\Providers`, `Meetings\Index`, `Consultations\Windows`,
+`Meetings\AttendanceReview`, `Meetings\Recordings`. Permissions are
+registered under module code `MEETINGS` (`meetings.manage|view|
+consultation.manage|recording.view`); the attendance screen uses
+Academic's existing `academic.attendance.mark`. **`meetings.waiting_room.override`
+is this pass's own name** for the "explicit permission" AC-COM-07-005
+requires but never names. No backend Action was added. Provider
+credentials are write-only; `host_url`/`passcode` are never selected into
+the schedule and are shown only to the meeting's own host via
+`ResolveMeetingHostCredentialsAction`. A learner-facing meeting always
+starts with its waiting room on; turning it off is a separate override —
+a user without the permission still triggers the Action so the
+unauthorised attempt is logged, then is refused. Attendance review is
+advisory: the session and matched learners are re-derived server-side on
+every confirm (never trusted from component state), a below-threshold
+learner gets no default status, and an unmatched participant is listed
+but must be marked from the register itself — there is no backend Action
+to match one, and none was invented. **Deliberately not built:** guardian
+consultation booking and the join/my-schedule endpoints (portal API),
+the webhook secret field (the backend registration Action has no write
+path for it), a meeting-webhook log screen (not in the spec's table), and
+a purge schedule for recordings (the screen offers on-demand purge; the
+cron wiring remains the backend's documented deferred gap). Comms module:
+141 tests (61 backend + 80 admin-UI), all green.
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so

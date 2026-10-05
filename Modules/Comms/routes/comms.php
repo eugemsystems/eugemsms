@@ -9,8 +9,13 @@ use Modules\Comms\Livewire\Automation\Index as AutomationIndex;
 use Modules\Comms\Livewire\Automation\ScanRuns as AutomationScanRuns;
 use Modules\Comms\Livewire\Automation\Variants as AutomationVariants;
 use Modules\Comms\Livewire\Calendar\View as CalendarView;
+use Modules\Comms\Livewire\Consultations\Windows as ConsultationWindows;
 use Modules\Comms\Livewire\Events\CheckIn as EventsCheckIn;
 use Modules\Comms\Livewire\Events\Register as EventsRegister;
+use Modules\Comms\Livewire\Meetings\AttendanceReview as MeetingAttendanceReview;
+use Modules\Comms\Livewire\Meetings\Index as MeetingsIndex;
+use Modules\Comms\Livewire\Meetings\Providers as MeetingProviders;
+use Modules\Comms\Livewire\Meetings\Recordings as MeetingRecordings;
 use Modules\Comms\Livewire\Messaging\Gateways\Index as GatewaysIndex;
 use Modules\Comms\Livewire\Messaging\Gateways\Webhooks as GatewayWebhooks;
 use Modules\Comms\Livewire\Messaging\Reports\Cost as CostReport;
@@ -51,4 +56,12 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/comms')->name(
     Route::livewire('newsletters', NewslettersCompose::class)->name('newsletters.compose');
     Route::livewire('events/registrations', EventsRegister::class)->name('events.register');
     Route::livewire('events/check-in', EventsCheckIn::class)->name('events.checkin');
+
+    Route::prefix('meetings')->name('meetings.')->group(function (): void {
+        Route::livewire('/', MeetingsIndex::class)->name('index');
+        Route::livewire('providers', MeetingProviders::class)->name('providers');
+        Route::livewire('attendance', MeetingAttendanceReview::class)->name('attendance');
+        Route::livewire('recordings', MeetingRecordings::class)->name('recordings');
+        Route::livewire('consultations', ConsultationWindows::class)->name('consultations');
+    });
 });

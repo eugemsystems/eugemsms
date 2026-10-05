@@ -170,6 +170,16 @@ class CommsServiceProvider extends ModuleServiceProvider
             'checkin' => ['description' => 'Check attendees in at the door.'],
         ]);
 
+        // COM-07 §5. `waiting_room.override` is this pass's own name for
+        // the "explicit permission" AC-COM-07-005 requires but never names.
+        PermissionRegistry::register('MEETINGS', [
+            'manage' => ['description' => 'Register meeting providers, schedule and cancel meetings, and purge expired recordings.', 'dangerous' => true],
+            'view' => ['description' => 'View the meeting schedule.'],
+            'consultation.manage' => ['description' => 'Set parent-teacher consultation availability and cancel bookings.'],
+            'recording.view' => ['description' => 'View meeting recordings and their expiry dates.'],
+            'waiting_room.override' => ['description' => 'Disable the waiting room of a learner-facing meeting (logged).', 'dangerous' => true],
+        ]);
+
         // COM-02 §5 names these without a `comms.` prefix.
         PermissionRegistry::register('AUTOMATION', [
             'view' => ['description' => 'View automation rules, execution logs, scan history and A/B variant performance.'],
