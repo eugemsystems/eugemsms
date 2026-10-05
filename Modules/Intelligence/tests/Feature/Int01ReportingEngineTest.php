@@ -86,6 +86,8 @@ it('re-evaluates a shared report against the viewer\'s own permissions, never th
         createdByUserId: $f['user']->id,
     ));
 
+    app(ShareReportAction::class)->execute($report->id, 'user', $classTeacher->id, $f['user']->id);
+
     $asHead = app(RunSavedReportAction::class)->execute($report->id, $f['user']);
     $asClassTeacher = app(RunSavedReportAction::class)->execute($report->id, $classTeacher);
 

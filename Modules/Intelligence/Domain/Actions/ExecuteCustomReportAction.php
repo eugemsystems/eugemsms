@@ -14,9 +14,11 @@ use Modules\Core\Domain\Support\Settings\ScopeChain;
 use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Core\Models\School;
 use Modules\Intelligence\Domain\DataObjects\ExecuteReportSpec;
+use Modules\Intelligence\Domain\DataObjects\ReportFieldDefinition;
 use Modules\Intelligence\Domain\DataObjects\ReportResult;
 use Modules\Intelligence\Domain\Registry\ReportFieldRegistry;
 use Modules\Intelligence\Domain\Support\ReportConditionBuilder;
+use Modules\Intelligence\Domain\Support\ReportFieldAccess;
 use Modules\Intelligence\Models\ReportExecution;
 use Modules\Intelligence\Models\WarehouseSnapshot;
 
@@ -45,6 +47,7 @@ final class ExecuteCustomReportAction extends Action
     public function __construct(
         private readonly ReportConditionBuilder $conditionBuilder,
         private readonly SettingResolver $settings,
+        private readonly ReportFieldAccess $access,
     ) {}
 
     public function execute(ExecuteReportSpec $spec, User $runner, bool $strict = true, ?int $reportId = null): ReportResult
@@ -58,6 +61,13 @@ final class ExecuteCustomReportAction extends Action
         if ($spec->consolidateSchoolIds !== null) {
             $this->assertConsolidationPermitted($runner, $spec->schoolId);
         }
+
+        // ⭐ A predicate over a field the runner cannot read is itself a leak —
+        // `WHERE basic_salary_minor > 5000` over a report that only *selects* a
+        // name tells the runner who earns more than 5000. So every filter and
+        // group-by field must be registered, usable for that purpose, and
+        // readable by the runner, whether or not it is also selected.
+        $this->assertFilterAndGroupFieldsPermitted($spec, $runner);
 
         /** @var class-string<Model> $modelClass */
         $modelClass = $entity->baseModelClass;
@@ -93,10 +103,7 @@ final class ExecuteCustomReportAction extends Action
                 throw new InvalidArgumentException("Unregistered report field '{$selection['entity']}.{$selection['field']}'.");
             }
 
-            $permitted = $runner->hasPermissionTo($field->requiredPermission)
-                && (! $field->isSensitive || $runner->hasPermissionTo('report.sensitive_field.access'));
-
-            if (! $permitted) {
+            if (! $this->mayRead($field, $runner)) {
                 if ($strict) {
                     throw new InsufficientScopeException(
                         "You do not have permission to access field '{$field->entityKey}.{$field->fieldKey}'.",
@@ -108,6 +115,13 @@ final class ExecuteCustomReportAction extends Action
             }
 
             $alias = $selection['alias'] ?? $field->fieldKey;
+
+            // The alias is concatenated into the select expression, so it must
+            // be a plain identifier — never caller-controlled SQL.
+            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,63}$/', $alias) !== 1) {
+                throw new InvalidArgumentException("Report column alias '{$alias}' must be a plain identifier.");
+            }
+
             $aliases[] = $alias;
             $query->addSelect($field->fieldKey.' as '.$alias);
         }
@@ -158,9 +172,49 @@ final class ExecuteCustomReportAction extends Action
         return new ReportResult(rows: $rows, rowCount: count($rows), durationMs: $durationMs);
     }
 
+    /**
+     * The field's own permission, plus the extra sensitive-data gate where
+     * the field is marked sensitive (BR-INT-01-002/003).
+     */
+    private function mayRead(ReportFieldDefinition $field, User $runner): bool
+    {
+        return $this->access->mayRead($field, $runner);
+    }
+
+    private function assertFilterAndGroupFieldsPermitted(ExecuteReportSpec $spec, User $runner): void
+    {
+        foreach ($spec->filters as $filter) {
+            $this->assertUsableField($spec->primaryEntityKey, (string) $filter['field'], 'filter', $runner);
+        }
+
+        foreach ($spec->groupBy as $groupField) {
+            $this->assertUsableField($spec->primaryEntityKey, (string) $groupField, 'group', $runner);
+        }
+    }
+
+    /**
+     * @param  'filter'|'group'  $use
+     */
+    private function assertUsableField(string $entityKey, string $fieldKey, string $use, User $runner): void
+    {
+        $field = ReportFieldRegistry::getField($entityKey, $fieldKey)
+            ?? throw new InvalidArgumentException("Unregistered report field '{$entityKey}.{$fieldKey}'.");
+
+        if (($use === 'filter' && ! $field->isFilterable) || ($use === 'group' && ! $field->isGroupable)) {
+            throw new InvalidArgumentException("Report field '{$entityKey}.{$fieldKey}' cannot be used to {$use}.");
+        }
+
+        if (! $this->mayRead($field, $runner)) {
+            throw new InsufficientScopeException(
+                "You do not have permission to {$use} by field '{$entityKey}.{$fieldKey}'.",
+                ['field' => $fieldKey, 'required_permission' => $field->requiredPermission],
+            );
+        }
+    }
+
     private function assertConsolidationPermitted(User $runner, int $schoolId): void
     {
-        if (! $runner->hasPermissionTo('core.school.view.group')) {
+        if (! $this->access->has($runner, 'core.school.view.group')) {
             throw new InsufficientScopeException(
                 'Cross-school consolidated reporting requires core.school.view.group.',
                 ['permission' => 'core.school.view.group'],

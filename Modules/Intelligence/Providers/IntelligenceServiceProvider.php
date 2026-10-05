@@ -6,6 +6,8 @@ namespace Modules\Intelligence\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Academic\Models\AttendanceSummary;
 use Modules\Academic\Models\TermSubjectResult;
 use Modules\Boarding\Domain\Actions\MarkRollCallAction;
@@ -19,6 +21,7 @@ use Modules\Core\Domain\DataObjects\Files\FileCategoryDefinition;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -87,6 +90,36 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
         $this->registerExecutiveWidgets();
         $this->registerFileCategories();
         $this->registerRiskIndicators();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book J INT-01 §5). `report.sensitive_field.access`
+     * is the extra gate the backend already checks by name (BR-INT-01-003);
+     * it was never registered, so it could not be granted from a role.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('REPORT', [
+            'build' => ['description' => 'Build, save and run ad hoc reports over fields the user may already read.'],
+            'schedule' => ['description' => 'Schedule saved reports for recurring delivery.'],
+            'view_audit' => ['description' => 'View the report execution audit log.'],
+            'sensitive_field.access' => ['description' => 'Include sensitive fields (compensation, medical flags) in reports — on top of each field’s own permission.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Same `Livewire::addLocation()` + explicit `web` group pattern every
+     * other module's admin-UI pass uses.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\\Intelligence\\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/intelligence.php');
+        });
     }
 
     private function registerNotificationKeys(): void

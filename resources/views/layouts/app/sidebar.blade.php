@@ -1483,6 +1483,37 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{--
+                            Book J (Modules\Intelligence) — school-facing
+                            INT screens only. The vendor-facing SAA modules are
+                            a separate authentication realm and never appear in
+                            this sidebar (Book J §0.2).
+                        --}}
+                        @php $insightsGroupActive = request()->routeIs('insights.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $insightsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-insights" aria-expanded="{{ $insightsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-insights">
+                                <i class="ri ri-bar-chart-box-line"></i> {{ __('Insights') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $insightsGroupActive ? 'show' : '' }}" id="sidebar-group-insights">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Custom reports') }}</div>
+                                    <a href="{{ route('insights.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.index', 'insights.reports.shared') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-chart-line"></i> {{ __('My reports') }}
+                                    </a>
+                                    <a href="{{ route('insights.reports.builder', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.builder') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-tools-line"></i> {{ __('Report builder') }} ⭐
+                                    </a>
+                                    <a href="{{ route('insights.reports.schedule', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.schedule') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-schedule-line"></i> {{ __('Scheduled reports') }}
+                                    </a>
+                                    <a href="{{ route('insights.reports.executions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.executions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Execution log') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>

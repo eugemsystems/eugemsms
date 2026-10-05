@@ -30,6 +30,26 @@ final class CreateCustomReportAction extends Action
             }
         }
 
+        foreach ($data->selectedFields as $selection) {
+            $alias = $selection['alias'] ?? null;
+
+            if ($alias !== null && preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,63}$/', $alias) !== 1) {
+                throw new InvalidArgumentException("Report column alias '{$alias}' must be a plain identifier.");
+            }
+        }
+
+        foreach ($data->filters ?? [] as $filter) {
+            if (ReportFieldRegistry::getField($data->primaryEntityKey, (string) ($filter['field'] ?? '')) === null) {
+                throw new InvalidArgumentException("Unregistered report filter field '{$data->primaryEntityKey}.".($filter['field'] ?? '')."'.");
+            }
+        }
+
+        foreach ($data->groupBy ?? [] as $groupField) {
+            if (ReportFieldRegistry::getField($data->primaryEntityKey, (string) $groupField) === null) {
+                throw new InvalidArgumentException("Unregistered report group-by field '{$data->primaryEntityKey}.{$groupField}'.");
+            }
+        }
+
         return $this->transaction(fn (): CustomReport => CustomReport::create([
             'school_id' => $data->schoolId,
             'name' => $data->name,

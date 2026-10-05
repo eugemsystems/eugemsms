@@ -1251,9 +1251,51 @@ from the class path under the module's `addLocation()` namespace, so
 update request then re-hydrated the *Finance* component. See
 `.ai/rules/comms.md`.
 
-### Book J — Intelligence & SaaS Control — ⬜ not started
-INT-01–INT-04 (`Modules/Intelligence`), SAA-01–SAA-03 (`Modules/Saas`) —
-neither has a `Livewire/` directory yet.
+### Book J — Intelligence & SaaS Control — 🟡 in progress
+
+Build order from the spec: INT-01 → INT-02 → INT-03 → INT-04 → SAA-01 →
+SAA-02 / SAA-03. INT screens are **school-facing** (this panel); SAA-01/02/03
+are **vendor-facing** and must live in a separate authentication realm, never
+in this panel's sidebar, routes or permissions (Book J §0.2).
+
+| Module | Screens | Status |
+|---|---|---|
+| INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
+| INT-02 | Executive Dashboards | ⬜ |
+| INT-03 | Early Warning & Predictive Analytics | ⬜ |
+| INT-04 | Public API, Webhooks & Integrations | ⬜ |
+| SAA-01 | Licensing, Subscription & Entitlement | ⬜ |
+| SAA-02 | Vendor Control Centre | ⬜ |
+| SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**INT-01 note.** Built the spec's 5 screens — `Reports\Builder`, `Reports\Index`
+(My reports), `Reports\Shared`, `Reports\Schedule`, `Reports\ExecutionLog` —
+under `Livewire/Insights/Reports/` (the name `reports.*` is already taken by
+Farm/Finance/Payroll/Fiscal). Permissions registered under module code
+`REPORT` (`report.build|schedule|view_audit` and `report.sensitive_field.access`,
+which the backend checked by name but never registered).
+
+**Three real security gaps in the backend were found and fixed before exposing
+the builder** (each has a regression test, `Int01QueryHardeningTest`): (1) a
+*filter or group-by* on a field the runner cannot read was applied unchecked —
+`WHERE basic_salary_minor > N` over a report that only selects a name is an
+inference oracle, contradicting AC-INT-01-001 — so every filter/group field is
+now registered, filterable/groupable and readable by the running user; (2) the
+column alias was concatenated into raw SQL — now a plain identifier only; (3)
+`RunSavedReportAction` ran any report for anyone who knew its id — now only the
+author or a share recipient (user or role). Field permission checks go through
+a new `ReportFieldAccess`, which treats a never-created permission as "not
+permitted" (spatie otherwise throws and the builder 500s). One existing test
+("re-evaluates a **shared** report…") never actually shared the report and only
+passed because of gap (3); it now shares it.
+
+**Deliberately not built:** the chart preview (the chart type is stored for a
+later renderer), report edit/delete and schedule pause/delete (no backend
+Action), PDF/Excel/CSV export and the `/api/v1/reports/*` endpoints, and
+attached files on scheduled delivery (the recipient is notified a report is
+ready; no file is rendered, and the cron wiring is still the backend's deferred
+gap). The warehouse is row-count tracking only, as its own Action documents.
+Intelligence module: 63 tests, all green; PHPStan clean.
 
 ### Book K — Closing the Catalogue — ⬜ not started
 FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
