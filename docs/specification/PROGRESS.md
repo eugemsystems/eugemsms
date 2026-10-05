@@ -1265,8 +1265,29 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
 | INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
 | SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ |
-| SAA-02 | Vendor Control Centre | ⬜ |
+| SAA-02 | Vendor Control Centre | ✅ admin screens (`Livewire/Vendor/{Tenants,Rollouts,Releases,Broadcasts,Incidents}/`, public `/status`) |
 | SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**SAA-02 note.** Vendor screens `Tenants\Index`, `Tenants\Show`, `Rollouts\Index`,
+`Releases\Index`, `Broadcasts\Compose`, `Incidents\Manage` (routes `vendor.*`), the
+unauthenticated `/status` page (public incidents only, `GetPublicStatusAction`) and a
+school-facing `Tenant\Announcements` (`account.announcements`, BR-SAA-02-006 — the
+tenant's own all-tenant and explicitly-targeted notices only). Health scores are always
+shown beside their component signals (AC-SAA-02-004). Opening a tenant, recomputing
+health and every rollout/release/broadcast/incident action are written to the vendor
+audit trail (BR-SAA-02-007) and listed on the tenant page. **Backend hardening:**
+rollouts need existing pilot/cohort tenants, refuse an already-global flag and a second
+concurrent rollout, and bound a percentage stage to 1–99; canary releases validate the
+version format, tenants and uniqueness, and a rolled-back release can no longer be
+"confirmed stable" or rolled back twice; broadcasts validate severity, length, window and
+tenants, and an empty audience is an error rather than "all"; incidents validate severity,
+components and status and refuse updates once resolved. **Known gaps:** (1) the
+**impersonation entry point** (BR-SAA-02-002) is not built — `Core\Users\Impersonate`
+only lists users in the *operator's own* tenant, so a cross-tenant, consent-gated vendor
+entry needs a design decision about the session swap; (2) `GET /api/v1/vendor/tenants/{id}/health`
+is not built; (3) nightly health snapshots are not scheduled (on-demand recompute only);
+(4) a tenant's own incident visibility to its administrators is the `Announcements`
+page, not yet a global banner.
 
 **SAA-01 note (and the vendor realm).** School-facing `Tenant\Subscription\MySubscription`
 (`account.subscription`, permissions `subscription.view`/`subscription.manage`) and

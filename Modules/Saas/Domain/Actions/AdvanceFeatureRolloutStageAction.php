@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Saas\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Models\FeatureFlag;
 use Modules\Core\Models\FeatureFlagOverride;
+use Modules\Core\Models\Tenant;
 use Modules\Saas\Domain\DataObjects\AdvanceFeatureRolloutStageData;
 use Modules\Saas\Domain\Exceptions\FeatureRolloutAlreadyAtFinalStageException;
 use Modules\Saas\Models\FeatureRollout;
@@ -32,6 +34,18 @@ final class AdvanceFeatureRolloutStageAction extends Action
 
         $nextStage = FeatureRollout::STAGE_ORDER[$currentIndex + 1];
         $flag = FeatureFlag::query()->where('key', $rollout->feature_flag_key)->firstOrFail();
+
+        if ($nextStage === 'cohort') {
+            $cohort = array_values(array_unique($data->cohortTenantIds ?? []));
+
+            if ($cohort === [] || Tenant::query()->whereIn('id', $cohort)->count() !== count($cohort)) {
+                throw new InvalidArgumentException('A cohort needs at least one existing tenant.');
+            }
+        }
+
+        if ($nextStage === 'percentage' && ($data->percentage === null || $data->percentage < 1 || $data->percentage > 99)) {
+            throw new InvalidArgumentException('A percentage stage needs a figure between 1 and 99; 100% is the general stage.');
+        }
 
         return $this->transaction(function () use ($rollout, $nextStage, $flag, $data): FeatureRollout {
             $updates = ['rollout_stage' => $nextStage];

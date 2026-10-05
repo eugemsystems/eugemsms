@@ -1578,6 +1578,9 @@
                                     <a href="{{ route('account.subscription', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('account.subscription') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-bank-card-line"></i> {{ __('My subscription') }}
                                     </a>
+                                    <a href="{{ route('account.announcements', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('account.announcements') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-megaphone-line"></i> {{ __('Announcements') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

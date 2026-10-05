@@ -19,6 +19,10 @@ final class RollbackReleaseAction extends Action
     {
         $deployment = ReleaseDeployment::query()->findOrFail($releaseDeploymentId);
 
+        if ($deployment->migration_status === 'rolled_back') {
+            throw new RollbackNoLongerAvailableException("Release deployment [{$deployment->id}] has already been rolled back.");
+        }
+
         if (! $deployment->rollback_available) {
             throw new RollbackNoLongerAvailableException(
                 "Release deployment [{$deployment->id}] has already been confirmed stable — rollback is no longer available."
