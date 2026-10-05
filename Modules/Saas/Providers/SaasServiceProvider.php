@@ -6,8 +6,11 @@ namespace Modules\Saas\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -42,6 +45,35 @@ class SaasServiceProvider extends ModuleServiceProvider
         $this->registerNotificationKeys();
         $this->registerModuleAdoptionSignals();
         $this->registerChurnRiskIndicators();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass. Only the school-facing screens carry permissions: the
+     * vendor console is gated by identity (`serp.vendor`, i.e.
+     * `users.user_type = vendor` + IP allowlist + confirmed 2FA), never by a
+     * grantable permission (Book J §0.2, AC-SAA-02-001).
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('SUBSCRIPTION', [
+            'view' => ['description' => 'View this tenant’s plan, usage and invoices.'],
+            'manage' => ['description' => 'Upgrade or downgrade the tenant’s plan — a billing commitment.', 'dangerous' => true],
+        ]);
+
+        PermissionRegistry::register('SUPPORT', [
+            'ticket.raise' => ['description' => 'Raise and follow support tickets with the software vendor.'],
+        ]);
+    }
+
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\\Saas\\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/saas.php');
+        });
     }
 
     private function registerTenantModels(): void

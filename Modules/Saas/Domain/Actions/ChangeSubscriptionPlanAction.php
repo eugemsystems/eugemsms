@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Saas\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Saas\Domain\DataObjects\ChangeSubscriptionPlanData;
 use Modules\Saas\Domain\DataObjects\IssueTenantInvoiceData;
@@ -35,6 +36,14 @@ final class ChangeSubscriptionPlanAction extends Action
         $subscription = Subscription::query()->findOrFail($data->subscriptionId);
         $fromPlan = SubscriptionPlan::query()->findOrFail($subscription->plan_id);
         $toPlan = SubscriptionPlan::query()->findOrFail($data->newPlanId);
+
+        if (! in_array($subscription->status, Subscription::ACTIVE_STATUSES, true)) {
+            throw new InvalidArgumentException('Only a trial or active subscription can change plan; resolve payment first.');
+        }
+
+        if ($toPlan->id === $fromPlan->id || ! $toPlan->is_active) {
+            throw new InvalidArgumentException('Choose a different, currently offered plan.');
+        }
 
         $learnerCount = $subscription->learner_count_at_billing ?? 0;
         $isUpgrade = $toPlan->monthlyPriceMinor($learnerCount) > $fromPlan->monthlyPriceMinor($learnerCount);

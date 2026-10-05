@@ -22,6 +22,8 @@ final class SuspendSubscriptionAction extends Action
     {
         $subscription = Subscription::query()->findOrFail($subscriptionId);
 
+        $this->assertMayTransition($subscription, ['trial', 'active', 'past_due', 'grace'], 'suspended');
+
         return $this->transaction(fn (): Subscription => $this->transitionStatus($subscription, 'suspended'));
     }
 }

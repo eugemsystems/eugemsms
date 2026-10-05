@@ -21,6 +21,8 @@ final class MarkSubscriptionPastDueAction extends Action
     {
         $subscription = Subscription::query()->findOrFail($subscriptionId);
 
+        $this->assertMayTransition($subscription, ['trial', 'active'], 'past_due');
+
         return $this->transaction(fn (): Subscription => $this->transitionStatus($subscription, 'past_due'));
     }
 }

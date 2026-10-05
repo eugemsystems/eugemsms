@@ -1264,9 +1264,34 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
 | INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
-| SAA-01 | Licensing, Subscription & Entitlement | ⬜ |
+| SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ |
 | SAA-02 | Vendor Control Centre | ⬜ |
 | SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**SAA-01 note (and the vendor realm).** School-facing `Tenant\Subscription\MySubscription`
+(`account.subscription`, permissions `subscription.view`/`subscription.manage`) and
+vendor-facing `Vendor\Subscription\Plans`, `Vendor\Subscription\Manage`,
+`Vendor\Billing\Invoices`, `Vendor\Licensing\Keys` (`vendor.*`). **Vendor realm design:**
+the backend had already settled it — a vendor is `users.user_type = vendor`, gated by the
+`serp.vendor` group / `EnsureVendorGuard` (identity, IP allowlist, confirmed 2FA), not a
+grantable permission and not a second user table; this pass builds on that rather than
+adding a `vendor` auth guard. Because Livewire update requests do not re-run route
+middleware, every vendor component re-runs the guard (`AuthorizesVendorConsole`) in mount,
+render and each mutation, and every tenant-affecting action is written to the activity log
+(`RecordVendorConsoleActionAction`, BR-SAA-02-007). A separate `vendor/` layout; nothing
+vendor-facing is linked from the school sidebar. **Backend hardening:** subscription
+lifecycle is now a real state machine (`assertMayTransition` — a cancelled subscription can
+no longer be "reactivated"); `ChangeSubscriptionPlanAction` refuses same/withdrawn plans and
+non-live subscriptions; `CreateSubscriptionAction` refuses a withdrawn plan, schools outside
+the tenant (entitlements are written per school) and a second live subscription;
+`RecordTenantPaymentAction` refuses zero, wrong-currency and void-invoice payments;
+`IssueLicenceKeyAction` binds the key to the subscription's own tenant; new
+`SetSubscriptionPlanActiveAction`. **Known gaps:** the `/api/v1/subscription/*` endpoints;
+no scheduled renewal/past-due/usage-metering runs (screens call the Actions on demand); no
+plan create/edit form (catalogue is read + withdraw/offer); `serp.vendor`'s IP allowlist is
+deliberately permissive while `VENDOR_IP_ALLOWLIST` is unset (existing, documented stance) —
+**set it in every deployed environment**; all vendor staff currently have equal console
+access (the spec defines no vendor sub-roles).
 
 **INT-04 note.** Built the spec's 6 screens — `Clients\Index`, `Webhooks\Index`,
 `Webhooks\Log`, `Sso\Index`, `Hardware\Index`, `Usage\Dashboard` — under

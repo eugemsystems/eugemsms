@@ -24,6 +24,8 @@ final class CancelSubscriptionAction extends Action
     {
         $subscription = Subscription::query()->findOrFail($subscriptionId);
 
+        $this->assertMayTransition($subscription, ['trial', 'active', 'past_due', 'grace', 'suspended'], 'cancelled');
+
         return $this->transaction(function () use ($subscription, $reason, $performedBy): Subscription {
             $result = $this->transitionStatus($subscription, 'cancelled', [
                 'cancelled_at' => Carbon::now(),

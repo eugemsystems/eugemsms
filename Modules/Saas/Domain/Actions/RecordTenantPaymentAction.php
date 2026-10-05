@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Saas\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Saas\Domain\DataObjects\RecordTenantPaymentData;
 use Modules\Saas\Models\TenantInvoice;
@@ -21,6 +22,18 @@ final class RecordTenantPaymentAction extends Action
     public function execute(RecordTenantPaymentData $data): TenantPayment
     {
         $invoice = TenantInvoice::query()->findOrFail($data->invoiceId);
+
+        if ($data->amountMinor <= 0) {
+            throw new InvalidArgumentException('A payment must be for more than zero.');
+        }
+
+        if ($data->currency !== $invoice->currency) {
+            throw new InvalidArgumentException("This invoice is in {$invoice->currency}; a payment in {$data->currency} cannot be applied to it.");
+        }
+
+        if ($invoice->status === 'void') {
+            throw new InvalidArgumentException('A void invoice cannot take a payment.');
+        }
 
         return $this->transaction(function () use ($invoice, $data): TenantPayment {
             $payment = TenantPayment::create([

@@ -1565,6 +1565,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Book J SAA-01/03 school-facing entries only (this tenant's own subscription, support and help). The vendor console is a separate realm and is never linked from here. --}}
+                        @php $accountGroupActive = request()->routeIs('account.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $accountGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-account" aria-expanded="{{ $accountGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-account">
+                                <i class="ri ri-vip-crown-2-line"></i> {{ __('Account') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $accountGroupActive ? 'show' : '' }}" id="sidebar-group-account">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('account.subscription', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('account.subscription') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-card-line"></i> {{ __('My subscription') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>

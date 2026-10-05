@@ -21,6 +21,8 @@ final class ReactivateSubscriptionAction extends Action
     {
         $subscription = Subscription::query()->findOrFail($subscriptionId);
 
+        $this->assertMayTransition($subscription, ['past_due', 'grace', 'suspended'], 'active');
+
         return $this->transaction(fn (): Subscription => $this->transitionStatus($subscription, 'active', ['grace_period_ends_at' => null]));
     }
 }
