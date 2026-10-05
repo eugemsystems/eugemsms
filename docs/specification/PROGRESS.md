@@ -693,24 +693,31 @@ See `.ai/rules/stores.md` for the full reasoning, the permission
 module-code split (`INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET`, not one
 `STORES` call), and testing gotchas found along the way.
 
-### Book H2 — Operations & Estates — 🟡 in progress (OPS-01/02/03 done this pass; OPS-04/05/06/07 not started)
+### Book H2 — Operations & Estates — 🟡 all 7 modules shipped (stays below ✅ only because OPS-02's own prior deferred screens, not this pass)
 Verified module ownership (one Laravel module each): OPS-01 → `Transport`,
 OPS-02 → `Operations`, OPS-03 → `Farm`, OPS-04 → `Utilities`, OPS-05 →
-`Facilities`, OPS-06 → `Security`, OPS-07 → `Sport`. This pass covers only
+`Facilities`, OPS-06 → `Security`, OPS-07 → `Sport`. The first pass covered
 OPS-01/02/03, in the book's own build order (OPS-02 → OPS-01 → OPS-03,
-§0.2) — **OPS-04 (Utilities), OPS-05 (Facilities), OPS-06 (Security), and
-OPS-07 (Sport) are a separate, not-yet-started pass within the same book**;
-none of the four has a `Livewire/` directory.
+§0.2). **This second pass covers OPS-04 (Utilities), OPS-05 (Facilities),
+OPS-06 (Security), and OPS-07 (Sport)** — independent of each other and of
+the first three per the book's own build order (§0.2 lists OPS-05/06/07 as
+"independent; parallel"), built here in spec reading order OPS-04 → OPS-05
+→ OPS-06 → OPS-07. All seven modules now have a populated `Livewire/`
+directory. The book-level status stays 🟡 rather than ✅ only because
+OPS-02's own note below (from the first pass) documents two deliberately
+deferred screens — per this file's own honesty discipline, ANY module with
+a deferred item keeps the whole book below ✅; nothing in this second pass
+left a comparable gap (see each of the four new notes below).
 
 | Module | Screens | Status |
 |---|---|---|
-| OPS-02 | Maintenance & Works Management | ✅ |
+| OPS-02 | Maintenance & Works Management | ✅ (see note — 2 screens deliberately deferred) |
 | OPS-01 | Transport & Fleet Management 🇿🇼 | ✅ |
 | OPS-03 | Estates, Farm & Production Units 🇿🇼 | ✅ |
-| OPS-04 | Utilities & Energy Management 🇿🇼 | ⬜ not started |
-| OPS-05 | Facilities & Hire | ⬜ not started |
-| OPS-06 | Security & Access | ⬜ not started |
-| OPS-07 | Sport, Houses & Co-curricular | ⬜ not started |
+| OPS-04 | Utilities & Energy Management 🇿🇼 | ✅ |
+| OPS-05 | Facilities & Hire | ✅ |
+| OPS-06 | Security & Access | ✅ |
+| OPS-07 | Sport, Houses & Co-curricular | ✅ |
 
 **OPS-02 note.** Built (`Livewire/Maintenance/{Assets,Reports,Schedules,
 WorkOrders}/`, `Livewire/Maintenance/{Report,Triage}.php`,
@@ -809,6 +816,87 @@ screen. **Before naming any new module-root Livewire component** (one
 directly under `Livewire/`, not nested under a sub-namespace), check
 `find . -name Index.php | grep Livewire | sed -E 's#.*/Livewire/##; s#/Index\.php$##' | sort | uniq -d`
 for a collision first — this is now a standing check, not a one-off.
+
+**OPS-04 note 🇿🇼 (second pass).** Built (`Livewire/{Accounts,Meters,
+Tokens,Readings,Generators,GeneratorRuns,Solar,Water,LoadShedding,
+Dashboard}/`, 10 screens): `Accounts\Index`, `Meters\Index`,
+`Tokens\Index` ⭐ (purchase, confirm credit, uncredited queue, monthly
+reconciliation — the real control that recovers money nobody would
+otherwise notice went missing), `Readings\Index` (append-only, anomaly
+flagged live), `Generators\Index`, `GeneratorRuns\Index` (start/stop,
+real diesel draw through `FIN-09`), `Solar\Index`, `Water\Index`
+(sources/readings/quality folded into one register), `LoadShedding\Index`,
+`Dashboard\Index` ⭐ (folds the spec's separate "Consumption analysis"
+screen into this one read, alongside the board-ready cost-of-outage
+sentence from `OutageCostResult`). **No gap-filling Actions needed** —
+every table already had a real create Action. One Livewire-hydration
+gotcha hit and fixed: a plain readonly DTO (`OutageCostResult`) cannot
+be a public Livewire property (`Property type not supported in
+Livewire`); exploded into scalar properties instead — see
+`.ai/rules/utilities.md`.
+
+**OPS-05 note.** Built (`Livewire/{Resources,Calendar,Request,Hire,
+Utilisation}/`, 5 screens): `Resources\Index` ⭐ (gap-fill — the spec's
+own screen table names no screen that creates a `BookableResource`
+row, even though `CreateBookableResourceAction` exists), `Calendar\Index`
+(read-only week view), `Request\Index` ⭐ (live clash check before
+submit, cancel, recurring expansion), `Hire\Index` ⭐ (folds the
+spec's own, separate "Approvals" screen into the external hire
+lifecycle — approve, deposit, confirm, complete, assess damage &
+refund — since the only thing `facilities.approve` ever approves in
+this book is an external hire), `Utilisation\Index`. A dedicated test
+proves AC-OPS-05-001 against a genuinely published `Modules\Academic`
+timetable (not a stub) — see `.ai/rules/facilities.md` for the
+cycle-day-1 fixture trick that makes this reliable on any weekday.
+
+**OPS-06 note ⭐⭐.** Built (`Livewire/{Muster,OccurrenceBook,Patrols,
+Contractors,Keys,LostProperty,Drills}/`, 7 screens): `Muster\Index` ⭐⭐
+(trigger a drill, live roster from `AssembleMusterRollAction`,
+tap-to-mark present, complete — the single most operationally
+important screen in this module), `OccurrenceBook\Index` (append-only,
+gapless, no edit/delete control anywhere), `Patrols\Index`,
+`Contractors\Index` ⭐ (folds the gate sign-in/out hard-refusal flow in
+— checked for and found a real structural match to
+`Boarding\Gate\Terminal`/`Welfare\Safeguarding\CaseDetail`: no
+override control exists on this screen because `SignInContractorWorkerAction`
+itself has none), `Keys\Index`, `LostProperty\Index`, `Drills\Index`.
+**Two gap-filling Actions added**: `CreateKeyAndCardAction` (no Action
+anywhere ever created a `keys_and_cards` row before this pass — only
+issue/return existed) and `RecordDrillFindingsAction` (nothing wrote
+`emergency_drills.findings`/`.actions_required`). A dedicated test
+proves AC-OPS-06-004 (a contractor worker with an approved contractor
+but no police clearance on file is refused gate access by name, no
+override, no `ContractorSiteVisit` row created). See
+`.ai/rules/security.md`.
+
+**OPS-07 note ⭐⭐ — the final module of Book H2.** Built
+(`Livewire/{Activities,Membership,Teams,Fixtures,Houses,Awards,Equipment}/`,
+7 screens): `Activities\Index`, `Membership\Index`, `Teams\Index`,
+`Fixtures\Index` ⭐ (folds the spec's separate "Squad selection" and
+"Results" screens into this fixture's own action bar: schedule,
+confirm — real `OPS-01` trip for away, real `OPS-05` booking for home
+— select squad with medical clearance enforced, mark `BRD-02` roll
+status `fixture`, record result, record injury), `Houses\Leaderboard`
+⭐⭐ (folds house-competition creation and manual points into the
+leaderboard read), `Awards\Index`, `Equipment\Index` (gap-fill — no
+screen named for `IssueEquipmentAction`/`ReturnEquipmentAction`/
+`CheckOverdueEquipmentAction`). **A second real cross-module Livewire
+component-name collision was found and fixed in this pass**:
+`Houses\Index` (the name a literal reading of the spec gives this
+screen) collides with `Modules\Core\Livewire\Houses\Index` (Book A
+CORE-02's own house register, already shipped) — fixed by renaming to
+`Houses\Leaderboard` end to end, which also happens to match the
+spec's own full component name (`Ops\Houses\Leaderboard`) better than
+the bare `Index` would have. The standing duplicate-name check was run
+again after the rename and is clean across the whole codebase. A
+dedicated test proves AC-OPS-07-001 (a learner with a declared,
+uncleared `affects_physical_activity` condition is blocked from squad
+selection by name; the fixture's own `squad_student_ids` stays null,
+not partially populated). See `.ai/rules/sport.md`.
+
+Combined test count for this second pass: **47 new admin-UI tests**
+across the four modules (13 Utilities + 9 Facilities + 12 Security +
+13 Sport), all green, alongside the whole-app suite.
 
 ### Book H3 — Payroll, Fiscalisation & Compliance — ⬜ not started
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13

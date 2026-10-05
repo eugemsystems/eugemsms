@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Sport\Providers;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Boarding\Domain\Events\InspectionRecorded;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -82,6 +85,41 @@ class SportServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerListeners();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-07 §4) — one module code, `SPORT`,
+     * mirroring the spec's own single `activities.*` permission
+     * namespace for every screen in this module's own table.
+     * `manage` additionally covers this pass's two gap-filling
+     * screens — house competitions/points and equipment issue — since
+     * the spec's own screen table names no dedicated permission for
+     * either (see `.ai/rules/sport.md`).
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('SPORT', [
+            'manage' => ['description' => 'Manage activities, membership, house competitions/points, and equipment issue.', 'dangerous' => true],
+            'team.manage' => ['description' => 'Create and manage teams.'],
+            'fixture.manage' => ['description' => 'Schedule fixtures, select squads, record results and injuries.'],
+            'view' => ['description' => 'View the house leaderboard.'],
+            'award.manage' => ['description' => 'Record colours, honours, and other awards.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `FarmServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Sport\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/sport.php');
+        });
     }
 
     private function registerListeners(): void

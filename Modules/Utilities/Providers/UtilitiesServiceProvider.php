@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Utilities\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -75,6 +78,39 @@ class UtilitiesServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-04 §6) — one module code, `UTILITIES`,
+     * mirroring the spec's own single `utilities.*` permission
+     * namespace for every screen in this module's own table.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('UTILITIES', [
+            'manage' => ['description' => 'Manage utility accounts, meters, solar, water sources and load shedding.', 'dangerous' => true],
+            'token.record' => ['description' => 'Record prepaid electricity token purchases and confirm credit.', 'dangerous' => true],
+            'read' => ['description' => 'Record meter readings.'],
+            'generator.manage' => ['description' => 'Register generators.'],
+            'generator.record' => ['description' => 'Start and stop generator runs.'],
+            'water.manage' => ['description' => 'Manage water sources, readings and quality tests.'],
+            'report.view' => ['description' => 'View the energy dashboard and consumption analysis.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `FarmServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Utilities\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/utilities.php');
+        });
     }
 
     /**

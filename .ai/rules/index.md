@@ -15,6 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/*/Domain/Support/*.php | .ai/rules/domain-support.md |
 | Modules/Core/database/factories/GradeLevelFactory.php | .ai/rules/factories.md |
 | Modules/*/tests/Feature/*.php | .ai/rules/feature.md |
+| Modules/Facilities/** | .ai/rules/facilities.md |
 | Modules/Farm/** | .ai/rules/farm.md |
 | Modules/Finance/** | .ai/rules/finance.md |
 | **/* | .ai/rules/general.md |
@@ -29,9 +30,12 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/People/** | .ai/rules/people.md |
 | Modules/*/Providers/*ServiceProvider.php | .ai/rules/providers.md |
 | Modules/*/resources/views/** | .ai/rules/resources-views.md |
+| Modules/Security/** | .ai/rules/security.md |
+| Modules/Sport/** | .ai/rules/sport.md |
 | Modules/Stores/** | .ai/rules/stores.md |
 | Modules/Finance/Domain/Support/*.php | .ai/rules/support.md |
 | Modules/*/tests/** | .ai/rules/tests.md |
 | Modules/Transport/** | .ai/rules/transport.md |
+| Modules/Utilities/** | .ai/rules/utilities.md |
 | resources/views/** | .ai/rules/views.md |
 | Modules/Welfare/** | .ai/rules/welfare.md |

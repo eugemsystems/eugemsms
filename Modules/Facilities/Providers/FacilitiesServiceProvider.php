@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Facilities\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -55,6 +58,41 @@ class FacilitiesServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-05 §4) — one module code,
+     * `FACILITIES`. `manage` is a gap-filling permission for the
+     * bookable resource register itself — the spec's own §4 screen
+     * table names no screen that creates a `BookableResource` row,
+     * even though `CreateBookableResourceAction` exists; see
+     * `.ai/rules/facilities.md` for the reasoning.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('FACILITIES', [
+            'manage' => ['description' => 'Manage the bookable resource register.', 'dangerous' => true],
+            'view' => ['description' => 'View the resource calendar.'],
+            'book' => ['description' => 'Request internal or external bookings.'],
+            'approve' => ['description' => 'Approve external hire requests.'],
+            'hire.manage' => ['description' => 'Manage the external hire lifecycle: deposits, contracts, damage assessment.', 'dangerous' => true],
+            'report.view' => ['description' => 'View utilisation and hire revenue reports.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `FarmServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Facilities\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/facilities.php');
+        });
     }
 
     /**

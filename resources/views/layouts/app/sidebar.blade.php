@@ -785,7 +785,7 @@
                     @endif
 
                     @if ($sessionsSchool)
-                        @php $estatesGroupActive = request()->routeIs('transport.*') || request()->routeIs('operations.*') || request()->routeIs('farm.*'); @endphp
+                        @php $estatesGroupActive = request()->routeIs('transport.*') || request()->routeIs('operations.*') || request()->routeIs('farm.*') || request()->routeIs('utilities.*') || request()->routeIs('facilities.*') || request()->routeIs('security.*') || request()->routeIs('sport.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $estatesGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-estates" aria-expanded="{{ $estatesGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-estates">
                                 <i class="ri ri-roadster-line"></i> {{ __('Estates & Operations') }}
@@ -881,6 +881,101 @@
                                     </a>
                                     <a href="{{ route('farm.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.reports.index') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-pie-chart-2-line"></i> {{ __('Farm reports') }} ⭐
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Utilities & Energy') }} 🇿🇼</div>
+                                    <a href="{{ route('utilities.accounts.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.accounts.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-flashlight-line"></i> {{ __('Utility accounts') }}
+                                    </a>
+                                    <a href="{{ route('utilities.meters.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.meters.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-2-line"></i> {{ __('Meters') }}
+                                    </a>
+                                    <a href="{{ route('utilities.tokens.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.tokens.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-coupon-3-line"></i> {{ __('Prepaid tokens') }} ⭐
+                                    </a>
+                                    <a href="{{ route('utilities.readings.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.readings.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pencil-ruler-2-line"></i> {{ __('Meter readings') }}
+                                    </a>
+                                    <a href="{{ route('utilities.generators.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.generators.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-plug-line"></i> {{ __('Generators') }}
+                                    </a>
+                                    <a href="{{ route('utilities.generator-runs.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.generator-runs.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-timer-flash-line"></i> {{ __('Generator log') }}
+                                    </a>
+                                    <a href="{{ route('utilities.solar.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.solar.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-sun-line"></i> {{ __('Solar') }}
+                                    </a>
+                                    <a href="{{ route('utilities.water.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.water.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-drop-line"></i> {{ __('Water') }}
+                                    </a>
+                                    <a href="{{ route('utilities.load-shedding.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.load-shedding.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-flashlight-line"></i> {{ __('Load shedding') }}
+                                    </a>
+                                    <a href="{{ route('utilities.dashboard.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('utilities.dashboard.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-grouped-line"></i> {{ __('Energy dashboard') }} ⭐
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Facilities & Hire') }}</div>
+                                    <a href="{{ route('facilities.resources.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('facilities.resources.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-2-line"></i> {{ __('Bookable resources') }}
+                                    </a>
+                                    <a href="{{ route('facilities.calendar.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('facilities.calendar.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-2-line"></i> {{ __('Resource calendar') }}
+                                    </a>
+                                    <a href="{{ route('facilities.request.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('facilities.request.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-check-line"></i> {{ __('Booking request') }}
+                                    </a>
+                                    <a href="{{ route('facilities.hire.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('facilities.hire.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-coin-line"></i> {{ __('External hire') }}
+                                    </a>
+                                    <a href="{{ route('facilities.utilisation.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('facilities.utilisation.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pie-chart-line"></i> {{ __('Utilisation') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Security & Access') }}</div>
+                                    <a href="{{ route('security.muster.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.muster.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-voice-line"></i> {{ __('Muster roll') }} ⭐
+                                    </a>
+                                    <a href="{{ route('security.occurrence-book.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.occurrence-book.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Occurrence book') }}
+                                    </a>
+                                    <a href="{{ route('security.patrols.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.patrols.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-walk-line"></i> {{ __('Patrols') }}
+                                    </a>
+                                    <a href="{{ route('security.contractors.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.contractors.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hard-hat-line"></i> {{ __('Contractors & gate') }} ⭐
+                                    </a>
+                                    <a href="{{ route('security.keys.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.keys.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-key-2-line"></i> {{ __('Keys & cards') }}
+                                    </a>
+                                    <a href="{{ route('security.lost-property.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.lost-property.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-briefcase-4-line"></i> {{ __('Lost property') }}
+                                    </a>
+                                    <a href="{{ route('security.drills.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('security.drills.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Emergency drills') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Sport, Houses & Co-curricular') }}</div>
+                                    <a href="{{ route('sport.activities.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.activities.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-football-line"></i> {{ __('Activities') }}
+                                    </a>
+                                    <a href="{{ route('sport.membership.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.membership.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-team-line"></i> {{ __('Membership') }}
+                                    </a>
+                                    <a href="{{ route('sport.teams.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.teams.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-star-line"></i> {{ __('Teams') }}
+                                    </a>
+                                    <a href="{{ route('sport.fixtures.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.fixtures.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Fixtures') }} ⭐
+                                    </a>
+                                    <a href="{{ route('sport.houses.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.houses.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-trophy-line"></i> {{ __('House leaderboard') }}
+                                    </a>
+                                    <a href="{{ route('sport.awards.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.awards.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-medal-line"></i> {{ __('Awards') }}
+                                    </a>
+                                    <a href="{{ route('sport.equipment.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('sport.equipment.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shirt-line"></i> {{ __('Equipment') }}
                                     </a>
                                 </div>
                             </div>

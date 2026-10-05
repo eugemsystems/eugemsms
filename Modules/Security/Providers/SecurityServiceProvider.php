@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Security\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Boarding\Models\MovementCheckpoint;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -79,6 +82,39 @@ class SecurityServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-06 §5) — one module code, `SECURITY`,
+     * mirroring the spec's own single `security.*` permission
+     * namespace for every screen in this module's own table.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('SECURITY', [
+            'muster' => ['description' => 'Trigger emergency drills and mark the muster roll.', 'dangerous' => true],
+            'occurrence.record' => ['description' => 'Record occurrence book entries.'],
+            'patrol.manage' => ['description' => 'Schedule patrol routes and record checkpoint scans.'],
+            'contractor.manage' => ['description' => 'Manage contractors, workers, and gate sign-in/out.', 'dangerous' => true],
+            'key.manage' => ['description' => 'Register keys and cards, issue and return them.', 'dangerous' => true],
+            'manage' => ['description' => 'Manage lost property.'],
+            'drill.manage' => ['description' => 'Record emergency drills and view trends.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `FarmServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Security\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/security.php');
+        });
     }
 
     /**
