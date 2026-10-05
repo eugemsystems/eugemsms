@@ -60,11 +60,26 @@ final class StatutoryConfigResolver
         // so a row already flipped to `superseded` by a later config
         // must remain resolvable for dates within ITS OWN effective
         // range. Only `draft` (never yet in force) is excluded.
+        //
+        // `whereDate(...)`, not a plain `where(...)` against
+        // `$payDate->toDateString()`: a bug found during the Book H3
+        // admin-UI pass — this column is written with a full
+        // `Y-m-d 00:00:00` timestamp on at least one supported DB
+        // driver (confirmed on SQLite; harmless on MySQL, which
+        // truncates a DATE column itself), and a plain string
+        // comparison against a bare `Y-m-d` value then fails
+        // lexicographically (`'2026-11-01 00:00:00' <= '2026-11-01'`
+        // is FALSE — the longer string sorts after its own prefix),
+        // silently excluding every row whose `effective_from`/
+        // `effective_to` equals the comparison date exactly.
+        // `whereDate()` wraps both sides in the driver's own `DATE()`
+        // function, which compares correctly regardless of a stored
+        // time component.
         return StatutoryConfiguration::query()
             ->where('config_type', $configType)
             ->where('status', '!=', 'draft')
-            ->where('effective_from', '<=', $payDate->toDateString())
-            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $payDate->toDateString()))
+            ->whereDate('effective_from', '<=', $payDate->toDateString())
+            ->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $payDate->toDateString()))
             ->where(fn ($q) => $q->whereNull('currency')->orWhere('currency', $currency?->value))
             ->where(fn ($q) => $q->where('school_id', $schoolId)->orWhereNull('school_id'))
             ->orderByRaw('school_id IS NULL')

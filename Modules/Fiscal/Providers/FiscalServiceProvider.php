@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Fiscal\Providers;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -67,6 +70,20 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * anticipated this module there, and adding one now would mean
  * editing an already-gated Book H2 action's own persisted shape
  * beyond a plain additive column. Deferred, not silently skipped.
+ *
+ * Admin-UI pass (Book H3 FIN-13 §7): `Livewire/{Devices,Rules,Days,
+ * Receipts,Queue,Reports,Reconciliation,Audit}/`, 9 screens.
+ * `Devices\Index` folds the spec's own separate "Certificate
+ * lifecycle" screen in. `Receipts\Retry` also hosts a manual
+ * "raise credit note" control for a receipt whose source module
+ * doesn't yet wire `RaiseFiscalCreditNoteAction` automatically.
+ * **A real, documented backend gap found but NOT closed this
+ * pass**: no Action anywhere ever writes a `fiscal_audit_log` row
+ * (`Audit\Index`'s own docblock) — BR-FIN-13-012 is unimplemented
+ * despite being a named rule; closing it needs wiring a log write
+ * into six existing Actions' call sites, real business logic
+ * broader than this book's "narrow create-only Action" gap-filling
+ * mandate, so it is surfaced honestly rather than improvised past.
  */
 class FiscalServiceProvider extends ModuleServiceProvider
 {
@@ -90,6 +107,38 @@ class FiscalServiceProvider extends ModuleServiceProvider
         $this->registerNotificationKeys();
         $this->registerListeners();
         $this->registerCloseChecklistItems();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H3 FIN-13 §7) — one module code, `FISCAL`,
+     * mirroring the spec's own `fiscal.*` permission namespace
+     * exactly.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('FISCAL', [
+            'device.manage' => ['description' => 'Register fiscal devices and manage their certificate lifecycle.', 'dangerous' => true],
+            'rules.manage' => ['description' => 'Create and review fiscalisation routing rules.', 'dangerous' => true],
+            'day.manage' => ['description' => 'Open and close fiscal days.'],
+            'view' => ['description' => 'View fiscal receipts, Z-reports, queue depth and reconciliation.'],
+            'retry' => ['description' => 'Retry failed or rejected fiscal receipts and raise credit notes.'],
+            'audit.view' => ['description' => 'View the raw fiscal audit log.'],
+        ]);
+    }
+
+    /**
+     * Mirrors every other Book H3 module's own `Livewire::addLocation()`
+     * call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Fiscal\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/fiscal.php');
+        });
     }
 
     /**

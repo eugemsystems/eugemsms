@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Reporting\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -63,6 +66,30 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * delivery (`report_schedules.next_run_at` actually firing) has no
  * scheduler wired — the table and `CreateReportScheduleAction` exist,
  * nothing drains `next_run_at` yet.
+ *
+ * Admin-UI pass (Book H3 FIN-12 §6): `Livewire/{Financial,Close,
+ * Schedules,Export}/`, 5 screens — only the 7 Actions that actually
+ * exist have a screen; `BalanceSheet`/`CashFlow`/`Departmental`/
+ * `Collection`/`PriorPeriod`/`Board` from the spec's own 12-screen
+ * table have no backing Action (verified by grep) and are
+ * deliberately not built. `Financial\IncomeStatement` folds the
+ * spec's own separate "Point-in-time" screen in — both read the
+ * same `IncomeStatementResult`. `Close\Checklist` folds the spec's
+ * own separate "Close pack" screen in, since a pack is always
+ * generated from a specific checklist run already selected there.
+ * One new gap-filling Action, `CreateReportDefinitionAction` —
+ * `report_definitions` had a migration/model/factory but no Action
+ * anywhere ever created a row, which would have left
+ * `CreateReportScheduleAction`'s own required FK with nothing real
+ * to point to. Registered under module code `REPORTING` (producing
+ * `reporting.report.trial_balance`/`.report.view`/`.period.close`/
+ * `.report.schedule`/`.report.export`), not the spec's own literal
+ * `finance.report.*`/`finance.period.close` prefix — the same
+ * "module code becomes the permission prefix" divergence
+ * `Modules\Stores` already established for FIN-08–11's
+ * `INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET` codes, since this
+ * spec module (FIN-12) is implemented as its own Laravel module
+ * rather than living inside `Modules\Finance`.
  */
 class ReportingServiceProvider extends ModuleServiceProvider
 {
@@ -77,6 +104,38 @@ class ReportingServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H3 FIN-12 §6) — one module code,
+     * `REPORTING` (see this class's own docblock for why that
+     * diverges from the spec's literal `finance.*` permission
+     * strings).
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('REPORTING', [
+            'report.trial_balance' => ['description' => 'View the trial balance.'],
+            'report.view' => ['description' => 'View financial statements and reports.'],
+            'period.close' => ['description' => 'Run the period close checklist, acknowledge warnings and generate the close pack.', 'dangerous' => true],
+            'report.schedule' => ['description' => 'Create report definitions and delivery schedules.'],
+            'report.export' => ['description' => 'Export journal detail to an accounting package format.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Mirrors every other Book H3 module's own `Livewire::addLocation()`
+     * call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Reporting\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/reporting.php');
+        });
     }
 
     /**

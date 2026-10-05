@@ -898,10 +898,115 @@ Combined test count for this second pass: **47 new admin-UI tests**
 across the four modules (13 Utilities + 9 Facilities + 12 Security +
 13 Sport), all green, alongside the whole-app suite.
 
-### Book H3 — Payroll, Fiscalisation & Compliance — ⬜ not started
+### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 in progress (PPL-05/FIN-13/FIN-14/FIN-12 done; CMP-01–04 not started)
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13
-→ `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. None have a
-`Livewire/` directory yet.
+→ `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. This pass
+covers the four FIN/PPL modules, in the book's own build order
+(PPL-05 → FIN-13 → FIN-14 → FIN-12, §0.3 — "largest; independent of
+the rest" first, reporting last since it "needs everything else
+posting correctly"). **CMP-01–04 (`Modules/Compliance`) are a
+separate, not-yet-started pass within this same book** — nothing in
+`Modules/Compliance` was touched.
+
+| Module | Screens | Status |
+|---|---|---|
+| PPL-05 | Payroll & Statutory Deductions 🇿🇼 | 🟡 partial (see note) |
+| FIN-13 | ZIMRA Fiscalisation (FDMS) 🇿🇼 | 🟡 partial (see note) |
+| FIN-14 | Student Wallet & Tuckshop | ✅ |
+| FIN-12 | Financial Reporting & Period Close ⭐ | 🟡 partial (see note) |
+| CMP-01–04 | ZIMSEC/MoPSE/Data Protection/Policy Register | ⬜ not started |
+
+**PPL-05 note 🇿🇼.** Built (`Livewire/{Statutory,Grades,Components,
+Staff,Loans,Run,Payslips,Returns,Reports}/`, 11 screens):
+`Statutory\Config` (the only screen that ever writes a PAYE band,
+AIDS Levy, NSSA POBS/APWCS, ZIMDEF or NEC rate — a raw validated-JSON
+textarea, not a structured band editor, with the live
+`requires_confirmation` banner `Academic\Curriculum\Frameworks`
+already established the pattern for), `Grades\Index` (also hosts the
+new `CreatePayGradeNotchAction`), `Components\Index` (tax-treatment
+flags, dropdown limited to the two calculation methods
+`PayComponentResolver` actually supports), `Staff\Structure` (dated,
+also hosts `AddStaffPayComponentAction`), `Loans\Index`, `Run\Wizard`
+⭐ (folds the spec's own separate "Preview" screen into one
+compute → approve → post → distribute lifecycle; resolves 14 of the
+15 `PayrollGlAccounts` by a dedicated `payroll_*` `system_key`, the
+fifteenth — Fee Debtors — from the `is_control_account`/
+`subledger_type = 'student'` dropdown), `Run\BankFile` (generates the
+bank CSV, records payment), `Payslips\Show` (calculation trace,
+gated behind `people.staff.view_compensation` the same way
+`People\Staff\Show` already gates salary), `Returns\Index`,
+`Returns\Itf16`, `Reports\Summary` (named `Summary`, not the spec's
+own bare `Index` — `Modules\Farm\Livewire\Reports\Index` already
+occupies that path). **A real, pre-existing backend bug found and
+fixed in this pass**: `StatutoryConfigResolver::find()` (plus two
+more call sites sharing the same root cause,
+`ComputePayslipAction::activeStructure()` and
+`PayComponentResolver::resolve()`) compared a `date`-cast column
+against a bare `Y-m-d` string with a plain `where(...)`; on SQLite
+that column stores a full `Y-m-d 00:00:00` timestamp, so the
+comparison silently excluded a configuration effective exactly
+*today* — found only because this pass's own admin-UI test asserted
+a newly-configured PAYE rate actually changed the computed
+deduction, not merely that the row existed. Fixed with
+`whereDate(...)`. See `.ai/rules/payroll.md`.
+
+**FIN-13 note 🇿🇼.** Built (`Livewire/{Devices,Rules,Days,Receipts,
+Queue,Reports,Reconciliation,Audit}/`, 9 screens): `Devices\Index`
+(folds in Certificate lifecycle — no renewal path distinct from
+registering a fresh device exists), `Rules\Index` (the routing
+engine, rationale + reviewer required at creation), `Days\Index`
+(open/close + compile Z-report once closed), `Receipts\Index`
+(read-only monitor), `Receipts\Retry` ⭐ (failed/rejected retry, plus
+manual credit-note raising for a source module that doesn't wire
+`RaiseFiscalCreditNoteAction` automatically), `Queue\Status`
+(offline depth/oldest/drain), `Reports\ZReports` (read-only),
+`Reconciliation\Index` ⭐ (runs the real
+`ReconcileFiscalisationAction` on demand), `Audit\Index` (read-only).
+**A real, documented backend gap found but NOT closed this pass**:
+no Action anywhere ever writes a `fiscal_audit_log` row — closing it
+needs wiring a log write into six existing call sites, broader than
+this book's narrow create-only gap-filling mandate. See
+`.ai/rules/fiscal.md`.
+
+**FIN-14 note.** Built (`Livewire/{Pos,Products,SpendPoints,Wallets,
+TermEnd,Reports}/`, 8 screens): `Pos\Terminal` ⭐ (touch-grid sale,
+an explicit "sale happened offline" toggle standing in for a real
+browser-side offline cache, void for the operator's own recent
+sales), `Products\Index`, `SpendPoints\Index`, `Wallets\Index`/
+`Wallets\Show` (named `Wallets`, not the spec's own `Accounts` —
+`Modules\Utilities\Livewire\Accounts\Index` already occupies that
+path; `Show` hosts top-up, guardian-set controls and close),
+`TermEnd\Process` ⚠ (preview-then-commit, no code path exists to
+recognise a balance as income), `Reports\Reconciliation` ⭐ (runs
+`ReconcileWalletLiabilityAction` on demand), `Reports\Sales`
+(read-only). A wallet's liability account resolves by the
+`wallet_liability` `system_key`; Fee Debtors reuses the same
+`is_control_account`/`subledger_type = 'student'` dropdown PPL-05's
+`Run\Wizard` uses. No gap-filling Actions were needed. See
+`.ai/rules/wallet.md`.
+
+**FIN-12 note ⭐.** Built (`Livewire/{Financial,Close,Schedules,
+Export}/`, 5 screens — only screens with a real Action behind them;
+the spec's own BalanceSheet/CashFlow/Departmental/Collection/
+PriorPeriod/Board have none, verified by grep, and are not built):
+`Financial\TrialBalance`, `Financial\IncomeStatement` (folds the
+spec's own separate "Point-in-time" screen in), `Close\Checklist`
+(folds the spec's own separate "Close pack" screen in; a blocking
+check never shows an acknowledge control at all), `Schedules\Index`
+(also hosts the new `CreateReportDefinitionAction`),
+`Export\Accounting` ⚠. **A second occurrence of PPL-05's own
+date-comparison bug, found and fixed the same way**:
+`GenerateAccountingExportAction`'s overlap check. Permissions
+registered under module code `REPORTING`, diverging from the spec's
+own literal `finance.report.*`/`finance.period.close` strings — the
+same divergence `Modules\Stores` already established for FIN-08–11.
+See `.ai/rules/financial-close.md` (named to avoid an unrelated
+tooling filter on the substring "report" in a rule filename — the
+module it documents is `Modules/Reporting`).
+
+Combined test count for this pass: **12 new admin-UI tests** across
+the four modules (3 Payroll + 3 Fiscal + 3 Wallet + 3 Reporting), all
+green, alongside the whole-app suite.
 
 ### Book I — Communication & Portals — ⬜ not started
 COM-01–COM-08. `Modules/Comms/Livewire/` does not exist yet.

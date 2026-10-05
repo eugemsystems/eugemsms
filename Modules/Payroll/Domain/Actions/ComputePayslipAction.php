@@ -262,10 +262,17 @@ final class ComputePayslipAction extends Action
 
     private function activeStructure(int $staffId, CarbonInterface $payDate): ?StaffPayStructure
     {
+        // `whereDate(...)`, not a plain `where(...)` — the same
+        // storage-format bug `StatutoryConfigResolver::find()`'s own
+        // docblock documents fixing in this pass (a date column can be
+        // written with a full `Y-m-d 00:00:00` timestamp on at least
+        // one supported DB driver, which then fails a plain
+        // lexicographic `<=`/`>=` string comparison against a bare
+        // `Y-m-d` value exactly on the boundary date).
         return StaffPayStructure::where('staff_id', $staffId)
             ->where('status', 'active')
-            ->where('effective_from', '<=', $payDate->toDateString())
-            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $payDate->toDateString()))
+            ->whereDate('effective_from', '<=', $payDate->toDateString())
+            ->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $payDate->toDateString()))
             ->first();
     }
 

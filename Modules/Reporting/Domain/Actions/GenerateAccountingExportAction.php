@@ -34,9 +34,17 @@ final class GenerateAccountingExportAction extends Action
 
     public function execute(GenerateAccountingExportData $data): AccountingExport
     {
+        // `whereDate(...)`, not a plain `where(...)` — the same
+        // storage-format bug `Modules\Payroll`'s
+        // `StatutoryConfigResolver::find()` docblock documents fixing
+        // in this same pass (a `date`-cast column can be written with
+        // a full `Y-m-d 00:00:00` timestamp on at least one supported
+        // DB driver, which then fails a plain lexicographic string
+        // comparison against a bare `Y-m-d` value exactly on a
+        // boundary date).
         $overlapping = AccountingExport::where('school_id', $data->schoolId)
-            ->where('period_from', '<=', $data->periodTo->toDateString())
-            ->where('period_to', '>=', $data->periodFrom->toDateString())
+            ->whereDate('period_from', '<=', $data->periodTo->toDateString())
+            ->whereDate('period_to', '>=', $data->periodFrom->toDateString())
             ->exists();
 
         if ($overlapping) {

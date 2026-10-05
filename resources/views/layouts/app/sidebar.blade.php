@@ -1160,6 +1160,128 @@
                         </div>
                     @endif
 
+                    @if ($sessionsSchool)
+                        @php $payrollComplianceGroupActive = request()->routeIs('payroll.*') || request()->routeIs('fiscal.*') || request()->routeIs('wallet.*') || request()->routeIs('reporting.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $payrollComplianceGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-payroll-compliance" aria-expanded="{{ $payrollComplianceGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-payroll-compliance">
+                                <i class="ri ri-bank-card-line"></i> {{ __('Payroll & Compliance') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $payrollComplianceGroupActive ? 'show' : '' }}" id="sidebar-group-payroll-compliance">
+                                <div class="app-sidebar-subnav">
+                                    {{--
+                                        Book H3 — Payroll, Fiscalisation & Compliance. Grouped by
+                                        the four Laravel modules this book's PPL-05/FIN-13/FIN-14/
+                                        FIN-12 passes shipped into (Payroll/Fiscal/Wallet/Reporting),
+                                        matching the sub-heading convention `Estates & Operations`
+                                        above already uses. CMP-01–04 (Modules\Compliance) are a
+                                        separate, not-yet-started pass — nothing added here for them.
+                                    --}}
+                                    <div class="app-sidebar-heading">{{ __('Payroll') }} 🇿🇼</div>
+                                    <a href="{{ route('payroll.statutory.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.statutory.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-government-line"></i> {{ __('Statutory configuration') }}
+                                    </a>
+                                    <a href="{{ route('payroll.grades.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.grades.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stairs-line"></i> {{ __('Pay grades') }}
+                                    </a>
+                                    <a href="{{ route('payroll.components.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.components.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-settings-line"></i> {{ __('Pay components') }}
+                                    </a>
+                                    <a href="{{ route('payroll.staff.structure', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.staff.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-settings-line"></i> {{ __('Staff pay structure') }}
+                                    </a>
+                                    <a href="{{ route('payroll.loans.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.loans.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-coin-line"></i> {{ __('Staff loans') }}
+                                    </a>
+                                    <a href="{{ route('payroll.run.wizard', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.run.wizard') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-play-circle-line"></i> {{ __('Payroll run') }} ⭐
+                                    </a>
+                                    <a href="{{ route('payroll.run.bank-file', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.run.bank-file') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-line"></i> {{ __('Bank file') }}
+                                    </a>
+                                    <a href="{{ route('payroll.returns.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.returns.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Statutory returns') }}
+                                    </a>
+                                    <a href="{{ route('payroll.returns.itf16', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.returns.itf16') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-chart-line"></i> {{ __('ITF16 reconciliation') }}
+                                    </a>
+                                    <a href="{{ route('payroll.reports.summary', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('payroll.reports.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-2-line"></i> {{ __('Payroll reports') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('ZIMRA Fiscalisation') }} 🇿🇼</div>
+                                    <a href="{{ route('fiscal.devices.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.devices.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hard-drive-2-line"></i> {{ __('Fiscal devices') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.rules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.rules.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-route-line"></i> {{ __('Routing rules') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.days.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.days.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Fiscal day control') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.receipts.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.receipts.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-receipt-line"></i> {{ __('Fiscal receipts') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.receipts.retry', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.receipts.retry') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-refresh-line"></i> {{ __('Retry workbench') }} ⭐
+                                    </a>
+                                    <a href="{{ route('fiscal.queue.status', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.queue.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Offline queue') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.reports.z-reports', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.reports.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Z-reports') }}
+                                    </a>
+                                    <a href="{{ route('fiscal.reconciliation.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.reconciliation.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-merge-line"></i> {{ __('Reconciliation') }} ⭐
+                                    </a>
+                                    <a href="{{ route('fiscal.audit.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('fiscal.audit.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-shield-2-line"></i> {{ __('Audit log') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Student Wallet & Tuckshop') }}</div>
+                                    <a href="{{ route('wallet.pos.terminal', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.pos.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shopping-cart-2-line"></i> {{ __('Tuckshop POS') }} ⭐
+                                    </a>
+                                    <a href="{{ route('wallet.products.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.products.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-price-tag-3-line"></i> {{ __('Products') }}
+                                    </a>
+                                    <a href="{{ route('wallet.spend-points.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.spend-points.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-store-2-line"></i> {{ __('Spend points') }}
+                                    </a>
+                                    <a href="{{ route('wallet.wallets.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.wallets.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-wallet-3-line"></i> {{ __('Student wallets') }}
+                                    </a>
+                                    <a href="{{ route('wallet.term-end.process', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.term-end.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-close-line"></i> {{ __('Term-end processing') }} ⚠
+                                    </a>
+                                    <a href="{{ route('wallet.reports.reconciliation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.reports.reconciliation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-line"></i> {{ __('Wallet reconciliation') }} ⭐
+                                    </a>
+                                    <a href="{{ route('wallet.reports.sales', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('wallet.reports.sales') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-line-chart-line"></i> {{ __('Sales analytics') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Financial Reporting & Close') }} ⭐</div>
+                                    <a href="{{ route('reporting.trial-balance', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.trial-balance') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-balance-line"></i> {{ __('Trial balance') }}
+                                    </a>
+                                    <a href="{{ route('reporting.income-statement', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.income-statement') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-funds-line"></i> {{ __('Income statement') }}
+                                    </a>
+                                    <a href="{{ route('reporting.close-checklist', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.close-checklist') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-multiple-line"></i> {{ __('Close checklist') }}
+                                    </a>
+                                    <a href="{{ route('reporting.schedules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.schedules.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-schedule-line"></i> {{ __('Scheduled reports') }}
+                                    </a>
+                                    <a href="{{ route('reporting.export.accounting', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.export.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-download-2-line"></i> {{ __('Accounting export') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
                     </a>

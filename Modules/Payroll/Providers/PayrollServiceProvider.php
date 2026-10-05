@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\Payroll\Providers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -63,9 +66,32 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  *    `percentage_of_basic` only; `percentage_of_gross`/`formula`/
  *    `hourly`/`per_unit` throw `UnsupportedCalculationMethodException`
  *    by name.
- *  - No UI, API, or permission registration exists for this module —
- *    the same boundary held by every other module in this codebase;
- *    nothing in this entire platform has a Livewire/API layer yet.
+ *  - No public API layer exists for this module beyond §7's own
+ *    bare `/me/payslips`/`/me/loans`/`/me/tax-certificate` listing —
+ *    those routes are not built in this pass either; payroll is
+ *    Livewire-only, per the spec's own "There is no API path to
+ *    compute, approve or post a run."
+ *
+ * Admin-UI pass (Book H3 PPL-05 §6): `Livewire/{Statutory,Grades,
+ * Components,Staff,Loans,Run,Payslips,Returns,Reports}/`, 11 screens.
+ * `Run\Wizard` folds the spec's own separate "Preview" screen into
+ * one action-bar lifecycle (compute → approve → post → distribute),
+ * the same fold several Book H1/H2 "Run" screens already use.
+ * `Reports\Summary` is named `Summary`, not the spec's own bare
+ * `Index` — `Modules\Farm\Livewire\Reports\Index` already occupies
+ * that exact relative path (Book H2 OPS-03), caught by this pass's
+ * own standing duplicate-component-name check before the file was
+ * written. One new gap-filling Action,
+ * `CreatePayGradeNotchAction` — `pay_grade_notches` had a migration/
+ * model/factory but no Action anywhere ever created a row, the same
+ * "model exists, no Action ever wrote one" gap every prior book's
+ * admin-UI pass has hit. The 15-account `PayrollGlAccounts` bundle
+ * `Run\Wizard`'s own post step needs resolves 14 of them by a
+ * dedicated `payroll_*` `system_key` (see that screen's own
+ * docblock) and picks the fifteenth (Fee Debtors) from accounts
+ * flagged `is_control_account`/`subledger_type = 'student'`, since
+ * no single system key for it exists in this codebase (the same gap
+ * PPL-02/PPL-03 already documented for income/refundable-deposits).
  */
 class PayrollServiceProvider extends ModuleServiceProvider
 {
@@ -85,6 +111,50 @@ class PayrollServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerCloseChecklistItems();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H3 PPL-05 §8) — one module code, `PAYROLL`,
+     * mirroring the spec's own `payroll.*` permission namespace
+     * exactly (`PermissionRegistry::register($moduleCode, [...])`
+     * synthesizes `strtolower($moduleCode).'.'.$path`).
+     * `payroll.reverse` is registered per the spec's own table even
+     * though no screen in this pass exercises it — a posted run's
+     * correction path (BR-PPL-05-016, "reversal plus a supplementary
+     * run") has no dedicated screen yet, a documented gap, not a
+     * missing permission.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('PAYROLL', [
+            'view' => ['description' => 'View payroll runs, payslips and reports.'],
+            'manage' => ['description' => 'Manage pay grades and pay components.', 'dangerous' => true],
+            'staff.manage' => ['description' => "Manage a staff member's own pay structure.", 'dangerous' => true],
+            'statutory.manage' => ['description' => 'Create and confirm statutory configuration — PAYE bands, NSSA, AIDS Levy, ZIMDEF, NEC.', 'dangerous' => true],
+            'run' => ['description' => 'Compute a payroll run.', 'dangerous' => true],
+            'approve' => ['description' => 'Approve a computed payroll run.', 'dangerous' => true],
+            'post' => ['description' => 'Post an approved payroll run to the general ledger and distribute payslips.', 'dangerous' => true],
+            'pay' => ['description' => 'Generate the payroll bank file and record payment.', 'dangerous' => true],
+            'loan.manage' => ['description' => 'Create and manage staff loans.'],
+            'returns.manage' => ['description' => 'Prepare, review and record submission of statutory returns.'],
+            'report.view' => ['description' => 'View payroll cost and headcount reports.'],
+            'reverse' => ['description' => 'Reverse a posted payroll run.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Mirrors every other Book H3 module's own `Livewire::addLocation()`
+     * call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Payroll\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/payroll.php');
+        });
     }
 
     /**

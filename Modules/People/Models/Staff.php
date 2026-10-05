@@ -53,7 +53,10 @@ use Modules\People\Database\Factories\StaffFactory;
  * @property string $status
  * @property string|null $zimra_bp_number
  * @property string|null $nssa_number
+ * @property string|null $bank_name
+ * @property string|null $bank_branch
  * @property string|null $bank_account_number
+ * @property string|null $bank_account_currency
  * @property bool $is_teaching
  * @property string|null $teacher_registration_no
  * @property int|null $max_weekly_periods

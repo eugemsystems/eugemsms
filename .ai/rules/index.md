@@ -18,6 +18,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Facilities/** | .ai/rules/facilities.md |
 | Modules/Farm/** | .ai/rules/farm.md |
 | Modules/Finance/** | .ai/rules/finance.md |
+| Modules/Fiscal/** | .ai/rules/fiscal.md |
 | **/* | .ai/rules/general.md |
 | resources/js/** | .ai/rules/js.md |
 | Modules/Core/Livewire/** | .ai/rules/livewire.md |
@@ -29,6 +30,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Payroll/** | .ai/rules/payroll.md |
 | Modules/People/** | .ai/rules/people.md |
 | Modules/*/Providers/*ServiceProvider.php | .ai/rules/providers.md |
+| Modules/Reporting/** | .ai/rules/financial-close.md |
 | Modules/*/resources/views/** | .ai/rules/resources-views.md |
 | Modules/Security/** | .ai/rules/security.md |
 | Modules/Sport/** | .ai/rules/sport.md |
@@ -37,5 +39,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/*/tests/** | .ai/rules/tests.md |
 | Modules/Transport/** | .ai/rules/transport.md |
 | Modules/Utilities/** | .ai/rules/utilities.md |
+| Modules/Wallet/** | .ai/rules/wallet.md |
 | resources/views/** | .ai/rules/views.md |
 | Modules/Welfare/** | .ai/rules/welfare.md |

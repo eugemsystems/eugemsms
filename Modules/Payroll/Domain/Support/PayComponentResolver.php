@@ -29,10 +29,13 @@ final class PayComponentResolver
 {
     public function resolve(StaffPayStructure $structure, CarbonInterface $asOf): ResolvedPayComponents
     {
+        // `whereDate(...)`, not a plain `where(...)` — the same
+        // storage-format bug `StatutoryConfigResolver::find()`'s own
+        // docblock documents fixing in this pass.
         $components = StaffPayComponent::with('component')
             ->where('pay_structure_id', $structure->id)
-            ->where('effective_from', '<=', $asOf->toDateString())
-            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $asOf->toDateString()))
+            ->whereDate('effective_from', '<=', $asOf->toDateString())
+            ->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $asOf->toDateString()))
             ->get()
             ->filter(fn (StaffPayComponent $spc): bool => $spc->component->is_active);
 

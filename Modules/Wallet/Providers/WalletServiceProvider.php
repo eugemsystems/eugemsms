@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Wallet\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -51,6 +54,23 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  *    credentials exist in this pass), so there is nothing for an
  *    auto-top-up trigger to call that would be more than a
  *    duplicate of that same honest gap.
+ *
+ * Admin-UI pass (Book H3 FIN-14 §6): `Livewire/{Pos,Products,
+ * SpendPoints,Wallets,TermEnd,Reports}/`, 8 screens. Named `Wallets`,
+ * not the spec's own `Accounts` — `Modules\Utilities\Livewire\Accounts\Index`
+ * already occupies that exact relative path (Book H2 OPS-04), caught
+ * by this pass's own standing duplicate-component-name check before
+ * the file was written. `Pos\Terminal`'s "sale happened offline"
+ * toggle is an honest stand-in for the spec's own device-level
+ * offline cache (§4) — there is no real browser-side offline queue
+ * built in this pass, only the one real behavioural difference
+ * between `ProcessWalletSaleAction` and `SyncOfflineWalletSaleAction`
+ * (going negative within the configured limit vs refusing outright).
+ * A wallet's `liability_account_id` resolves by the dedicated
+ * `wallet_liability` `system_key`; Fee Debtors (on close/term-end)
+ * resolves the same `is_control_account`/`subledger_type = 'student'`
+ * dropdown `Payroll\Run\Wizard` already uses, since no system key
+ * exists for it either.
  */
 class WalletServiceProvider extends ModuleServiceProvider
 {
@@ -66,6 +86,36 @@ class WalletServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerCloseChecklistItems();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H3 FIN-14 §6) — one module code, `WALLET`,
+     * mirroring the spec's own `wallet.*` permission namespace
+     * exactly.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('WALLET', [
+            'sell' => ['description' => 'Operate the tuckshop POS terminal.'],
+            'manage' => ['description' => 'Manage products, spend points, top-ups and term-end processing.', 'dangerous' => true],
+            'view' => ['description' => 'View wallet balances and transactions.'],
+            'report.view' => ['description' => 'View wallet reconciliation and sales analytics.'],
+        ]);
+    }
+
+    /**
+     * Mirrors every other Book H3 module's own `Livewire::addLocation()`
+     * call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Wallet\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/wallet.php');
+        });
     }
 
     /**
