@@ -1084,7 +1084,7 @@ new), alongside the whole-app suite.
 | Module | Screens | Status |
 |---|---|---|
 | COM-01 | Messaging Gateways & Delivery | ✅ (`Livewire/Messaging/`) |
-| COM-02 | Event-Driven Automation Rules | ⬜ |
+| COM-02 | Event-Driven Automation Rules | ✅ (`Livewire/Automation/`) |
 | COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ⬜ |
 | COM-06 | Calendar, Events & Notice Board | ⬜ |
 | COM-07 | Virtual Meetings | ⬜ |
@@ -1112,6 +1112,25 @@ admin-UI), all green. PHPStan could not be run in the cloud session
 (larastan's `phpstan/phpstan` is distributed only as a GitHub zipball,
 blocked by the sandbox proxy) — run `vendor/bin/phpstan analyse` locally
 before relying on this module being PHPStan-clean.
+
+**COM-02 note.** Built (`Livewire/Automation/{Index,Builder,ExecutionLog,
+ScanRuns,Variants}`, 5 screens, matching the spec's own §5 table).
+Permissions registered under module code `AUTOMATION` (`automation.view`,
+`automation.manage`) — the spec names them without a `comms.` prefix.
+No new Actions were needed. `Builder` is two screens in one: with no rule
+it is the condition-group builder (field picker scoped to the chosen
+entity/event, saves the rule **inactive**); with a rule it is that rule's
+own screen — preview (no dispatch, no `rule_executions` write), cost
+estimate, activate/deactivate. The spec's "cost estimate before save" is
+delivered as "before activation" (BR-COM-02-008's actual requirement),
+because the backend preview/estimate Actions take a saved rule id.
+**Deliberately not built:** editing a saved rule's conditions (the backend
+has no update Action — deactivate and re-create), removing a variant or
+changing its weight (same), previewing an *event* rule (preview scans
+current data, which only exists for scheduled-scan rules), and a "run
+scan now" button (it would send real messages; the cron wiring for
+`RunScanRuleAction` is still the backend's documented deferred gap).
+Comms module: 96 tests (61 backend + 35 admin-UI), all green.
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so

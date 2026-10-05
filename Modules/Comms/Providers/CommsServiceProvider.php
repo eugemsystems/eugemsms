@@ -141,6 +141,12 @@ class CommsServiceProvider extends ModuleServiceProvider
             'report.view' => ['description' => 'View messaging cost, segmentation and segment-waste reports.'],
             'reconciliation.manage' => ['description' => 'Reconcile system-recorded messaging spend against provider statements.', 'dangerous' => true],
         ]);
+
+        // COM-02 §5 names these without a `comms.` prefix.
+        PermissionRegistry::register('AUTOMATION', [
+            'view' => ['description' => 'View automation rules, execution logs, scan history and A/B variant performance.'],
+            'manage' => ['description' => 'Create, preview, cost-review, activate and deactivate automation rules and their A/B variants.', 'dangerous' => true],
+        ]);
     }
 
     /**

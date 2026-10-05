@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Comms\Livewire\Automation\Builder as AutomationBuilder;
+use Modules\Comms\Livewire\Automation\ExecutionLog as AutomationExecutionLog;
+use Modules\Comms\Livewire\Automation\Index as AutomationIndex;
+use Modules\Comms\Livewire\Automation\ScanRuns as AutomationScanRuns;
+use Modules\Comms\Livewire\Automation\Variants as AutomationVariants;
 use Modules\Comms\Livewire\Messaging\Gateways\Index as GatewaysIndex;
 use Modules\Comms\Livewire\Messaging\Gateways\Webhooks as GatewayWebhooks;
 use Modules\Comms\Livewire\Messaging\Reports\Cost as CostReport;
@@ -21,4 +26,13 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/comms')->name(
     Route::livewire('sms/sender-ids', SenderIds::class)->name('sms.sender-ids');
     Route::livewire('reports/cost', CostReport::class)->name('reports.cost');
     Route::livewire('reports/reconciliation', ReconciliationReport::class)->name('reports.reconciliation');
+
+    Route::prefix('automation')->name('automation.')->group(function (): void {
+        Route::livewire('/', AutomationIndex::class)->name('index');
+        Route::livewire('rules/create', AutomationBuilder::class)->name('create');
+        Route::livewire('rules/{rule}', AutomationBuilder::class)->name('builder');
+        Route::livewire('executions', AutomationExecutionLog::class)->name('executions');
+        Route::livewire('scans', AutomationScanRuns::class)->name('scans');
+        Route::livewire('variants', AutomationVariants::class)->name('variants');
+    });
 });

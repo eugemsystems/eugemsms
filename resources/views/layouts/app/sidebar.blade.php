@@ -1381,8 +1381,8 @@
                         </div>
 
                         {{--
-                            Book I (Modules\Comms) admin screens. Only COM-01
-                            is built so far; later COM modules add their own
+                            Book I (Modules\Comms) admin screens. COM-01 and
+                            COM-02 are built so far; later COM modules add their own
                             headings inside this one group.
                         --}}
                         @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
@@ -1408,6 +1408,20 @@
                                     </a>
                                     <a href="{{ route('comms.reports.reconciliation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.reports.reconciliation') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-scales-3-line"></i> {{ __('Cost reconciliation') }} ⭐
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Automation Rules') }}</div>
+                                    <a href="{{ route('comms.automation.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.automation.index', 'comms.automation.create', 'comms.automation.builder') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-robot-2-line"></i> {{ __('Rule library') }} ⭐
+                                    </a>
+                                    <a href="{{ route('comms.automation.executions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.automation.executions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-3"></i> {{ __('Execution log') }}
+                                    </a>
+                                    <a href="{{ route('comms.automation.scans', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.automation.scans') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-radar-line"></i> {{ __('Scan history') }}
+                                    </a>
+                                    <a href="{{ route('comms.automation.variants', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.automation.variants') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-test-tube-line"></i> {{ __('A/B performance') }}
                                     </a>
                                 </div>
                             </div>
