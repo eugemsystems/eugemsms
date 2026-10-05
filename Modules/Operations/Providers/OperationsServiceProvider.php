@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Operations\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -63,6 +66,43 @@ class OperationsServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-02 §7) — one module code, `MAINTENANCE`,
+     * since the spec's own screen-permission column already names every
+     * permission under a single `maintenance.*` namespace (unlike Book
+     * H1's four-way `INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET` split —
+     * see `.ai/rules/stores.md`). `Maintenance\Report` deliberately has
+     * no permission of its own to check — the spec's own screen table
+     * names its permission literally "any user" (BR-OPS-02-001's "and
+     * nothing else"), so nothing is registered for it here.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('MAINTENANCE', [
+            'view' => ['description' => 'View work orders and the maintenance asset register.'],
+            'manage' => ['description' => 'Create work orders, assets, and preventive schedules; approve work orders.', 'dangerous' => true],
+            'triage' => ['description' => 'Triage fault reports into work orders, duplicates, or rejections.'],
+            'execute' => ['description' => 'Complete work orders and record parts, labour, and contractor cost against them.'],
+            'project.manage' => ['description' => 'Create, advance, and complete capital projects.', 'dangerous' => true],
+            'report.view' => ['description' => 'View SLA and cost-analysis maintenance reports.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `StoresServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Operations\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/maintenance.php');
+        });
     }
 
     /**

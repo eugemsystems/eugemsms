@@ -785,6 +785,109 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $estatesGroupActive = request()->routeIs('transport.*') || request()->routeIs('operations.*') || request()->routeIs('farm.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $estatesGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-estates" aria-expanded="{{ $estatesGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-estates">
+                                <i class="ri ri-roadster-line"></i> {{ __('Estates & Operations') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $estatesGroupActive ? 'show' : '' }}" id="sidebar-group-estates">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Maintenance & Works') }}</div>
+                                    <a href="{{ route('operations.maintenance.report', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.report') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-tools-line"></i> {{ __('Report a fault') }}
+                                    </a>
+                                    <a href="{{ route('operations.maintenance.triage', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.triage') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-filter-3-line"></i> {{ __('Triage') }}
+                                    </a>
+                                    <a href="{{ route('operations.maintenance.work-orders.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.work-orders.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Work orders') }}
+                                    </a>
+                                    <a href="{{ route('operations.maintenance.assets.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.assets.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-4-line"></i> {{ __('Maintenance assets') }}
+                                    </a>
+                                    <a href="{{ route('operations.maintenance.schedules.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.schedules.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-check-line"></i> {{ __('Preventive schedules') }}
+                                    </a>
+                                    <a href="{{ route('operations.maintenance.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.maintenance.reports.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-2-line"></i> {{ __('Maintenance reports') }}
+                                    </a>
+                                    <a href="{{ route('operations.projects.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('operations.projects.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Capital projects') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Transport & Fleet') }} 🇿🇼</div>
+                                    <a href="{{ route('transport.fleet.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.fleet.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bus-line"></i> {{ __('Fleet register') }}
+                                    </a>
+                                    <a href="{{ route('transport.compliance.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.compliance.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Compliance monitor') }} ⭐
+                                    </a>
+                                    <a href="{{ route('transport.drivers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.drivers.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-id-card-line"></i> {{ __('Drivers') }}
+                                    </a>
+                                    <a href="{{ route('transport.routes.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.routes.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-route-line"></i> {{ __('Routes & zones') }}
+                                    </a>
+                                    <a href="{{ route('transport.assignment.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.assignment.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-add-line"></i> {{ __('Learner assignment') }}
+                                    </a>
+                                    <a href="{{ route('transport.trips.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.trips.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Trip scheduling') }}
+                                    </a>
+                                    <a href="{{ route('transport.manifest.show', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.manifest.show') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Driver manifest') }}
+                                    </a>
+                                    <a href="{{ route('transport.fuel.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.fuel.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-gas-station-line"></i> {{ __('Fuel log') }}
+                                    </a>
+                                    <a href="{{ route('transport.fuel-anomalies.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.fuel-anomalies.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-radar-line"></i> {{ __('Fuel anomalies') }} ⭐
+                                    </a>
+                                    <a href="{{ route('transport.incidents.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.incidents.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Incidents') }}
+                                    </a>
+                                    <a href="{{ route('transport.route-costs.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('transport.route-costs.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-funds-line"></i> {{ __('Route costing') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Estates & Farm') }} 🇿🇼</div>
+                                    <a href="{{ route('farm.units.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.units.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-plant-line"></i> {{ __('Production units') }}
+                                    </a>
+                                    <a href="{{ route('farm.fields.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.fields.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-map-2-line"></i> {{ __('Fields') }}
+                                    </a>
+                                    <a href="{{ route('farm.cycles.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.cycles.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-seedling-line"></i> {{ __('Crop cycles') }}
+                                    </a>
+                                    <a href="{{ route('farm.harvest.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.harvest.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-plant-fill"></i> {{ __('Harvest') }} ⭐
+                                    </a>
+                                    <a href="{{ route('farm.livestock.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.livestock.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-footprint-line"></i> {{ __('Livestock register') }}
+                                    </a>
+                                    <a href="{{ route('farm.livestock-events.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.livestock-events.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-syringe-line"></i> {{ __('Livestock events') }} ⭐
+                                    </a>
+                                    <a href="{{ route('farm.production.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.production.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-drop-line"></i> {{ __('Daily production') }}
+                                    </a>
+                                    <a href="{{ route('farm.transfers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.transfers.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-restaurant-line"></i> {{ __('Kitchen transfers') }} ⭐
+                                    </a>
+                                    <a href="{{ route('farm.sales.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.sales.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shopping-basket-line"></i> {{ __('Farm sales') }}
+                                    </a>
+                                    <a href="{{ route('farm.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('farm.reports.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pie-chart-2-line"></i> {{ __('Farm reports') }} ⭐
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $approvalsGroupActive = request()->routeIs('approvals.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $approvalsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-approvals" aria-expanded="{{ $approvalsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-approvals">

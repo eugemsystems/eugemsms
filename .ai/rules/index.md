@@ -15,6 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/*/Domain/Support/*.php | .ai/rules/domain-support.md |
 | Modules/Core/database/factories/GradeLevelFactory.php | .ai/rules/factories.md |
 | Modules/*/tests/Feature/*.php | .ai/rules/feature.md |
+| Modules/Farm/** | .ai/rules/farm.md |
 | Modules/Finance/** | .ai/rules/finance.md |
 | **/* | .ai/rules/general.md |
 | resources/js/** | .ai/rules/js.md |
@@ -23,6 +24,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/People/Models/*.php | .ai/rules/models.md |
 | Modules/*/Models/*.php | .ai/rules/modules-models.md |
 | Modules/*/**, Modules/*/composer.json | .ai/rules/modules.md |
+| Modules/Operations/** | .ai/rules/operations.md |
 | Modules/Payroll/** | .ai/rules/payroll.md |
 | Modules/People/** | .ai/rules/people.md |
 | Modules/*/Providers/*ServiceProvider.php | .ai/rules/providers.md |
@@ -30,5 +32,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Stores/** | .ai/rules/stores.md |
 | Modules/Finance/Domain/Support/*.php | .ai/rules/support.md |
 | Modules/*/tests/** | .ai/rules/tests.md |
+| Modules/Transport/** | .ai/rules/transport.md |
 | resources/views/** | .ai/rules/views.md |
 | Modules/Welfare/** | .ai/rules/welfare.md |

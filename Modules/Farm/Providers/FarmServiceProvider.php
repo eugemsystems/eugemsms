@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Farm\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -74,6 +77,39 @@ class FarmServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-03 §5) — one module code, `FARM`,
+     * mirroring the spec's own single `farm.*` permission namespace
+     * for every screen in this module's own table.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('FARM', [
+            'manage' => ['description' => 'Create and manage production units and fields.', 'dangerous' => true],
+            'crop.manage' => ['description' => 'Plan crop cycles, allocate labour and overhead, and fail a cycle.'],
+            'record' => ['description' => 'Record crop inputs, harvests, livestock events, and daily production.'],
+            'livestock.manage' => ['description' => 'Create livestock records and run mortality checks.'],
+            'transfer' => ['description' => 'Transfer produce to the kitchen at internal cost.', 'dangerous' => true],
+            'sales.manage' => ['description' => 'Record external farm sales.'],
+            'report.view' => ['description' => 'View profitability and savings reports.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `StoresServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Farm\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/farm.php');
+        });
     }
 
     /**

@@ -693,11 +693,122 @@ See `.ai/rules/stores.md` for the full reasoning, the permission
 module-code split (`INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET`, not one
 `STORES` call), and testing gotchas found along the way.
 
-### Book H2 — Operations & Estates — ⬜ not started
+### Book H2 — Operations & Estates — 🟡 in progress (OPS-01/02/03 done this pass; OPS-04/05/06/07 not started)
 Verified module ownership (one Laravel module each): OPS-01 → `Transport`,
 OPS-02 → `Operations`, OPS-03 → `Farm`, OPS-04 → `Utilities`, OPS-05 →
-`Facilities`, OPS-06 → `Security`, OPS-07 → `Sport`. None have a `Livewire/`
-directory yet.
+`Facilities`, OPS-06 → `Security`, OPS-07 → `Sport`. This pass covers only
+OPS-01/02/03, in the book's own build order (OPS-02 → OPS-01 → OPS-03,
+§0.2) — **OPS-04 (Utilities), OPS-05 (Facilities), OPS-06 (Security), and
+OPS-07 (Sport) are a separate, not-yet-started pass within the same book**;
+none of the four has a `Livewire/` directory.
+
+| Module | Screens | Status |
+|---|---|---|
+| OPS-02 | Maintenance & Works Management | ✅ |
+| OPS-01 | Transport & Fleet Management 🇿🇼 | ✅ |
+| OPS-03 | Estates, Farm & Production Units 🇿🇼 | ✅ |
+| OPS-04 | Utilities & Energy Management 🇿🇼 | ⬜ not started |
+| OPS-05 | Facilities & Hire | ⬜ not started |
+| OPS-06 | Security & Access | ⬜ not started |
+| OPS-07 | Sport, Houses & Co-curricular | ⬜ not started |
+
+**OPS-02 note.** Built (`Livewire/Maintenance/{Assets,Reports,Schedules,
+WorkOrders}/`, `Livewire/Maintenance/{Report,Triage}.php`,
+`Livewire/Projects/`, 7 screens): `Maintenance\Report` (any authenticated
+user, no permission of its own — the spec's own screen table names its
+permission literally "any user"), `Maintenance\Triage` (safety-flagged
+reports always sort first, BR-OPS-02-002), `Maintenance\WorkOrders\Index`
+(folds the spec's separate "Technician job card" screen into one
+list+detail action bar — approve/complete/verify/issue parts/record
+labour/record contractor cost all operate on the selected order),
+`Maintenance\Assets\Index` (also stands in for "Asset maintenance
+history"), `Maintenance\Schedules\Index` (preventive schedules + an
+on-demand "Generate due" button, since `GeneratePreventiveWorkOrdersAction`
+has no cron wiring yet), `Maintenance\Reports\Index` (folds the spec's
+separate SLA and Cost analysis screens into one tabbed read),
+`Projects\Index` (capital projects, create/advance/complete). **Three new
+gap-filling Actions**: `CreateMaintenanceAssetAction`,
+`CreateMaintenanceScheduleAction` (same "model/migration/factory exist,
+no Action ever created a row" gap prior books hit repeatedly — verified
+by grep), and `AdvanceCapitalProjectStatusAction` (forward-only
+planning→approved→in_progress; nothing in the shipped domain layer moved
+a capital project out of `planning`, and `CompleteCapitalProjectAction`
+requires `approved`/`in_progress`). **Deliberately not built**: a
+standalone "Contractor management" screen (no `is_contractor` flag or
+Action distinguishes a contractor `Supplier` from any other — `WorkOrders\Index`
+lets the user pick any supplier for `contractor_supplier_id`) and capital
+project milestones (`capital_project_milestones` has the same
+"model exists, no Action ever wrote one" gap, but no acceptance criterion
+in this book names milestone-level behaviour to build a UI against).
+
+**OPS-01 note 🇿🇼.** Built (`Livewire/{Fleet,Compliance,Drivers,Routes,
+Assignment,Trips,Manifest,Fuel,FuelAnomalies,Incidents,RouteCosts}/`, 11
+screens): `Fleet\Index` (register + ground/reactivate), `Compliance\Index`
+🇿🇼 (the seven statutory compliance types from BR-OPS-01-002; the
+`[60,30,7]`-day alert window is read live from
+`transport.compliance_alert_days` via `SettingResolver` — never a
+hard-coded literal in the screen, per CLAUDE.md's statutory-figure rule),
+`Drivers\Index`, `Routes\Index` (folds zone management in alongside
+route+stop creation — the spec names no separate "Zones" screen),
+`Assignment\Index` (shows the resulting termly fee live, read off the
+picked stop's own zone), `Trips\Index` (schedule + depart + odometer),
+`Manifest\Show` (tap-to-board/alight), `Fuel\Index`, `FuelAnomalies\Index`
+⭐ (never dismissed without a recorded explanation; a "Run 30-day check"
+button for `CheckCumulativeFuelAnomalyAction`, uncronned), `Incidents\Index`,
+`RouteCosts\Index`. **One new gap-filling Action**: `ReactivateVehicleAction`
+— `GroundVehicleAction` shipped with no reverse, which would have left
+the Compliance monitor's own "grounded vehicles" view a one-way trip.
+A dedicated test proves `ScheduleTripAction` itself (never duplicated in
+the UI) refuses a vehicle with an expired certificate of fitness
+(AC-OPS-01-001), and `Assignment\Index` shows the correct termly fee
+before confirming (AC-OPS-01-002).
+
+**OPS-03 note 🇿🇼.** Built (`Livewire/{Units,Fields,Cycles,Harvest,
+Livestock,LivestockEvents,Production,KitchenTransfers,Sales,Reports}/`, 10
+screens): `Units\Index`, `Fields\Index`, `Cycles\Index` (folds the spec's
+separate "Input recording" screen into the selected cycle's own action
+bar alongside labour/overhead/fail), `Harvest\Index` (shows cost per kg —
+the internal transfer price — immediately after recording, read back off
+the cycle `RecordHarvestAction` just updated), `Livestock\Index`
+(capitalisation fields only shown for `purpose = breeding`, mirroring
+`CreateLivestockAction`'s own `shouldCapitalize()` gate), `LivestockEvents\Index`
+(withdrawal period captured directly on a treatment), `Production\Index`,
+`KitchenTransfers\Index` ⭐ — **named `KitchenTransfers`, not the spec's own
+bare `Transfers`: a real cross-module Livewire component-name collision
+was found and fixed in this pass** (see below), `Sales\Index`,
+`Reports\Index` (folds the spec's separate "Profitability" and "Savings
+report" screens into one tabbed read). **Deliberately not built**: no
+screen fabricates fiscalisation — `farm_sales.fiscal_receipt_id` stays
+null on every row `Sales\Index` creates, since `FIN-13` (Book H3) doesn't
+exist yet (`RecordFarmSaleAction`'s own documented boundary); the spec's
+own AC-OPS-03-006 ("fiscalised through FIN-13") is therefore not
+literally true today, recorded here rather than silently improvised past.
+Two dedicated tests prove AC-OPS-03-001 (a 1,440/1,800kg cycle yields
+exactly 80 minor-unit cost per kg) and AC-OPS-03-003 (a kitchen transfer
+of milk from a cow within a recorded withdrawal period is blocked, naming
+nothing extra — the Action's own message already names the end date).
+
+**A real, previously-undiscovered bug found and fixed in this pass:
+Livewire full-page components collide by name across modules when two
+different modules each register a component at the same path relative
+to their own `Livewire::addLocation()` root.** `Modules\Farm\Livewire\Transfers\Index`
+(this pass's original name, matching the spec's own screen name) and
+`Modules\Stores\Livewire\Transfers\Index` (Book H1 FIN-09, already
+shipped) are both exactly `Transfers/Index.php` one level under their
+module's own `Livewire/` root. Livewire's component Finder resolves a
+full-page route's component by a name derived from this relative path,
+not the fully-qualified PHP class — so both routes silently resolved to
+whichever module registered its service provider later, and a user
+granted only `farm.transfer` got a plain `403` on `farm.transfers.index`
+(checked against Stores' `inventory.transfer.manage` instead), with no
+exception logged and the real component's own `mount()` never invoked —
+confirmed by direct instrumentation. Fixed by renaming the class to
+`KitchenTransfers\Index` (end to end: namespace, directory, view path,
+route import, test import) rather than touching Stores' earlier-shipped
+screen. **Before naming any new module-root Livewire component** (one
+directly under `Livewire/`, not nested under a sub-namespace), check
+`find . -name Index.php | grep Livewire | sed -E 's#.*/Livewire/##; s#/Index\.php$##' | sort | uniq -d`
+for a collision first — this is now a standing check, not a one-off.
 
 ### Book H3 — Payroll, Fiscalisation & Compliance — ⬜ not started
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13

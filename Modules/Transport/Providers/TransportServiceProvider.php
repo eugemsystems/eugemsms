@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Transport\Providers;
 
+use Illuminate\Support\Facades\Route as RouteFacade;
+use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -73,6 +76,41 @@ class TransportServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book H2 OPS-01 §5) — one module code, `TRANSPORT`,
+     * mirroring the spec's own single `transport.*` permission
+     * namespace for every screen in this module's own table.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('TRANSPORT', [
+            'view' => ['description' => 'View the fleet register.'],
+            'manage' => ['description' => 'Register vehicles, drivers, compliance records, routes, and zones; ground or reactivate a vehicle.', 'dangerous' => true],
+            'assign' => ['description' => 'Assign or re-assign a learner to a transport route and zone.'],
+            'trip.manage' => ['description' => 'Schedule trips and record odometer readings.'],
+            'drive' => ['description' => 'Record learner boarding and alighting from the driver manifest.'],
+            'fuel.record' => ['description' => 'Record a fuel log entry.'],
+            'fuel.review' => ['description' => 'Review and explain fuel anomalies.', 'dangerous' => true],
+            'incident.manage' => ['description' => 'Report and manage vehicle incidents.'],
+            'report.view' => ['description' => 'View per-route costing.'],
+        ]);
+    }
+
+    /**
+     * Mirrors `StoresServiceProvider::registerLivewireRoutes()`'s own
+     * `Livewire::addLocation()` call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Transport\Livewire');
+
+        RouteFacade::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/transport.php');
+        });
     }
 
     /**
