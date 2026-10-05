@@ -1379,6 +1379,39 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{--
+                            Book I (Modules\Comms) admin screens. Only COM-01
+                            is built so far; later COM modules add their own
+                            headings inside this one group.
+                        --}}
+                        @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $commsGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-comms" aria-expanded="{{ $commsGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-comms">
+                                <i class="ri ri-chat-3-line"></i> {{ __('Communication') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $commsGroupActive ? 'show' : '' }}" id="sidebar-group-comms">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Messaging Gateways') }} 🇿🇼</div>
+                                    <a href="{{ route('comms.gateways.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.gateways.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-router-line"></i> {{ __('Gateways') }} ⚠⚠
+                                    </a>
+                                    <a href="{{ route('comms.whatsapp.templates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.whatsapp.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-whatsapp-line"></i> {{ __('WhatsApp templates') }} ⭐
+                                    </a>
+                                    <a href="{{ route('comms.sms.sender-ids', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.sms.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-message-2-line"></i> {{ __('SMS sender IDs') }}
+                                    </a>
+                                    <a href="{{ route('comms.reports.cost', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.reports.cost') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-2-line"></i> {{ __('Cost & segmentation') }}
+                                    </a>
+                                    <a href="{{ route('comms.reports.reconciliation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.reports.reconciliation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-scales-3-line"></i> {{ __('Cost reconciliation') }} ⭐
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>

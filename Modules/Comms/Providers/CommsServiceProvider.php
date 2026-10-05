@@ -7,6 +7,8 @@ namespace Modules\Comms\Providers;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Comms\Domain\DataObjects\AutomationEntityDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationEventDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationScanRecord;
@@ -57,6 +59,7 @@ use Modules\Comms\Models\WhatsAppTemplate;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationChannelDriverRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\Notification;
@@ -119,6 +122,38 @@ class CommsServiceProvider extends ModuleServiceProvider
         $this->registerMeetingProviderDrivers();
         $this->registerCom07NotificationKeys();
         $this->registerCom08NotificationKeys();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * Admin-UI pass (Book I). Permission names come from COM-01 §6's
+     * own screens table; registered under the single `COMMS` module
+     * code as `comms.{resource}.{action}`.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('COMMS', [
+            'gateway.manage' => ['description' => 'Register messaging gateways, run health checks and manage failover priority.', 'dangerous' => true],
+            'gateway.view' => ['description' => 'View messaging gateways and the inbound webhook log.'],
+            'template.manage' => ['description' => 'Register WhatsApp Business accounts, submit templates and record Meta review decisions.', 'dangerous' => true],
+            'sender_id.manage' => ['description' => 'Register SMS sender IDs and record per-network approval status.'],
+            'report.view' => ['description' => 'View messaging cost, segmentation and segment-waste reports.'],
+            'reconciliation.manage' => ['description' => 'Reconcile system-recorded messaging spend against provider statements.', 'dangerous' => true],
+        ]);
+    }
+
+    /**
+     * Same `Livewire::addLocation()` + explicit `web` group pattern
+     * every other module's admin-UI pass uses.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\\Comms\\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/comms.php');
+        });
     }
 
     /**

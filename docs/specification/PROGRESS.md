@@ -69,7 +69,7 @@ Action/model's own docblock, not silently missing — see each module's own
 
 ---
 
-## Admin UI — in progress, Book A and Book B complete
+## Admin UI — in progress, Books A–H3 complete, Book I started
 
 This pass retrofits Livewire screens onto the already-complete backend,
 **in the same book order as the original build** (A → B → C → D → E → F →
@@ -1079,8 +1079,46 @@ across the four CMP modules (4 CMP-01 + 3 CMP-02 + 5 CMP-03 + 4 CMP-04),
 all green — Compliance module total 47 (31 pre-existing backend + 16
 new), alongside the whole-app suite.
 
-### Book I — Communication & Portals — ⬜ not started
-COM-01–COM-08. `Modules/Comms/Livewire/` does not exist yet.
+### Book I — Communication & Portals — 🟡 in progress
+
+| Module | Screens | Status |
+|---|---|---|
+| COM-01 | Messaging Gateways & Delivery | ✅ (`Livewire/Messaging/`) |
+| COM-02 | Event-Driven Automation Rules | ⬜ |
+| COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ⬜ |
+| COM-06 | Calendar, Events & Notice Board | ⬜ |
+| COM-07 | Virtual Meetings | ⬜ |
+| COM-08 | Feedback & Complaints | ⬜ |
+
+**COM-01 note.** Built (`Livewire/Messaging/{Gateways,WhatsApp,Sms,Reports}/`,
+6 screens, matching the spec's own §6 table): `Gateways\Index` (register,
+health check, activate/deactivate), `Gateways\Webhooks`, `WhatsApp\Templates`
+(folds WhatsApp Business account registration and Meta quality rating in
+with template submit/review), `Sms\SenderIds`, `Reports\Cost`,
+`Reports\Reconciliation`. Permissions registered under module code `COMMS`
+(`comms.gateway.manage|view`, `comms.template.manage`,
+`comms.sender_id.manage`, `comms.report.view`,
+`comms.reconciliation.manage`) — the backend pass had registered none.
+Two gap-filling Actions: `RegisterWhatsAppBusinessAccountAction`,
+`SetMessageGatewayActiveAction`. Credentials are write-only (never read
+back into a view); the webhook log shows receipt metadata only, never
+raw payloads. **Deliberately not built:** the spec's gateway "test send"
+(needs `CORE-09`'s recipient-resolving dispatch path; a health check
+already exercises the driver), and a stored currency for reconciliation
+(the table has no currency column, so amounts use the school's base
+currency). Small registers use plain tables, not the shared data-table,
+like the Compliance pass. Comms module: 79 tests (61 backend + 18 new
+admin-UI), all green. PHPStan could not be run in the cloud session
+(larastan's `phpstan/phpstan` is distributed only as a GitHub zipball,
+blocked by the sandbox proxy) — run `vendor/bin/phpstan analyse` locally
+before relying on this module being PHPStan-clean.
+
+**A real Livewire gotcha found in this pass**: component names derive
+from the class path under the module's `addLocation()` namespace, so
+`Modules\Comms\Livewire\Gateways\Index` and Finance's own
+`Gateways\Index` both resolve to the name `gateways.index`; a Livewire
+update request then re-hydrated the *Finance* component. See
+`.ai/rules/comms.md`.
 
 ### Book J — Intelligence & SaaS Control — ⬜ not started
 INT-01–INT-04 (`Modules/Intelligence`), SAA-01–SAA-03 (`Modules/Saas`) —

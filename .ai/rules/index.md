@@ -31,6 +31,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/People/** | .ai/rules/people.md |
 | Modules/*/Providers/*ServiceProvider.php | .ai/rules/providers.md |
 | Modules/Compliance/** | .ai/rules/compliance.md |
+| Modules/Comms/** | .ai/rules/comms.md |
 | Modules/Reporting/** | .ai/rules/financial-close.md |
 | Modules/*/resources/views/** | .ai/rules/resources-views.md |
 | Modules/Security/** | .ai/rules/security.md |
