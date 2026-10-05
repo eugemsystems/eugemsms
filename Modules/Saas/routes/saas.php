@@ -4,16 +4,24 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Saas\Domain\Actions\GetPublicStatusAction;
+use Modules\Saas\Livewire\Public\Article as HelpArticle;
+use Modules\Saas\Livewire\Public\KnowledgeBase as HelpIndex;
 use Modules\Saas\Livewire\Tenant\Announcements;
 use Modules\Saas\Livewire\Tenant\Subscription\MySubscription;
+use Modules\Saas\Livewire\Tenant\Support\Raise as TenantSupportRaise;
+use Modules\Saas\Livewire\Vendor\Adoption\Index as VendorAdoption;
 use Modules\Saas\Livewire\Vendor\Billing\Invoices as VendorInvoices;
 use Modules\Saas\Livewire\Vendor\Broadcasts\Compose as VendorBroadcasts;
+use Modules\Saas\Livewire\Vendor\ChurnRisk\Queue as VendorChurn;
 use Modules\Saas\Livewire\Vendor\Incidents\Manage as VendorIncidents;
 use Modules\Saas\Livewire\Vendor\Licensing\Keys as VendorKeys;
+use Modules\Saas\Livewire\Vendor\Onboarding\Index as VendorOnboarding;
+use Modules\Saas\Livewire\Vendor\Onboarding\Templates as VendorTemplates;
 use Modules\Saas\Livewire\Vendor\Releases\Index as VendorReleases;
 use Modules\Saas\Livewire\Vendor\Rollouts\Index as VendorRollouts;
 use Modules\Saas\Livewire\Vendor\Subscription\Manage as VendorSubscriptions;
 use Modules\Saas\Livewire\Vendor\Subscription\Plans as VendorPlans;
+use Modules\Saas\Livewire\Vendor\Support\Queue as VendorSupportQueue;
 use Modules\Saas\Livewire\Vendor\Tenants\Index as VendorTenants;
 use Modules\Saas\Livewire\Vendor\Tenants\Show as VendorTenantShow;
 
@@ -24,6 +32,7 @@ use Modules\Saas\Livewire\Vendor\Tenants\Show as VendorTenantShow;
 Route::middleware(['auth', 'verified'])->prefix('schools/{school}/account')->name('account.')->group(function (): void {
     Route::livewire('subscription', MySubscription::class)->name('subscription');
     Route::livewire('announcements', Announcements::class)->name('announcements');
+    Route::livewire('support', TenantSupportRaise::class)->name('support');
 });
 
 /**
@@ -49,6 +58,11 @@ Route::middleware('serp.vendor')->prefix('vendor')->name('vendor.')->group(funct
     Route::livewire('releases', VendorReleases::class)->name('releases');
     Route::livewire('broadcasts', VendorBroadcasts::class)->name('broadcasts');
     Route::livewire('incidents', VendorIncidents::class)->name('incidents');
+    Route::livewire('onboarding', VendorOnboarding::class)->name('onboarding');
+    Route::livewire('onboarding/templates', VendorTemplates::class)->name('onboarding.templates');
+    Route::livewire('support', VendorSupportQueue::class)->name('support');
+    Route::livewire('adoption', VendorAdoption::class)->name('adoption');
+    Route::livewire('churn', VendorChurn::class)->name('churn');
 });
 
 /**
@@ -56,3 +70,9 @@ Route::middleware('serp.vendor')->prefix('vendor')->name('vendor.')->group(funct
  * authentication, public incidents only (`GetPublicStatusAction`).
  */
 Route::get('status', fn () => view('saas::public.status', ['incidents' => app(GetPublicStatusAction::class)->execute()]))->name('status');
+
+/** Public help centre (Book J SAA-03 §5) — read-only, no authentication. */
+Route::prefix('help')->name('help.')->group(function (): void {
+    Route::livewire('/', HelpIndex::class)->name('index');
+    Route::livewire('{slug}', HelpArticle::class)->name('article');
+});

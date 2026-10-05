@@ -106,7 +106,7 @@ it('applies an onboarding template by cloning its configuration profile and incr
 it('raises a support ticket that never touches the COM-08 complaint queue (BR-SAA-03-003/AC-SAA-03-001)', function (): void {
     $tenant = Tenant::factory()->create();
     $school = School::factory()->for($tenant)->create();
-    $user = User::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
 
     $ticket = app(RaiseSupportTicketAction::class)->execute(new RaiseSupportTicketData(
         tenantId: $tenant->id,

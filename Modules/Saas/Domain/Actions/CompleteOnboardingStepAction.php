@@ -18,7 +18,7 @@ final class CompleteOnboardingStepAction extends Action
 {
     public function execute(int $checklistId, string $stepKey, ?string $owner = null): OnboardingChecklist
     {
-        $checklist = OnboardingChecklist::query()->findOrFail($checklistId);
+        $checklist = OnboardingChecklist::query()->withoutGlobalScopes()->findOrFail($checklistId);
 
         $found = false;
         $steps = array_map(function (array $step) use ($stepKey, $owner, &$found): array {

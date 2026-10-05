@@ -1266,7 +1266,28 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
 | SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ |
 | SAA-02 | Vendor Control Centre | ✅ admin screens (`Livewire/Vendor/{Tenants,Rollouts,Releases,Broadcasts,Incidents}/`, public `/status`) |
-| SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+| SAA-03 | Onboarding, Support & Customer Success | ✅ admin screens (`Livewire/Vendor/{Onboarding,Support,Adoption,ChurnRisk}/`, `Livewire/Tenant/Support/`, public `/help`) |
+
+**SAA-03 note.** Vendor screens `Onboarding\Index` (tracker), `Onboarding\Templates`,
+`Support\Queue` (SLA-sorted), `Adoption\Index`, `ChurnRisk\Queue`; school-facing
+`Tenant\Support\Raise` (`account.support`, permission `support.ticket.raise`) and the
+public, read-only help centre at `/help` and `/help/{slug}` (the `GET /api/v1/help/articles`
+equivalent; article Markdown is rendered with raw HTML escaped). A ticket's tenant,
+school and author are derived on the server (the author must be a user of the tenant, the
+school one of the tenant's), and it lands in `support_tickets` — never in the school's
+COM-08 complaint queue (AC-SAA-03-001, asserted). **New/hardened Actions:**
+`AssignSupportTicketAction` (vendor staff only), `ChangeSupportTicketStatusAction` (a real
+state machine; `closed` is final), `ReviewChurnRiskFlagAction`, `CreateOnboardingTemplateAction`
+(one library entry per profile); `RaiseSupportTicketAction` and `StartOnboardingChecklistAction`
+validate input, tenant/school/author consistency, unique step keys and vendor-only success
+managers. Churn flags always render their plain-language, weighted, sourced factors
+(AC-SAA-03-005). **Known gaps:** no ticket reply thread / resolution note (the spec's
+`support_tickets` has none); the churn flag has no intervention-note column, so
+`intervention_logged` records the move only; no vendor authoring UI for knowledge-base
+articles, product tours or release-note distribution (Actions exist; the spec's screen
+list does not include them); the `/api/v1/support/*`, `/help/articles` and `/tours/*`
+endpoints; no scheduled stall alerts, adoption recompute or SLA checks (on-demand buttons
+only).
 
 **SAA-02 note.** Vendor screens `Tenants\Index`, `Tenants\Show`, `Rollouts\Index`,
 `Releases\Index`, `Broadcasts\Compose`, `Incidents\Manage` (routes `vendor.*`), the

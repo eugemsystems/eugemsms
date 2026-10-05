@@ -1581,6 +1581,12 @@
                                     <a href="{{ route('account.announcements', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('account.announcements') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-megaphone-line"></i> {{ __('Announcements') }}
                                     </a>
+                                    <a href="{{ route('account.support', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('account.support') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-customer-service-2-line"></i> {{ __('Contact support') }}
+                                    </a>
+                                    <a href="{{ route('help.index') }}" class="nav-link" wire:navigate>
+                                        <i class="ri ri-question-line"></i> {{ __('Help articles') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>
