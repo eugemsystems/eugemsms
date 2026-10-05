@@ -1262,11 +1262,32 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 |---|---|---|
 | INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
-| INT-03 | Early Warning & Predictive Analytics | ⬜ |
+| INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
 | INT-04 | Public API, Webhooks & Integrations | ⬜ |
 | SAA-01 | Licensing, Subscription & Entitlement | ⬜ |
 | SAA-02 | Vendor Control Centre | ⬜ |
 | SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**INT-03 note.** Built the spec's 6 screens — `EarlyWarning\Queue`,
+`StudentDetail`, `FeeRisk`, `Enrolment`, `StaffWellbeing`, `Weights` — under
+`insights.early-warning.*`. New permissions: `risk.review` (dangerous),
+`risk.configure`, `staff.wellbeing.view`. Scores are advisory: no screen
+contacts a guardian, none is reachable without a staff permission
+(AC-INT-03-002), and flag closure needs a note (AC-INT-03-004). Spec
+deviations and backend hardening: (1) the spec's `finance.report.view` was
+never registered by Finance — `FeeRisk` accepts `finance.report.debtors` or
+`finance.report.collections`; (2) `SetRiskScoreWeightAction` is new — weights
+are bounded 0–100 (the spec names "registered bounds" but no figures) and only
+registered learner indicators can be re-weighted or disabled; (3)
+`ReviewWithdrawalRiskFlagAction` now rejects unknown statuses and re-review of
+a closed flag; (4) `ComputeFeeDefaultRiskAction` clears rows for households
+no longer overdue (the table is one current row per guardian);
+(5) `StaffWellbeingVisibility` limits wellbeing to the staff member and their
+`reports_to_staff_id` line manager — no school-wide override. **Known gap:** no
+nightly recompute is scheduled (BR-INT-03-005, `risk.recompute_hour`) — the
+scheduled-task sync gap in `.ai/rules/commands.md` blocks it; recompute is
+on demand from the screens until that platform fix lands. Likewise the three
+`/api/v1/risk/*` endpoints are not built (API surface is INT-04's pass).
 
 **INT-02 note.** Built the spec's 4 screens — `Executive\HeadDashboard`,
 `Executive\BursarDashboard`, `Executive\Kpis`, `Executive\BoardPack` — under

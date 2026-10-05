@@ -63,6 +63,12 @@ final class ComputeFeeDefaultRiskAction extends Action
             ));
         }
 
+        // A household that has since cleared its arrears must not keep a
+        // stale score — this table is one current row per guardian.
+        FeeDefaultRiskScore::where('school_id', $schoolId)
+            ->whereNotIn('guardian_id', $overdue->pluck('billed_party_id')->all() ?: [0])
+            ->delete();
+
         return $results;
     }
 }

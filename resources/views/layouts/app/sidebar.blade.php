@@ -1512,6 +1512,23 @@
                                         <i class="ri ri-presentation-line"></i> {{ __('Board pack') }}
                                     </a>
 
+                                    <div class="app-sidebar-heading">{{ __('Early warning') }}</div>
+                                    <a href="{{ route('insights.early-warning.queue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.early-warning.queue', 'insights.early-warning.student') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('At-risk queue') }}
+                                    </a>
+                                    <a href="{{ route('insights.early-warning.fee-risk', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.early-warning.fee-risk') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-coin-line"></i> {{ __('Fee default risk') }}
+                                    </a>
+                                    <a href="{{ route('insights.early-warning.enrolment', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.early-warning.enrolment') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-line-chart-line"></i> {{ __('Enrolment forecast') }}
+                                    </a>
+                                    <a href="{{ route('insights.early-warning.staff-wellbeing', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.early-warning.staff-wellbeing') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-heart-pulse-line"></i> {{ __('Staff wellbeing') }}
+                                    </a>
+                                    <a href="{{ route('insights.early-warning.weights', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.early-warning.weights') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-equalizer-line"></i> {{ __('Indicator weights') }}
+                                    </a>
+
                                     <div class="app-sidebar-heading">{{ __('Custom reports') }}</div>
                                     <a href="{{ route('insights.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.index', 'insights.reports.shared') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-file-chart-line"></i> {{ __('My reports') }}

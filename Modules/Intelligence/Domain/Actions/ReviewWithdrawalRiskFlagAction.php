@@ -19,13 +19,23 @@ final class ReviewWithdrawalRiskFlagAction extends Action
 {
     private const array CLOSING_STATUSES = ['intervention_logged', 'resolved', 'withdrawn'];
 
+    private const array STATUSES = ['open', 'intervention_logged', 'resolved', 'withdrawn'];
+
     public function execute(int $flagId, string $status, int $reviewerUserId, ?string $interventionNote = null): WithdrawalRiskFlag
     {
         if (in_array($status, self::CLOSING_STATUSES, true) && ($interventionNote === null || trim($interventionNote) === '')) {
             throw new InvalidArgumentException('Closing a withdrawal risk flag requires an intervention note (BR-INT-03-008).');
         }
 
+        if (! in_array($status, self::STATUSES, true)) {
+            throw new InvalidArgumentException("[{$status}] is not a withdrawal risk flag status.");
+        }
+
         $flag = WithdrawalRiskFlag::findOrFail($flagId);
+
+        if (in_array($flag->status, ['resolved', 'withdrawn'], true)) {
+            throw new InvalidArgumentException('A closed withdrawal risk flag cannot be reviewed again.');
+        }
 
         return $this->transaction(function () use ($flag, $status, $reviewerUserId, $interventionNote): WithdrawalRiskFlag {
             $flag->update([

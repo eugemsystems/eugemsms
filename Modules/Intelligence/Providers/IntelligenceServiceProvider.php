@@ -114,6 +114,15 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             'kpi.manage' => ['description' => 'Set this school’s KPI targets and warning thresholds.'],
             'board_pack.generate' => ['description' => 'Assemble the comprehensive board pack for a term.', 'dangerous' => true],
         ]);
+
+        PermissionRegistry::register('RISK', [
+            'review' => ['description' => 'Review the at-risk learner queue, factor breakdowns and withdrawal risk flags — pastoral staff only, never learners or guardians.', 'dangerous' => true],
+            'configure' => ['description' => 'Re-weight or disable early-warning indicators and generate enrolment forecasts.'],
+        ]);
+
+        PermissionRegistry::register('STAFF', [
+            'wellbeing.view' => ['description' => 'View staff wellbeing indicators — only your own and your direct reports’, whatever else you hold.'],
+        ]);
     }
 
     /**

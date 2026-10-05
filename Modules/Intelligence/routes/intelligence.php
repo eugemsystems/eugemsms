@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Intelligence\Livewire\EarlyWarning\Enrolment as EarlyWarningEnrolment;
+use Modules\Intelligence\Livewire\EarlyWarning\FeeRisk as EarlyWarningFeeRisk;
+use Modules\Intelligence\Livewire\EarlyWarning\Queue as EarlyWarningQueue;
+use Modules\Intelligence\Livewire\EarlyWarning\StaffWellbeing as EarlyWarningStaffWellbeing;
+use Modules\Intelligence\Livewire\EarlyWarning\StudentDetail as EarlyWarningStudentDetail;
+use Modules\Intelligence\Livewire\EarlyWarning\Weights as EarlyWarningWeights;
 use Modules\Intelligence\Livewire\Executive\BoardPack as ExecutiveBoardPack;
 use Modules\Intelligence\Livewire\Executive\BursarDashboard as ExecutiveBursarDashboard;
 use Modules\Intelligence\Livewire\Executive\HeadDashboard as ExecutiveHeadDashboard;
@@ -33,5 +39,14 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/insights')->na
         Route::livewire('bursar', ExecutiveBursarDashboard::class)->name('bursar');
         Route::livewire('kpis', ExecutiveKpis::class)->name('kpis');
         Route::livewire('board-pack', ExecutiveBoardPack::class)->name('board-pack');
+    });
+
+    Route::prefix('early-warning')->name('early-warning.')->group(function (): void {
+        Route::livewire('queue', EarlyWarningQueue::class)->name('queue');
+        Route::livewire('students/{student}', EarlyWarningStudentDetail::class)->whereNumber('student')->name('student');
+        Route::livewire('fee-risk', EarlyWarningFeeRisk::class)->name('fee-risk');
+        Route::livewire('enrolment', EarlyWarningEnrolment::class)->name('enrolment');
+        Route::livewire('staff-wellbeing', EarlyWarningStaffWellbeing::class)->name('staff-wellbeing');
+        Route::livewire('weights', EarlyWarningWeights::class)->name('weights');
     });
 });
