@@ -7,6 +7,8 @@ namespace Modules\Core\Domain\Actions\Sessions;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Domain\Support\Settings\ScopeChain;
+use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Core\Models\CalendarHoliday;
 use Modules\Core\Models\Term;
 use Modules\Core\Models\TermWeek;
@@ -19,6 +21,10 @@ use Modules\Core\Models\TermWeek;
  */
 final class GenerateTermWeeksAction extends Action
 {
+    public function __construct(
+        private readonly SettingResolver $settings,
+    ) {}
+
     /**
      * @return Collection<int, TermWeek>
      */
@@ -43,11 +49,16 @@ final class GenerateTermWeeksAction extends Action
             // and get silently dropped from the count.
             $termStart = $term->starts_on->copy()->startOfDay();
             $termEnd = $term->ends_on->copy()->startOfDay();
-            $cursor = $termStart->copy()->startOfWeek()->startOfDay();
+            // Explicit, never Carbon's locale default: `en` starts the week on
+            // Monday but `en_US` on Sunday, so relying on it silently shifted
+            // every term-week boundary with the server's locale.
+            $weekStartsOn = $this->weekStartsOn($term->school_id);
+            $weekEndsOn = ($weekStartsOn + 6) % 7;
+            $cursor = $termStart->copy()->startOfWeek($weekStartsOn)->startOfDay();
             $teachingDays = 0;
 
             while ($cursor->lessThanOrEqualTo($termEnd)) {
-                $weekEnd = $cursor->copy()->endOfWeek()->startOfDay();
+                $weekEnd = $cursor->copy()->endOfWeek($weekEndsOn)->startOfDay();
                 $rangeStart = $cursor->greaterThan($termStart) ? $cursor : $termStart;
                 $rangeEnd = $weekEnd->lessThan($termEnd) ? $weekEnd : $termEnd;
 
@@ -83,6 +94,17 @@ final class GenerateTermWeeksAction extends Action
 
             return $weeks;
         });
+    }
+
+    /**
+     * `academic.week_starts_on` (CORE-03 §10, default `monday`). Anything
+     * other than `sunday` falls back to Monday rather than guessing.
+     */
+    private function weekStartsOn(int $schoolId): int
+    {
+        $value = strtolower((string) $this->settings->get('academic.week_starts_on', new ScopeChain(schoolId: $schoolId)));
+
+        return $value === 'sunday' ? CarbonInterface::SUNDAY : CarbonInterface::MONDAY;
     }
 
     private function isHalfTermWeek(Term $term, CarbonInterface $weekStart, CarbonInterface $weekEnd): bool

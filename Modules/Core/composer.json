@@ -16,6 +16,11 @@
             "Modules\\Core\\Database\\Seeders\\": "database/seeders/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Core\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [

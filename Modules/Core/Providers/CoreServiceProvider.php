@@ -273,6 +273,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             ['backups.retention_weekly', 'int', '4', 'Grandfather-father-son retention: weekly backups to keep (BR-CORE-13-005).'],
             ['backups.retention_monthly', 'int', '12', 'Grandfather-father-son retention: monthly backups to keep (BR-CORE-13-005).'],
             ['backups.retention_yearly', 'int', '7', 'Grandfather-father-son retention: yearly backups to keep (BR-CORE-13-005).'],
+            ['academic.week_starts_on', 'string', 'monday', 'First day of the school week, monday or sunday — drives term-week boundaries (CORE-03 §10).'],
         ];
 
         foreach ($definitions as [$key, $dataType, $default, $label]) {

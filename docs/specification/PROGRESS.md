@@ -1262,6 +1262,32 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 
 ---
 
+## Test & static-analysis status (re-verified on a clean Linux checkout)
+
+Run on PHP 8.4 / Linux with `composer install`, `npm ci` and a built
+frontend: **`vendor/bin/pest` — 1758 tests, 1756 passed, 0 failed, 2
+skipped**; **`vendor/bin/phpstan analyse` — 0 errors** (the project's
+configured level is **7**, not the 8 the CLAUDE.md tech-stack table says).
+The 2 skips are by design: `NumberingConcurrencyTest` needs a real MySQL
+server (SQLite cannot prove row-level locking) and one Fortify feature
+gate in `tests/TestCase.php`.
+
+Three real portability bugs surfaced only on Linux, and are fixed:
+- `Modules/Core` had no `autoload-dev` mapping, so its `tests/Fixtures`
+  classes (namespace `Modules\Core\Tests\Fixtures`) only autoloaded on
+  case-insensitive filesystems — 47 tests failed on Linux.
+- `GenerateTermWeeksAction` took its week boundaries from Carbon's
+  *locale* default (`en` = Monday, `en_US` = Sunday) instead of the spec's
+  `academic.week_starts_on` setting (default `monday`, CORE-03 §10). The
+  setting is now registered (with a Core sync migration for deployed
+  databases) and the Action honours it explicitly.
+- Two Comms screens tripped PHPStan (a mis-inferred nullsafe and aliased
+  `selectRaw` columns read as model properties); both restructured.
+
+Build note: `npm run build` fetches the "Public Sans" font from
+`fonts.bunny.net` at build time, so a build environment must allow that
+host (or the font config must be vendored locally).
+
 ## How to keep this file honest
 
 - After a module's admin UI ships (tested, Pint/PHPStan clean, committed),

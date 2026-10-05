@@ -54,8 +54,9 @@ final class Cost extends Component
             ->selectRaw('channel, cost_currency, count(*) as messages, sum(cost_minor) as total_minor')
             ->groupBy('channel', 'cost_currency')
             ->orderBy('channel')
+            ->toBase()
             ->get()
-            ->map(fn ($row): array => [
+            ->map(fn (object $row): array => [
                 'channel' => $row->channel,
                 'messages' => (int) $row->messages,
                 'total' => $this->formatMinor((int) $row->total_minor, $row->cost_currency),

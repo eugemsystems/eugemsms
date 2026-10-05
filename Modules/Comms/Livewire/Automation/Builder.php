@@ -230,10 +230,7 @@ final class Builder extends Component
 
     public function render(): View
     {
-        $allowedFields = match (true) {
-            $this->triggerType === 'event' => AutomationEventRegistry::get($this->eventName)?->allowedFields ?? [],
-            default => AutomationEntityRegistry::get($this->scanEntity)?->allowedFields ?? [],
-        };
+        $allowedFields = $this->allowedFields();
 
         return view('comms::automation.builder', [
             'notificationKeys' => array_keys(NotificationKeyRegistry::all()),
@@ -246,6 +243,21 @@ final class Builder extends Component
                 ? Money::of((int) $this->automationRule->estimated_monthly_cost_minor, Currency::tryFrom((string) $this->automationRule->estimated_monthly_currency) ?? Currency::from($this->school->base_currency))->format()
                 : null,
         ]);
+    }
+
+    /**
+     * The fields the chosen event or entity exposes for automation
+     * (BR-COM-02-003); none until one is chosen.
+     *
+     * @return array<int, string>
+     */
+    private function allowedFields(): array
+    {
+        $definition = $this->triggerType === 'event'
+            ? AutomationEventRegistry::get($this->eventName)
+            : AutomationEntityRegistry::get($this->scanEntity);
+
+        return $definition === null ? [] : $definition->allowedFields;
     }
 
     /**
