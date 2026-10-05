@@ -180,6 +180,18 @@ class CommsServiceProvider extends ModuleServiceProvider
             'waiting_room.override' => ['description' => 'Disable the waiting room of a learner-facing meeting (logged).', 'dangerous' => true],
         ]);
 
+        // COM-08 §4. Complaint intake needs no permission by the spec
+        // ("any authenticated user"); `Show` is also open to the
+        // complaint's own assignee, checked in the component.
+        PermissionRegistry::register('SURVEYS', [
+            'manage' => ['description' => 'Build and close surveys.'],
+            'view' => ['description' => 'View aggregated survey results.'],
+        ]);
+
+        PermissionRegistry::register('COMPLAINTS', [
+            'manage' => ['description' => 'Work the complaint queue: define categories, assign, update, resolve, and run exit interviews.', 'dangerous' => true],
+        ]);
+
         // COM-02 §5 names these without a `comms.` prefix.
         PermissionRegistry::register('AUTOMATION', [
             'view' => ['description' => 'View automation rules, execution logs, scan history and A/B variant performance.'],

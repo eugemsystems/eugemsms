@@ -24,3 +24,6 @@ Other modules (Welfare, Academic) bind the record as a route parameter and add a
 
 ## addError() persists across Livewire requests — reset the bag when a method doesn't call validate()
 `validate()` clears the error bag; a method that only calls `addError()` does not, so a stale message survives a later successful call. Call `$this->resetErrorBag()` at the start of such methods (found when `AttendanceReview::confirm()` kept showing "choose a status" after a successful confirm).
+
+## A complaint routed to safeguarding must never have its content selected into a Comms screen
+`RaiseComplaintAction` still stores the description on the `complaints` row when it routes to BRD-08, so the only thing keeping it from ordinary complaint staff is that no screen reads it. `Complaints\Queue` and `Complaints\Show` select a routed complaint's id/number/category/status only (the queue fetches subjects in a second query that excludes routed ids), and `Complaints\Submit` shows the raiser only "referred to safeguarding". Any new Comms screen or export that lists complaints must do the same. `AssignComplaintAction` and `ChangeComplaintStatusAction` refuse a routed complaint. Covered by a sentinel-string test in `Com08FeedbackComplaintsAdminUiTest`.

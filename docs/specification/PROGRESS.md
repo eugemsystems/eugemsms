@@ -69,7 +69,7 @@ Action/model's own docblock, not silently missing — see each module's own
 
 ---
 
-## Admin UI — in progress, Books A–H3 complete, Book I started
+## Admin UI — in progress, Books A–I complete (J and K remain)
 
 This pass retrofits Livewire screens onto the already-complete backend,
 **in the same book order as the original build** (A → B → C → D → E → F →
@@ -1079,7 +1079,7 @@ across the four CMP modules (4 CMP-01 + 3 CMP-02 + 5 CMP-03 + 4 CMP-04),
 all green — Compliance module total 47 (31 pre-existing backend + 16
 new), alongside the whole-app suite.
 
-### Book I — Communication & Portals — 🟡 in progress
+### Book I — Communication & Portals — ✅ complete
 
 | Module | Screens | Status |
 |---|---|---|
@@ -1088,7 +1088,7 @@ new), alongside the whole-app suite.
 | COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ✅ admin screen only (`Livewire/Portal/Admin/`) — see note |
 | COM-06 | Calendar, Events & Notice Board | ✅ (`Livewire/{Calendar,Notices,Newsletters,Events}/`) |
 | COM-07 | Virtual Meetings | ✅ (`Livewire/{Meetings,Consultations}/`) |
-| COM-08 | Feedback & Complaints | ⬜ |
+| COM-08 | Feedback, Surveys & Complaints | ✅ (`Livewire/{Surveys,Complaints,ExitInterviews}/`) |
 
 **COM-01 note.** Built (`Livewire/Messaging/{Gateways,WhatsApp,Sms,Reports}/`,
 6 screens, matching the spec's own §6 table): `Gateways\Index` (register,
@@ -1204,6 +1204,45 @@ path for it), a meeting-webhook log screen (not in the spec's table), and
 a purge schedule for recordings (the screen offers on-demand purge; the
 cron wiring remains the backend's documented deferred gap). Comms module:
 141 tests (61 backend + 80 admin-UI), all green.
+
+**COM-08 note.** Built 7 screens: the spec's six —
+`Surveys\Builder`, `Surveys\Results`, `Complaints\Submit`,
+`Complaints\Queue`, `Complaints\Show`, `ExitInterviews\Index` — plus
+`Complaints\Categories`, **this pass's own addition** (the backend could
+raise a complaint but had no way to create the category every complaint
+needs, and a category carries the SLA and the safeguarding flag).
+Permissions: `surveys.manage|view` and `complaints.manage`; intake needs
+none beyond school membership ("any authenticated user"), and `Show` is
+also open to the complaint's own assignee. **Four gap-filling Actions**,
+because the backend had no way to do these and the SLA check never fires
+for an unassigned complaint: `CreateComplaintCategoryAction`,
+`AssignComplaintAction`, `ChangeComplaintStatusAction` (refuses a finished
+or safeguarding-routed complaint; resolution still goes through
+`ResolveComplaintAction`) and `CloseSurveyAction`.
+
+**Safeguarding (BR-COM-08-006).** A complaint routed to BRD-08 is shown in
+the queue by number and category only, and its detail page is a stub: its
+subject, description, raiser, related learner and thread are never
+selected into any view, and no action is offered on it — verified by a
+test that greps the rendered output for a sentinel string. The raiser's
+own list likewise shows only "referred to safeguarding". The complaints
+row still holds a copy of the description (the backend writes it), so that
+copy is only protected by this screen not reading it; moving or removing
+it is a backend decision.
+
+**Other behaviour.** The raiser's identity is derived server-side (staff or
+guardian record, else anonymous); "submit anonymously" stores none. The
+raiser's own list and the assignee's "visible to the raiser" thread both
+read through `GetComplaintThreadForRaiserAction`, so an internal note never
+reaches the raiser. Survey results are aggregates only — counts, a scale
+average, NPS, and free text with no respondent. A survey opens as soon as it
+is saved and cannot be edited (no update Action), and a skip rule may only
+jump forward. **Deliberately not built:** the respondent-facing survey form
+and survey distribution, the portal complaint endpoints, the raiser's
+satisfaction rating, SLA alerts being *scheduled* (the Action exists; the
+cron wiring is the backend's documented deferred gap), and the head's
+termly aggregate report (BR-COM-08-008). Comms module: 162 tests (61
+backend + 101 admin-UI), all green. **This completes Book I's admin UI.**
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so

@@ -1382,7 +1382,8 @@
 
                         {{--
                             Book I (Modules\Comms) admin screens. COM-01, COM-02,
-                            COM-03/04/05's admin screen, COM-06 and COM-07 are built so far; later COM modules add their own
+                            COM-03/04/05's admin screen, COM-06, COM-07 and COM-08 — all of Book I —
+                            are built; later COM modules add their own
                             headings inside this one group.
                         --}}
                         @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
@@ -1464,6 +1465,20 @@
                                     </a>
                                     <a href="{{ route('comms.meetings.providers', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.meetings.providers') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-plug-line"></i> {{ __('Meeting providers') }} ⚠⚠
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Feedback & Complaints') }}</div>
+                                    <a href="{{ route('comms.surveys.builder', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.surveys.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-survey-line"></i> {{ __('Surveys') }}
+                                    </a>
+                                    <a href="{{ route('comms.complaints.submit', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.complaints.submit') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-feedback-line"></i> {{ __('Raise a complaint') }}
+                                    </a>
+                                    <a href="{{ route('comms.complaints.queue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.complaints.queue', 'comms.complaints.show', 'comms.complaints.categories') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-inbox-line"></i> {{ __('Complaint queue') }} ⚠
+                                    </a>
+                                    <a href="{{ route('comms.exit-interviews', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.exit-interviews') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-logout-box-r-line"></i> {{ __('Exit interviews') }}
                                     </a>
                                 </div>
                             </div>
