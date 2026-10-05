@@ -1086,7 +1086,7 @@ new), alongside the whole-app suite.
 | COM-01 | Messaging Gateways & Delivery | ✅ (`Livewire/Messaging/`) |
 | COM-02 | Event-Driven Automation Rules | ✅ (`Livewire/Automation/`) |
 | COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ✅ admin screen only (`Livewire/Portal/Admin/`) — see note |
-| COM-06 | Calendar, Events & Notice Board | ⬜ |
+| COM-06 | Calendar, Events & Notice Board | ✅ (`Livewire/{Calendar,Notices,Newsletters,Events}/`) |
 | COM-07 | Virtual Meetings | ⬜ |
 | COM-08 | Feedback & Complaints | ⬜ |
 
@@ -1152,6 +1152,32 @@ entitlement filter `resolve()` does, without the enabled-state filter);
 enable. The learner "tell someone" entry point is not a widget, so no
 configuration can remove it — the screen says so. Comms module: 104
 tests (61 backend + 43 admin-UI), all green.
+
+**COM-06 note.** Built 6 screens, matching the spec's own §4 table:
+`Calendar\View`, `Notices\Index`, `Notices\Compose`, `Newsletters\Compose`,
+`Events\Register`, `Events\CheckIn`. Permissions are registered under four
+module codes (`CALENDAR`, `NOTICES`, `NEWSLETTERS`, `EVENTS` — the spec names
+them without a `comms.` prefix, same multi-code pattern as Compliance).
+One gap-filling Action: `CreateNewsletterAction` (the backend had a
+`newsletters` table and model but no way to create one). The calendar is
+filtered to what the *viewing user* may see via `GetCalendarForViewerAction`;
+creating a manual event and the on-demand rebuild need `events.manage`
+(the spec names no permission for them). Audience pickers offer whole
+school, staff, section and grade level only — `class` and `house` are not
+offered because `CalendarAudienceFilter` cannot resolve them, so a notice
+scoped to one would reach nobody. A full event waitlists rather than
+failing, and cancelling promotes the next person. A ticketed event only
+supports a *learner* attendee (the backend raises the FIN-02 ad hoc charge
+against a student), so the screen asks for an admission number; payment is
+confirmed by entering an existing cashier receipt number — the backend's
+own documented bridge for the missing charge-to-receipt settlement, i.e.
+"paid" is human-asserted. **Deliberately not built:** newsletter *sending*
+(no backend sender exists — an issue only ever reaches draft/scheduled),
+notice attachments (CORE-10's file picker isn't wired), the iCal feed and
+its tokens and ticket scanning (API/mobile surfaces), and read-rate
+denominators on the notice board (the backend only approximates the
+audience size for narrow scopes). Comms module: 122 tests (61 backend +
+61 admin-UI), all green.
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so

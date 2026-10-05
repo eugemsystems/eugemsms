@@ -1381,8 +1381,8 @@
                         </div>
 
                         {{--
-                            Book I (Modules\Comms) admin screens. COM-01, COM-02
-                            and COM-03/04/05's admin screen are built so far; later COM modules add their own
+                            Book I (Modules\Comms) admin screens. COM-01, COM-02,
+                            COM-03/04/05's admin screen and COM-06 are built so far; later COM modules add their own
                             headings inside this one group.
                         --}}
                         @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
@@ -1427,6 +1427,26 @@
                                     <div class="app-sidebar-heading">{{ __('Portals') }}</div>
                                     <a href="{{ route('comms.portal.widgets', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.portal.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-layout-grid-line"></i> {{ __('Portal widgets') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Calendar, Notices & Events') }}</div>
+                                    <a href="{{ route('comms.calendar.view', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.calendar.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-2-line"></i> {{ __('Calendar') }}
+                                    </a>
+                                    <a href="{{ route('comms.notices.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.notices.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pushpin-line"></i> {{ __('Notice board') }}
+                                    </a>
+                                    <a href="{{ route('comms.notices.compose', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.notices.compose') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-megaphone-line"></i> {{ __('Post notice') }} ⚠
+                                    </a>
+                                    <a href="{{ route('comms.newsletters.compose', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.newsletters.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-newspaper-line"></i> {{ __('Newsletters') }}
+                                    </a>
+                                    <a href="{{ route('comms.events.register', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.events.register') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-ticket-2-line"></i> {{ __('Event registration') }} ⚠
+                                    </a>
+                                    <a href="{{ route('comms.events.checkin', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.events.checkin') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-qr-scan-2-line"></i> {{ __('Event check-in') }}
                                     </a>
                                 </div>
                             </div>

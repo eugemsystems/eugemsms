@@ -8,12 +8,18 @@ use Modules\Comms\Livewire\Automation\ExecutionLog as AutomationExecutionLog;
 use Modules\Comms\Livewire\Automation\Index as AutomationIndex;
 use Modules\Comms\Livewire\Automation\ScanRuns as AutomationScanRuns;
 use Modules\Comms\Livewire\Automation\Variants as AutomationVariants;
+use Modules\Comms\Livewire\Calendar\View as CalendarView;
+use Modules\Comms\Livewire\Events\CheckIn as EventsCheckIn;
+use Modules\Comms\Livewire\Events\Register as EventsRegister;
 use Modules\Comms\Livewire\Messaging\Gateways\Index as GatewaysIndex;
 use Modules\Comms\Livewire\Messaging\Gateways\Webhooks as GatewayWebhooks;
 use Modules\Comms\Livewire\Messaging\Reports\Cost as CostReport;
 use Modules\Comms\Livewire\Messaging\Reports\Reconciliation as ReconciliationReport;
 use Modules\Comms\Livewire\Messaging\Sms\SenderIds;
 use Modules\Comms\Livewire\Messaging\WhatsApp\Templates as WhatsAppTemplates;
+use Modules\Comms\Livewire\Newsletters\Compose as NewslettersCompose;
+use Modules\Comms\Livewire\Notices\Compose as NoticesCompose;
+use Modules\Comms\Livewire\Notices\Index as NoticesIndex;
 use Modules\Comms\Livewire\Portal\Admin\Widgets as PortalWidgets;
 
 /**
@@ -38,4 +44,11 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/comms')->name(
     });
 
     Route::livewire('portal/widgets', PortalWidgets::class)->name('portal.widgets');
+
+    Route::livewire('calendar', CalendarView::class)->name('calendar.view');
+    Route::livewire('notices', NoticesIndex::class)->name('notices.index');
+    Route::livewire('notices/compose', NoticesCompose::class)->name('notices.compose');
+    Route::livewire('newsletters', NewslettersCompose::class)->name('newsletters.compose');
+    Route::livewire('events/registrations', EventsRegister::class)->name('events.register');
+    Route::livewire('events/check-in', EventsCheckIn::class)->name('events.checkin');
 });

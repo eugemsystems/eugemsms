@@ -150,6 +150,26 @@ class CommsServiceProvider extends ModuleServiceProvider
             'widget.manage' => ['description' => 'Enable, disable and reorder portal dashboard widgets per persona.'],
         ]);
 
+        // COM-06 §4 names these without a `comms.` prefix either; four
+        // module codes, the same multi-code pattern Compliance uses.
+        PermissionRegistry::register('CALENDAR', [
+            'view' => ['description' => 'View the unified school calendar, filtered to the viewer’s audience.'],
+        ]);
+
+        PermissionRegistry::register('NOTICES', [
+            'view' => ['description' => 'View the notice board and read receipts.'],
+            'post' => ['description' => 'Post, schedule and pin notices to an audience.', 'dangerous' => true],
+        ]);
+
+        PermissionRegistry::register('NEWSLETTERS', [
+            'manage' => ['description' => 'Compose, schedule and archive newsletters.'],
+        ]);
+
+        PermissionRegistry::register('EVENTS', [
+            'manage' => ['description' => 'Create events, set capacity and ticketing, register attendees and confirm ticket payment.', 'dangerous' => true],
+            'checkin' => ['description' => 'Check attendees in at the door.'],
+        ]);
+
         // COM-02 §5 names these without a `comms.` prefix.
         PermissionRegistry::register('AUTOMATION', [
             'view' => ['description' => 'View automation rules, execution logs, scan history and A/B variant performance.'],
