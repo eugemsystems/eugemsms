@@ -1381,8 +1381,8 @@
                         </div>
 
                         {{--
-                            Book I (Modules\Comms) admin screens. COM-01 and
-                            COM-02 are built so far; later COM modules add their own
+                            Book I (Modules\Comms) admin screens. COM-01, COM-02
+                            and COM-03/04/05's admin screen are built so far; later COM modules add their own
                             headings inside this one group.
                         --}}
                         @php $commsGroupActive = request()->routeIs('comms.*'); @endphp
@@ -1422,6 +1422,11 @@
                                     </a>
                                     <a href="{{ route('comms.automation.variants', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.automation.variants') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-test-tube-line"></i> {{ __('A/B performance') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Portals') }}</div>
+                                    <a href="{{ route('comms.portal.widgets', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.portal.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-layout-grid-line"></i> {{ __('Portal widgets') }}
                                     </a>
                                 </div>
                             </div>

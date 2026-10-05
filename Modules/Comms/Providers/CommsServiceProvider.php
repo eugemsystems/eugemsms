@@ -142,6 +142,14 @@ class CommsServiceProvider extends ModuleServiceProvider
             'reconciliation.manage' => ['description' => 'Reconcile system-recorded messaging spend against provider statements.', 'dangerous' => true],
         ]);
 
+        // COM-03 §8. The three `portal.dashboard.view.*` permissions in
+        // the spec guard the portal API, which has no controllers yet, so
+        // they are not registered until something enforces them.
+        PermissionRegistry::register('PORTAL', [
+            'widget.view' => ['description' => 'View school-level portal dashboard widget configuration.'],
+            'widget.manage' => ['description' => 'Enable, disable and reorder portal dashboard widgets per persona.'],
+        ]);
+
         // COM-02 §5 names these without a `comms.` prefix.
         PermissionRegistry::register('AUTOMATION', [
             'view' => ['description' => 'View automation rules, execution logs, scan history and A/B variant performance.'],

@@ -1085,7 +1085,7 @@ new), alongside the whole-app suite.
 |---|---|---|
 | COM-01 | Messaging Gateways & Delivery | ✅ (`Livewire/Messaging/`) |
 | COM-02 | Event-Driven Automation Rules | ✅ (`Livewire/Automation/`) |
-| COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ⬜ |
+| COM-03/04/05 | Portal Services (Parent, Learner, Staff) | ✅ admin screen only (`Livewire/Portal/Admin/`) — see note |
 | COM-06 | Calendar, Events & Notice Board | ⬜ |
 | COM-07 | Virtual Meetings | ⬜ |
 | COM-08 | Feedback & Complaints | ⬜ |
@@ -1131,6 +1131,27 @@ current data, which only exists for scheduled-scan rules), and a "run
 scan now" button (it would send real messages; the cron wiring for
 `RunScanRuleAction` is still the backend's documented deferred gap).
 Comms module: 96 tests (61 backend + 35 admin-UI), all green.
+
+**COM-03/04/05 note.** One admin screen, by design:
+`Portal\Admin\Widgets` (`Livewire/Portal/Admin/Widgets`) — school-level
+enable/reorder of dashboard widgets per persona (parent / learner /
+staff). The spec's other COM-03/04/05 surfaces are **not Livewire**: the
+parent, learner and staff dashboards, the onboarding wizard and device
+registration are consumed by the Next.js and Flutter apps over the
+`/api/v1/portal/*` API (this panel is internal staff only), and device
+management is `CORE-05`'s own `Core\Profile\Devices`. Those API
+endpoints are still unbuilt — see "Known, deliberately-documented backend
+gaps" above. Permissions registered under module code `PORTAL`
+(`portal.widget.view`, `portal.widget.manage`); the spec's three
+`portal.dashboard.view.*` permissions are **not** registered, because
+nothing enforces them until the portal API exists. Widgets for a module
+the school has not enabled are never listed (a small new
+`EnabledWidgetsResolver::availableForConfiguration()` applies the same
+entitlement filter `resolve()` does, without the enabled-state filter);
+`portal.dashboard_widget_max_per_persona` caps how many a school can
+enable. The learner "tell someone" entry point is not a widget, so no
+configuration can remove it — the screen says so. Comms module: 104
+tests (61 backend + 43 admin-UI), all green.
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so

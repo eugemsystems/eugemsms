@@ -21,6 +21,24 @@ use Modules\Core\Models\SchoolModule;
 final class EnabledWidgetsResolver
 {
     /**
+     * Every widget a school could configure for `$persona` — only the
+     * module-entitlement filter applies (BR-COM-03-003/004), so a
+     * disabled-but-available widget still appears for the admin to
+     * enable. Never applies the enabled/grade filters `resolve()` does.
+     *
+     * @return array<int, WidgetDefinition>
+     */
+    public function availableForConfiguration(string $persona, int $schoolId): array
+    {
+        $enabledModules = SchoolModule::where('school_id', $schoolId)->where('is_enabled', true)->pluck('module_code');
+
+        return array_values(array_filter(
+            WidgetRegistry::forPersona($persona),
+            fn (WidgetDefinition $widget): bool => $widget->requiresModule === null || $enabledModules->contains($widget->requiresModule),
+        ));
+    }
+
+    /**
      * @return array<int, WidgetDefinition>
      */
     public function resolve(string $persona, int $schoolId, ?int $gradeOrdinal = null): array

@@ -14,6 +14,7 @@ use Modules\Comms\Livewire\Messaging\Reports\Cost as CostReport;
 use Modules\Comms\Livewire\Messaging\Reports\Reconciliation as ReconciliationReport;
 use Modules\Comms\Livewire\Messaging\Sms\SenderIds;
 use Modules\Comms\Livewire\Messaging\WhatsApp\Templates as WhatsAppTemplates;
+use Modules\Comms\Livewire\Portal\Admin\Widgets as PortalWidgets;
 
 /**
  * Book I admin screens, school-scoped like every other module's own
@@ -35,4 +36,6 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/comms')->name(
         Route::livewire('scans', AutomationScanRuns::class)->name('scans');
         Route::livewire('variants', AutomationVariants::class)->name('variants');
     });
+
+    Route::livewire('portal/widgets', PortalWidgets::class)->name('portal.widgets');
 });
