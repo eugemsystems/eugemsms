@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Compliance\Providers;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Modules\Compliance\Domain\Registry\PersonalDataTableRegistry;
 use Modules\Compliance\Models\Consent;
 use Modules\Compliance\Models\ConsentType;
@@ -26,6 +28,7 @@ use Modules\Compliance\Models\ZimsecRegistration;
 use Modules\Compliance\Models\ZimsecResult;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
+use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -94,6 +97,23 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * `contracts` (this module's own addition — see its migration's
  * docblock) reuses `CheckDocumentExpiryAction`, the same expiry
  * mechanism `statutory_documents` uses.
+ *
+ * Admin-UI pass (Book H3 CMP-01–04, 22 screens total). Permissions are
+ * registered under FOUR separate module codes — `ZIMSEC`, `MOPSE`,
+ * `PRIVACY`, `POLICY` — rather than one `PermissionRegistry::register('COMPLIANCE', [...])`
+ * call, even though all four live in this one Laravel module. This
+ * mirrors `Modules\Welfare`'s own documented precedent (see
+ * `.ai/rules/welfare.md`) for the identical reason: CMP-01's and
+ * CMP-03's own spec sections name their screens' permissions literally
+ * as `zimsec.*`/`privacy.*`, not `compliance.zimsec.*`/`compliance.privacy.*`
+ * — `$name = strtolower($moduleCode).'.'.$path` in
+ * `PermissionRegistry::register()` means registering under `COMPLIANCE`
+ * would silently produce the wrong permission name for every screen
+ * that checks the spec's own literal string. CMP-02 and CMP-04 have no
+ * spec-given permission names at all (no §4 screens table in either
+ * section of `11-book-h3-...md`) — `MOPSE`/`POLICY` are this pass's own
+ * choice, made consistent with the other two for the same reason: one
+ * module code per sub-domain, not one for the whole Laravel module.
  */
 class ComplianceServiceProvider extends ModuleServiceProvider
 {
@@ -109,6 +129,52 @@ class ComplianceServiceProvider extends ModuleServiceProvider
         $this->registerSettingDefinitions();
         $this->registerNotificationKeys();
         $this->registerPersonalDataTables();
+        $this->registerPermissions();
+        $this->registerLivewireRoutes();
+    }
+
+    /**
+     * See this class's own docblock for why four module codes, not one.
+     */
+    private function registerPermissions(): void
+    {
+        PermissionRegistry::register('ZIMSEC', [
+            'manage' => ['description' => 'Manage ZIMSEC registrations, candidates, validation rules, fees and statements of entry.', 'dangerous' => true],
+            'export' => ['description' => 'Export a ZIMSEC registration and record its submission.', 'dangerous' => true],
+            'results.import' => ['description' => 'Import ZIMSEC results.'],
+            'view' => ['description' => 'View ZIMSEC pass-rate analysis.'],
+        ]);
+
+        PermissionRegistry::register('MOPSE', [
+            'manage' => ['description' => 'Generate, export and submit MoPSE/EMIS statutory returns and inspection packs.', 'dangerous' => true],
+            'view' => ['description' => 'View MoPSE/EMIS statutory returns and data quality checks.'],
+        ]);
+
+        PermissionRegistry::register('PRIVACY', [
+            'manage' => ['description' => 'Manage consent types, retention schedules, processing register, processors and privacy notices.', 'dangerous' => true],
+            'view' => ['description' => 'View the consent register and processing register.'],
+            'dispose' => ['description' => 'Enqueue, review and dispose of records reaching their retention date.', 'dangerous' => true],
+            'request.handle' => ['description' => 'Receive, verify, compile and refuse subject access requests.', 'dangerous' => true],
+            'breach.manage' => ['description' => 'Record data breaches and their notification decisions.', 'dangerous' => true],
+        ]);
+
+        PermissionRegistry::register('POLICY', [
+            'manage' => ['description' => 'Create policies, statutory documents, contracts and governance minutes.', 'dangerous' => true],
+            'view' => ['description' => 'View the policy register and consolidated incident register.'],
+        ]);
+    }
+
+    /**
+     * Mirrors every other Book H3 module's own `Livewire::addLocation()`
+     * call and reasoning.
+     */
+    private function registerLivewireRoutes(): void
+    {
+        Livewire::addLocation(classNamespace: 'Modules\Compliance\Livewire');
+
+        Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/compliance.php');
+        });
     }
 
     private function registerTenantModels(): void

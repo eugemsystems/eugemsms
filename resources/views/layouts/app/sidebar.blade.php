@@ -1282,6 +1282,105 @@
                         </div>
                     @endif
 
+                    @if ($sessionsSchool)
+                        {{--
+                            Book H3 CMP-01–04 (Modules\Compliance), the four modules
+                            left not-yet-started by the Payroll & Compliance group
+                            above (that group's own comment names them explicitly).
+                            A separate top-level group rather than a fifth heading
+                            inside "Payroll & Compliance" — ZIMSEC/MoPSE/data
+                            protection/policy registers aren't payroll or
+                            fiscalisation concerns, and `compliance.*` route names
+                            are already distinct from `payroll.*`/`fiscal.*`/
+                            `wallet.*`/`reporting.*`, so there is no prefix overlap
+                            to worry about.
+                        --}}
+                        @php $complianceGroupActive = request()->routeIs('compliance.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $complianceGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-compliance" aria-expanded="{{ $complianceGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-compliance">
+                                <i class="ri ri-shield-check-line"></i> {{ __('Regulatory Compliance') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $complianceGroupActive ? 'show' : '' }}" id="sidebar-group-compliance">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('ZIMSEC') }} 🇿🇼</div>
+                                    <a href="{{ route('compliance.zimsec.registrations.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.registrations.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-line"></i> {{ __('Registrations') }}
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.validation.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.validation.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-check-line"></i> {{ __('Candidate validation') }} ⭐
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.fees.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.fees.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-money-dollar-circle-line"></i> {{ __('Entry fees') }}
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.export.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.export.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-upload-2-line"></i> {{ __('Export & submission') }} ⚠
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.statements.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.statements.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-mail-send-line"></i> {{ __('Statements of entry') }}
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.results-import.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.results-import.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-upload-line"></i> {{ __('Results import') }}
+                                    </a>
+                                    <a href="{{ route('compliance.zimsec.analysis.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.zimsec.analysis.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-grouped-line"></i> {{ __('Pass-rate analysis') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('MoPSE / EMIS') }} 🇿🇼</div>
+                                    <a href="{{ route('compliance.mopse.returns.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.mopse.returns.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-government-line"></i> {{ __('Statutory returns') }}
+                                    </a>
+                                    <a href="{{ route('compliance.mopse.inspection-pack.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.mopse.inspection-pack.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-folder-received-line"></i> {{ __('Inspection pack') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Data Protection & Privacy') }} 🇿🇼</div>
+                                    <a href="{{ route('compliance.privacy.consent-types.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.consent-types.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-list-check-2"></i> {{ __('Consent types') }}
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.consents.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.consents.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-follow-line"></i> {{ __('Consent register') }}
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.retention.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.retention.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-time-line"></i> {{ __('Retention schedules') }} ⚠
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.disposal.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.disposal.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-delete-bin-6-line"></i> {{ __('Disposal queue') }} ⚠⚠
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.requests.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.requests.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-search-line"></i> {{ __('Subject access requests') }} ⚠
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.breaches.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.breaches.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Breach register') }} ⚠⚠
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.processing.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.processing.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-flow-chart"></i> {{ __('Processing register') }}
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.processors.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.processors.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-cloud-line"></i> {{ __('Third-party processors') }}
+                                    </a>
+                                    <a href="{{ route('compliance.privacy.notices.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.privacy.notices.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Privacy notices') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Policy & Document Register') }}</div>
+                                    <a href="{{ route('compliance.policy.policies.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.policy.policies.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-article-line"></i> {{ __('Policy register') }}
+                                    </a>
+                                    <a href="{{ route('compliance.policy.documents.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.policy.documents.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-shield-2-line"></i> {{ __('Statutory documents & contracts') }}
+                                    </a>
+                                    <a href="{{ route('compliance.policy.minutes.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.policy.minutes.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Governance minutes') }}
+                                    </a>
+                                    <a href="{{ route('compliance.policy.incident-register.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('compliance.policy.incident-register.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alert-line"></i> {{ __('Incident register') }} ⭐
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <a href="{{ route('feature-flags.index') }}" class="nav-link {{ request()->routeIs('feature-flags.*') ? 'active' : '' }}" wire:navigate>
                         <i class="ri ri-flag-line"></i> {{ __('Feature flags') }}
                     </a>

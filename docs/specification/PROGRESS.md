@@ -898,15 +898,19 @@ Combined test count for this second pass: **47 new admin-UI tests**
 across the four modules (13 Utilities + 9 Facilities + 12 Security +
 13 Sport), all green, alongside the whole-app suite.
 
-### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 in progress (PPL-05/FIN-13/FIN-14/FIN-12 done; CMP-01–04 not started)
+### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 all 8 modules built, book stays 🟡 (PPL-05/FIN-13/FIN-12 each carry a deliberately-deferred item)
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13
-→ `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. This pass
-covers the four FIN/PPL modules, in the book's own build order
+→ `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. The first
+pass covered the four FIN/PPL modules, in the book's own build order
 (PPL-05 → FIN-13 → FIN-14 → FIN-12, §0.3 — "largest; independent of
 the rest" first, reporting last since it "needs everything else
-posting correctly"). **CMP-01–04 (`Modules/Compliance`) are a
-separate, not-yet-started pass within this same book** — nothing in
-`Modules/Compliance` was touched.
+posting correctly"). **A second pass then built CMP-01–04
+(`Modules/Compliance`)**, completing the book. The book as a whole
+stays 🟡, not ✅ — PPL-05, FIN-13 and FIN-12 each already carry their
+own documented deferred item (see their notes below), and CMP-01–04
+turning out clean doesn't change that; this file's own "how to keep
+this file honest" rule is to mark partial explicitly rather than round
+up.
 
 | Module | Screens | Status |
 |---|---|---|
@@ -914,7 +918,10 @@ separate, not-yet-started pass within this same book** — nothing in
 | FIN-13 | ZIMRA Fiscalisation (FDMS) 🇿🇼 | 🟡 partial (see note) |
 | FIN-14 | Student Wallet & Tuckshop | ✅ |
 | FIN-12 | Financial Reporting & Period Close ⭐ | 🟡 partial (see note) |
-| CMP-01–04 | ZIMSEC/MoPSE/Data Protection/Policy Register | ⬜ not started |
+| CMP-01 | ZIMSEC Candidate Registration & Results 🇿🇼 | ✅ |
+| CMP-02 | MoPSE Returns & EMIS Reporting 🇿🇼 | ✅ |
+| CMP-03 | Data Protection, Consent & Privacy 🇿🇼 | ✅ |
+| CMP-04 | Policy, Document Register & Retention | ✅ |
 
 **PPL-05 note 🇿🇼.** Built (`Livewire/{Statutory,Grades,Components,
 Staff,Loans,Run,Payslips,Returns,Reports}/`, 11 screens):
@@ -1004,9 +1011,73 @@ See `.ai/rules/financial-close.md` (named to avoid an unrelated
 tooling filter on the substring "report" in a rule filename — the
 module it documents is `Modules/Reporting`).
 
-Combined test count for this pass: **12 new admin-UI tests** across
-the four modules (3 Payroll + 3 Fiscal + 3 Wallet + 3 Reporting), all
-green, alongside the whole-app suite.
+Combined test count for the first pass: **12 new admin-UI tests**
+across the four modules (3 Payroll + 3 Fiscal + 3 Wallet + 3
+Reporting), all green, alongside the whole-app suite.
+
+**CMP-01 note 🇿🇼.** Built (`Livewire/Zimsec/{Registrations,Validation,
+Fees,Export,Statements,ResultsImport,Analysis}/`, 7 screens, matching
+the spec's own §4 table exactly): `Registrations\Index` (create/derive/
+close; deadline countdown computed inline from `registration_closes_on`
+rather than calling the scheduled-scan `CheckZimsecDeadlinesAction`),
+`Validation\Index` (folds validation-rule management into the
+candidate-errors screen — a rule is data, fixed here; a candidate's
+bio-data is never re-keyed, BR-CMP-01-001), `Fees\Index`, `Export\Index`
+(folds `RecordZimsecSubmissionAction` in, per the spec's own §1 literal
+ordering), `Statements\Index`, `ResultsImport\Index` (raw
+comma-separated textarea rows, the same low-volume-input precedent
+`Payroll\Statutory\Config` established), `Analysis\Index`. No gap-filling
+Actions were needed — all 50 backend Actions across the four CMP
+modules pre-existed this pass.
+
+**CMP-02 note 🇿🇼.** Built (`Livewire/Mopse/{SchoolReturns,
+InspectionPack}/`, 2 screens — **no §4 screens table exists in the spec
+for this module**, this pass's own design): `SchoolReturns\Index` folds
+the whole generate → quality-check → export → submit lifecycle onto one
+action-bar screen (mirroring `Reports\Close\Checklist`'s precedent);
+`InspectionPack\Index` is separate since it produces a bare `File`, not
+a `statutory_school_returns` row. Permissions registered under module
+code `MOPSE` (`mopse.manage`/`mopse.view`), this pass's own choice in
+the absence of a spec-given name.
+
+**CMP-03 note 🇿🇼 ⭐.** Built (`Livewire/Privacy/{ConsentTypes,Consents,
+Retention,Disposal,Requests,Breaches,Processing,Processors,Notices}/`,
+9 screens, matching the spec's own §4 table exactly). `Retention\Index`
+and `Disposal\Index` show ONLY queue/schedule metadata — record class,
+table names, retention years, trigger, disposal method, a bare
+`record_type`/`record_id` pointer — and never query, render, or even
+name in a docblock a safeguarding case's own content, verified by a
+dedicated static-scan test (`Cmp03PrivacyAdminUiTest`, mirroring Book
+G's own no-delete scan). See `.ai/rules/compliance.md` for the full
+reasoning and a real gotcha this pass's own first draft hit (a
+docblock literally naming `Modules\Welfare`'s action tripped the scan).
+
+**CMP-04 note.** Built (`Livewire/Policy/{Policies,StatutoryDocuments,
+Minutes,IncidentRegister}/`, 4 screens — **no §4 screens table exists
+in the spec for this module either**, this pass's own design).
+`StatutoryDocuments\Index` folds the contract register in (both tables
+share `CheckDocumentExpiryAction`'s one expiry mechanism) and is named
+to avoid reading like, though it would not have collided with,
+`Core\Livewire\Documents\Index`. `IncidentRegister\Index` excludes
+safeguarding entirely (AC-CMP-04-003), verified by an admin-UI test
+asserting the only entry present is `data_protection`, never
+`safeguarding`.
+
+**A real Livewire gotcha found and fixed in this pass**:
+`AnalyseZimsecPassRatesAction`'s `ZimsecPassRateResult` and
+`GenerateConsolidatedIncidentRegisterAction`'s
+`Collection<ConsolidatedIncidentRegisterEntry>` are both custom
+readonly DataObjects — Livewire has no synthesizer for an arbitrary
+plain object, so assigning either straight to a public property threw
+`Property type not supported in Livewire` the moment either screen's
+`->call()` tried to dehydrate. Fixed by converting both to plain arrays
+before assignment, in `Zimsec\Analysis\Index` and
+`Policy\IncidentRegister\Index` respectively. See `.ai/rules/compliance.md`.
+
+Combined test count for the second pass: **16 new admin-UI tests**
+across the four CMP modules (4 CMP-01 + 3 CMP-02 + 5 CMP-03 + 4 CMP-04),
+all green — Compliance module total 47 (31 pre-existing backend + 16
+new), alongside the whole-app suite.
 
 ### Book I — Communication & Portals — ⬜ not started
 COM-01–COM-08. `Modules/Comms/Livewire/` does not exist yet.
