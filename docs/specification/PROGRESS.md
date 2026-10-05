@@ -1265,12 +1265,14 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 ## Test & static-analysis status (re-verified on a clean Linux checkout)
 
 Run on PHP 8.4 / Linux with `composer install`, `npm ci` and a built
-frontend: **`vendor/bin/pest` — 1758 tests, 1756 passed, 0 failed, 2
-skipped**; **`vendor/bin/phpstan analyse` — 0 errors** (the project's
-configured level is **7**, not the 8 the CLAUDE.md tech-stack table says).
-The 2 skips are by design: `NumberingConcurrencyTest` needs a real MySQL
-server (SQLite cannot prove row-level locking) and one Fortify feature
-gate in `tests/TestCase.php`.
+frontend: **`vendor/bin/pest` — 1758 tests, 0 failed**; **`vendor/bin/phpstan
+analyse` — 0 errors** (the project's configured level is **7**, not the 8
+the CLAUDE.md tech-stack table says). `NumberingConcurrencyTest` (the Book A
+numbering row-lock gate proof) *skips itself* unless a MySQL server is
+reachable at `127.0.0.1:3306` as `root` with the password the test hard-codes
+(SQLite cannot prove row-level locking); with MySQL 8.0 running it passes, so
+a clean environment needs MySQL for that gate to be genuinely verified, not
+merely skipped.
 
 Three real portability bugs surfaced only on Linux, and are fixed:
 - `Modules/Core` had no `autoload-dev` mapping, so its `tests/Fixtures`
