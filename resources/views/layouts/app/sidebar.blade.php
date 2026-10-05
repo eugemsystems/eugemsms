@@ -1498,6 +1498,20 @@
                             </a>
                             <div class="collapse {{ $insightsGroupActive ? 'show' : '' }}" id="sidebar-group-insights">
                                 <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('Executive') }}</div>
+                                    <a href="{{ route('insights.executive.head', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.executive.head') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-3-line"></i> {{ __('Head dashboard') }}
+                                    </a>
+                                    <a href="{{ route('insights.executive.bursar', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.executive.bursar') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-money-dollar-box-line"></i> {{ __('Bursar dashboard') }}
+                                    </a>
+                                    <a href="{{ route('insights.executive.kpis', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.executive.kpis') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-focus-3-line"></i> {{ __('KPI targets') }}
+                                    </a>
+                                    <a href="{{ route('insights.executive.board-pack', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.executive.board-pack') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-presentation-line"></i> {{ __('Board pack') }}
+                                    </a>
+
                                     <div class="app-sidebar-heading">{{ __('Custom reports') }}</div>
                                     <a href="{{ route('insights.reports.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('insights.reports.index', 'insights.reports.shared') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-file-chart-line"></i> {{ __('My reports') }}

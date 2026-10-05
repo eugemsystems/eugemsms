@@ -1261,12 +1261,39 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | Module | Screens | Status |
 |---|---|---|
 | INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
-| INT-02 | Executive Dashboards | ⬜ |
+| INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ⬜ |
 | INT-04 | Public API, Webhooks & Integrations | ⬜ |
 | SAA-01 | Licensing, Subscription & Entitlement | ⬜ |
 | SAA-02 | Vendor Control Centre | ⬜ |
 | SAA-03 | Onboarding, Support & Customer Success | ⬜ |
+
+**INT-02 note.** Built the spec's 4 screens — `Executive\HeadDashboard`,
+`Executive\BursarDashboard`, `Executive\Kpis`, `Executive\BoardPack` — under
+`Livewire/Executive/`. Permissions under module code `EXECUTIVE`
+(`executive.dashboard.view`, `.view.finance`, `executive.kpi.manage`,
+`executive.board_pack.generate`); the head and bursar dashboards are on
+separate permissions. KPI tiles are colour-coded from `GetKpiValueAction`
+(AC-INT-02-001) and link to the *owning module's own* report where one exists
+(only `finance.reports.collections` / `aged-debtors` today — a KPI with no such
+screen has no link rather than a parallel detail view). The head's page also
+shows the three-year enrolment comparative read from warehouse snapshots, the
+open stock-consumption anomaly count (FIN-09's data, only surfaced), the
+executive widgets resolved through COM-03's registry, and a "send me today's
+digest" action (exceptions only, through CORE-09). The warning threshold is
+compared **directly** with the KPI's own value (the backend's reading of the
+spec's worked example), so for a non-percentage KPI such as days overdue it must
+be set deliberately — the KPI screen says so. The board pack offers only the
+four sections the backend can resolve (enrolment, financial = FIN-12's income
+statement unmodified, staffing, boarding); `academic` and the INT-03 risk
+summary are not offered. One backend hardening: `SetKpiTargetAction` now refuses
+an unregistered KPI key. **Deliberately not built:** the `/api/v1/executive/*`
+endpoints, the daily digest *scheduling* (the Action exists; the cron wiring is
+the backend's deferred gap), a manual warehouse-snapshot trigger (the
+comparative shows "no snapshot yet" until the nightly rebuild runs, and nothing
+schedules it yet), the fuel-anomaly list (no persisted anomaly table exists),
+and a PDF board pack (it is a JSON file in the vault). Intelligence module: 79
+tests; PHPStan clean.
 
 **INT-01 note.** Built the spec's 5 screens — `Reports\Builder`, `Reports\Index`
 (My reports), `Reports\Shared`, `Reports\Schedule`, `Reports\ExecutionLog` —

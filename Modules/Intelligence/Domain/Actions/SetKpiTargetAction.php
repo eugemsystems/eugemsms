@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Intelligence\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Intelligence\Domain\Registry\KpiRegistry;
 use Modules\Intelligence\Models\KpiTarget;
 
 /**
@@ -16,6 +18,10 @@ final class SetKpiTargetAction extends Action
 {
     public function execute(int $schoolId, string $kpiKey, int $academicYearId, float $targetValue, float $warningThresholdPercent = 90.0): KpiTarget
     {
+        if (KpiRegistry::get($kpiKey) === null) {
+            throw new InvalidArgumentException("Unregistered KPI '{$kpiKey}'.");
+        }
+
         return $this->transaction(fn (): KpiTarget => KpiTarget::updateOrCreate(
             ['school_id' => $schoolId, 'kpi_key' => $kpiKey, 'academic_year_id' => $academicYearId],
             ['target_value' => $targetValue, 'warning_threshold_percent' => $warningThresholdPercent],

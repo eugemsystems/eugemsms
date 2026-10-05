@@ -107,6 +107,13 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             'view_audit' => ['description' => 'View the report execution audit log.'],
             'sensitive_field.access' => ['description' => 'Include sensitive fields (compensation, medical flags) in reports — on top of each field’s own permission.', 'dangerous' => true],
         ]);
+
+        PermissionRegistry::register('EXECUTIVE', [
+            'dashboard.view' => ['description' => 'View the head’s executive dashboard.'],
+            'dashboard.view.finance' => ['description' => 'View the bursar’s finance dashboard.'],
+            'kpi.manage' => ['description' => 'Set this school’s KPI targets and warning thresholds.'],
+            'board_pack.generate' => ['description' => 'Assemble the comprehensive board pack for a term.', 'dangerous' => true],
+        ]);
     }
 
     /**
