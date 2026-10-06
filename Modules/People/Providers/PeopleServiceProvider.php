@@ -106,6 +106,17 @@ class PeopleServiceProvider extends ModuleServiceProvider
      */
     private function registerPermissions(): void
     {
+        PermissionRegistry::register('ALUMNI', [
+            'view' => ['description' => 'View the alumni directory and profiles, including frozen academic summaries and giving history.'],
+            'career.verify' => ['description' => 'Record career updates for an alumnus and confirm them.'],
+            'contact.manage' => ['description' => 'Record an alumnus’s contact opt-out and offer them a portal account.'],
+            'event.manage' => ['description' => 'Create alumni events on the school calendar.'],
+            'campaign.manage' => ['description' => 'Create and review capital campaigns.'],
+            'pledge.manage' => ['description' => 'Record donor pledges.'],
+            'donation.record' => ['description' => 'Record a donation received — posts to the general ledger.', 'dangerous' => true],
+            'endowment.manage' => ['description' => 'Create bursary endowments that fund a discount scheme.', 'dangerous' => true],
+        ]);
+
         PermissionRegistry::register('PEOPLE', [
             'students.view' => ['description' => 'View the learner directory and profiles.'],
             'students.create' => ['description' => 'Enrol a new learner.'],
@@ -151,6 +162,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/guardians.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/admissions.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/staff.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/alumni.php');
         });
     }
 

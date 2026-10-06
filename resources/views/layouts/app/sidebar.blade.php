@@ -183,6 +183,38 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $alumniGroupActive = request()->routeIs('alumni.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $alumniGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-alumni" aria-expanded="{{ $alumniGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-alumni">
+                                <i class="ri ri-graduation-cap-line"></i> {{ __('Alumni') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $alumniGroupActive ? 'show' : '' }}" id="sidebar-group-alumni">
+                                <div class="app-sidebar-subnav">
+                                    <a href="{{ route('alumni.directory.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.directory.index', 'alumni.directory.show') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-contacts-book-line"></i> {{ __('Directory') }}
+                                    </a>
+                                    <a href="{{ route('alumni.events.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.events.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-calendar-event-line"></i> {{ __('Events') }}
+                                    </a>
+                                    <a href="{{ route('alumni.campaigns.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.campaigns.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-funds-line"></i> {{ __('Campaigns') }}
+                                    </a>
+                                    <a href="{{ route('alumni.pledges.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.pledges.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-heart-line"></i> {{ __('Pledges') }}
+                                    </a>
+                                    <a href="{{ route('alumni.donations.record', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.donations.record') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-gift-line"></i> {{ __('Record a donation') }}
+                                    </a>
+                                    <a href="{{ route('alumni.endowments.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('alumni.endowments.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bank-line"></i> {{ __('Endowments') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $academicGroupActive = request()->routeIs('academic.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $academicGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-academic" aria-expanded="{{ $academicGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-academic">

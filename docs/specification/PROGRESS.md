@@ -1443,11 +1443,32 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 | Module | Admin UI |
 |---|---|
 | FIN-07 | ✅ `Finance/Livewire/{Discounts,Scholarships}/`, `Reports/Discounts` |
-| PPL-06 | ⬜ |
+| PPL-06 | ✅ `People/Livewire/Alumni/` |
 | ACA-08 | ⬜ |
 | ACA-09 | ⬜ |
 | ACA-10 | ⬜ |
 | ACA-11 | ⬜ |
+
+**PPL-06 note.** Seven screens under `alumni.*` (`Directory\Index`, `Directory\Show`,
+`Events\Index`, `Campaigns\Index`, `Pledges\Index`, `Donations\Record`,
+`Endowments\Index`) and the `alumni.*` permissions (view, career.verify, contact.manage,
+event/campaign/pledge manage, donation.record ⚠, endowment.manage ⚠). The frozen
+academic summary is shown exactly as stored (AC-PPL-06-002); career updates show as
+unverified until confirmed (BR-PPL-06-004); staff can record an opt-out but no screen
+offers opting an alumnus back in (BR-PPL-06-011); campaign progress is the money
+received, with pledges shown separately (AC-PPL-06-003). **Backend fixes:**
+`OfferAlumniPortalAccountAction` set the new user's `tenant_id` to the *school id* — now the
+school's tenant, and a duplicate email is refused; `RecordDonationAction` accepted any
+account, campaign, pledge or endowment id, any currency and a zero amount — it now
+validates ownership, status, currency, term/year, future dates and restricted-gift
+purpose, and a donation to a campaign pledge counts toward that campaign automatically;
+campaign, pledge, endowment, event and career-update Actions validate their inputs.
+**Known gaps:** no way to add a pre-system external alumnus (a gap the backend already
+documents); opt-out can only suppress channels for alumni with a portal user, as the
+record holds no standalone email/phone; the `/api/v1/alumni/*` and
+`/campaigns/{ulid}/progress` endpoints; no donor-recognition roll or reunion
+group-coordinator screens; alumni-event tickets/RSVP are COM-06's and not surfaced here;
+a lapsed-pledge sweep is not scheduled.
 
 **FIN-07 note.** Nine screens: `Discounts\Schemes`, `Budgets`, `AwardList` (the spec's
 `Awards\Index`), `GrantAward`, `ConditionReview`, `SponsorAwards`, `Scholarships\Applications`,

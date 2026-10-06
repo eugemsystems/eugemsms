@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\People\Domain\Actions;
 
+use App\Models\User;
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Actions\Auth\CreateUserAction;
 use Modules\Core\Domain\DataObjects\Auth\CreateUserData;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\Auth\UserType;
+use Modules\Core\Models\School;
 use Modules\People\Domain\DataObjects\OfferAlumniPortalAccountData;
 use Modules\People\Models\Alumnus;
 use Modules\People\Models\Student;
@@ -41,15 +44,24 @@ final class OfferAlumniPortalAccountAction extends Action
         }
 
         $student = Student::findOrFail($alumnus->student_id);
+        $school = School::query()->findOrFail($alumnus->school_id);
 
-        return $this->transaction(function () use ($alumnus, $student, $data): Alumnus {
+        if ($data->email === null && $data->phone === null) {
+            throw new InvalidArgumentException('A portal account needs an email address or a phone number.');
+        }
+
+        if ($data->email !== null && User::query()->where('email', $data->email)->exists()) {
+            throw new InvalidArgumentException('An account with that email already exists.');
+        }
+
+        return $this->transaction(function () use ($alumnus, $student, $data, $school): Alumnus {
             $user = $this->createUser->execute(new CreateUserData(
                 firstName: $student->first_name,
                 lastName: $student->last_name,
                 email: $data->email,
                 phone: $data->phone,
                 userType: UserType::Alumni,
-                tenantId: $alumnus->school_id,
+                tenantId: $school->tenant_id,
             ));
 
             $alumnus->update(['user_id' => $user->id]);

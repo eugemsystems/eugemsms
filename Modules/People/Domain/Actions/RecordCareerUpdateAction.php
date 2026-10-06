@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\People\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\People\Domain\DataObjects\RecordCareerUpdateData;
 use Modules\People\Models\AlumniCareerUpdate;
@@ -19,6 +20,18 @@ final class RecordCareerUpdateAction extends Action
     public function execute(RecordCareerUpdateData $data): AlumniCareerUpdate
     {
         $alumnus = Alumnus::findOrFail($data->alumnusId);
+
+        if (! in_array($data->updateType, ['education', 'employment', 'achievement'], true)) {
+            throw new InvalidArgumentException("[{$data->updateType}] is not a career update type.");
+        }
+
+        if (trim($data->title) === '' || mb_strlen($data->title) > 200 || ($data->institutionOrEmployer !== null && mb_strlen($data->institutionOrEmployer) > 200)) {
+            throw new InvalidArgumentException('A career update needs a title of up to 200 characters.');
+        }
+
+        if ($data->startsOn !== null && $data->endsOn !== null && $data->endsOn->lessThan($data->startsOn)) {
+            throw new InvalidArgumentException('A career update cannot end before it starts.');
+        }
 
         return $this->transaction(fn (): AlumniCareerUpdate => AlumniCareerUpdate::create([
             'school_id' => $alumnus->school_id,

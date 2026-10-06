@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\People\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Comms\Domain\Actions\CreateCalendarEventAction;
 use Modules\Core\Domain\Actions\Action;
 use Modules\People\Domain\DataObjects\CreateAlumniEventData;
@@ -23,6 +24,16 @@ final class CreateAlumniEventAction extends Action
 
     public function execute(CreateAlumniEventData $data): AlumniEvent
     {
+        if (! in_array($data->eventType, ['reunion', 'founders_day', 'sports_gala', 'fundraising_dinner'], true)) {
+            throw new InvalidArgumentException("[{$data->eventType}] is not an alumni event type.");
+        }
+
+        foreach ($data->targetGraduationYears ?? [] as $year) {
+            if ($year < 1900 || $year > (int) now()->year + 1) {
+                throw new InvalidArgumentException('Target graduation years must be real years.');
+            }
+        }
+
         return $this->transaction(function () use ($data): AlumniEvent {
             $calendarEvent = $this->createCalendarEvent->execute(
                 schoolId: $data->schoolId,

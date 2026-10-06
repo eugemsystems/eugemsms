@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\People\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Domain\Support\Currency;
 use Modules\Core\Models\AcademicYear;
+use Modules\Finance\Models\DiscountScheme;
 use Modules\People\Domain\DataObjects\CreateBursaryEndowmentData;
 use Modules\People\Domain\DataObjects\SyncEndowmentBudgetEnvelopeData;
+use Modules\People\Models\Alumnus;
 use Modules\People\Models\BursaryEndowment;
 
 /**
@@ -24,6 +28,27 @@ final class CreateBursaryEndowmentAction extends Action
 
     public function execute(CreateBursaryEndowmentData $data): BursaryEndowment
     {
+        if (trim($data->donorName) === '' || mb_strlen($data->donorName) > 200 || Currency::tryFrom($data->currency) === null) {
+            throw new InvalidArgumentException('An endowment needs the donor’s name and a supported currency.');
+        }
+
+        foreach ([$data->endowmentCapitalMinor, $data->annualCommitmentMinor] as $figure) {
+            if ($figure !== null && $figure < 0) {
+                throw new InvalidArgumentException('Endowment figures cannot be negative.');
+            }
+        }
+
+        if (($data->endowmentCapitalMinor ?? 0) === 0 && ($data->annualCommitmentMinor ?? 0) === 0) {
+            throw new InvalidArgumentException('An endowment needs capital, an annual commitment, or both.');
+        }
+
+        // The scheme it funds must be this school's own.
+        DiscountScheme::query()->where('school_id', $data->schoolId)->findOrFail($data->fundsSchemeId);
+
+        if ($data->alumnusId !== null) {
+            Alumnus::query()->where('school_id', $data->schoolId)->findOrFail($data->alumnusId);
+        }
+
         return $this->transaction(function () use ($data): BursaryEndowment {
             $endowment = BursaryEndowment::create([
                 'school_id' => $data->schoolId,
