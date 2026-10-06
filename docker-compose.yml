@@ -160,8 +160,57 @@ services:
       AWS_BUCKET: ${AWS_BUCKET:-}
     entrypoint: ["/bin/sh", "-c", "mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" && mc mb --ignore-existing \"local/$$AWS_BUCKET\""]
 
+  # ---- Garage: self-hosted S3-compatible store for production (profile "garage"). See docs/DOCKER.md "Production file storage".
+  # Internal network only: no published ports. For dev, optionally uncomment the ports line.
+  garage:
+    profiles: ["garage"]
+    # TAG: v2.3.0 was the newest semver tag seen on Docker Hub (dxflrs/garage); image not pulled here. Owner must verify before deploy.
+    image: dxflrs/garage:v2.3.0
+    restart: unless-stopped
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set GARAGE_RPC_SECRET (openssl rand -hex 32)}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set GARAGE_ADMIN_TOKEN (openssl rand -base64 32)}
+    # ports:
+    #   - "127.0.0.1:3900:3900"
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  garage-setup:
+    profiles: ["garage"]
+    build:
+      context: docker/garage
+      dockerfile: Dockerfile.setup
+    restart: "no"
+    network_mode: "service:garage"
+    depends_on:
+      garage:
+        condition: service_healthy
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set GARAGE_ADMIN_TOKEN}
+      GARAGE_BUCKET: ${AWS_BUCKET:?set AWS_BUCKET}
+      GARAGE_KEY_NAME: ${GARAGE_KEY_NAME:-eugemsms}
+      GARAGE_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID (GK + 24 hex chars)}
+      GARAGE_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY (64 hex chars)}
+      GARAGE_CAPACITY: ${GARAGE_CAPACITY:-10G}
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - ./docker/garage/setup.sh:/setup.sh:ro
+      - garagemeta:/var/lib/garage/meta
+    entrypoint: ["/bin/sh", "/setup.sh"]
+
 volumes:
   dbdata:
   storage:
   redisdata:
   miniodata:
+  garagemeta:
+  garagedata:

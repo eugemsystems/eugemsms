@@ -1,0 +1,18 @@
+# Single-node Garage config. Secrets are NOT here: GARAGE_RPC_SECRET and GARAGE_ADMIN_TOKEN
+# are injected from .env by docker-compose.yml (Garage reads them from the environment).
+# Verify key names against the pinned version's docs (garagehq.deuxfleurs.fr, reference manual > configuration file).
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+replication_factor = 1
+
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"

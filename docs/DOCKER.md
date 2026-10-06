@@ -44,6 +44,17 @@ gunzip -c backup.sql.gz | docker compose exec -T db sh -c 'mysql -uroot -p"$MYSQ
 ```
 Also back up the `storage` volume (uploads): `docker run --rm -v eugemsms_storage:/s -v $PWD:/b alpine tar czf /b/storage.tgz -C /s .`
 
+## Production file storage
+Options, simplest first:
+- **Plain local disk (default, zero dependencies):** `FILESYSTEM_DISK=local`; files live in the `storage` volume. Right for one VPS. Back up that volume (see Backups).
+- **Garage (self-hosted S3, profile `garage`):** `dxflrs/garage:v2.3.0` (newest semver tag seen on Docker Hub; not pulled or tested here, owner must verify). MinIO's `s3` profile stays as is.
+  1. Set `COMPOSE_PROFILES=garage` and the Garage block from `.env.docker.example` (RPC secret, admin token, bucket, key id `GK`+24 hex, secret 64 hex, `AWS_ENDPOINT=http://garage:3900`, path style true, region `garage`, `FILESYSTEM_DISK=s3`).
+  2. `docker compose -f docker-compose.yml --profile garage up -d`. `garage-setup` runs once and is safe to re-run.
+  3. Garage publishes no ports (internal network only). Config is `docker/garage/garage.toml` (single node, `replication_factor=1`, `s3_region=garage`); secrets come from env.
+- **Unverified CLI steps** in `docker/garage/setup.sh` (check against the pinned version with `garage --help`): `layout show` output text "Current cluster layout version: 0" used to detect no layout; `node id -q`; `layout assign -z -c`; `layout apply --version 1`; `bucket info|create`; `key info|import --yes -n`; `bucket allow --read --write --owner --key`. The official image is shell-less, so setup builds a small alpine image copying `/garage`, and shares the garage network and meta volume. The healthcheck `/garage status` is also unverified. Never run end to end: no Docker daemon was available.
+- **Backups:** stop or snapshot, then archive both volumes: `docker run --rm -v eugemsms_garagemeta:/m -v eugemsms_garagedata:/d -v $PWD:/b alpine sh -c 'tar czf /b/garage-meta.tgz -C /m . && tar czf /b/garage-data.tgz -C /d .'`. Meta (LMDB) is not safe to copy hot; stop `garage` first (or use `metadata_snapshots_dir`/filesystem snapshots). Keep the `.env` secrets too.
+- **Not complete yet:** the app still needs `league/flysystem-aws-s3-v3` (not installed, needs owner approval), and several paths hardcode `Storage::disk('local')`: `UploadFileAction`, `GenerateDocumentAction`/`RegenerateDocumentAction`, Core `Documents\Index`, Finance `Statements\Generate` and `Invoices\Show`, People `GuardianDocumentsController` (plus `public` for branding, `backups` for `CreateBackupAction`). S3 mode needs the package plus a follow-up code change.
+
 ## Queue and scheduler
 `worker` runs `queue:work` (database queue) and `schedule:work`, which executes the tasks from `routes/console.php` (ScheduledTaskRegistry, `serp:run-task`). Run exactly one `worker` replica, otherwise the scheduler fires twice (`withoutOverlapping` mitigates, not eliminates). Scale queue throughput with `QUEUE_PROCS`. Restart after deploys (`docker compose restart worker`). Logs: `docker compose logs -f worker`.
 

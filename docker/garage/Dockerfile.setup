@@ -1,0 +1,6 @@
+# The official dxflrs/garage image is scratch-based (no shell), so the one-shot setup job copies the
+# garage binary into alpine. Keep the tag in sync with docker-compose.yml.
+ARG GARAGE_TAG=v2.3.0
+FROM dxflrs/garage:${GARAGE_TAG} AS garage
+FROM alpine:3.20
+COPY --from=garage /garage /usr/local/bin/garage
