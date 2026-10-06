@@ -150,7 +150,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
   ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging
   duplicate learners and guardians (needs a design that respects append-only financial records),
-  bulk operations and bulk class allocation, house allocation, guardian portal access, the
+  guardian portal access, the
   structured appraisal rubric, the public application form and `/api/v1` endpoints.
 
 - **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
@@ -209,6 +209,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   method codes (`PZW211` USD, `PZW201` ZWG, overridable) follow Pesepay's documented API from memory and are
   covered by faked-HTTP tests only. First step on a machine that can reach it: one sandbox payment.
 - **ACA-04 attendance reports.** Class report, learner heatmap, absence follow-up and register CSV.
+- **Bulk class and house allocation.** `Allocation\Bulk` places up to 300 learners in a class and/or a
+  house in one step (`BulkAllocateClassAction`, `AllocateStudentsToHouseAction`); wrong grade level, already
+  there, not currently enrolled, and a full class are skipped and listed with the reason. House moves are
+  written to the learner timeline. Other Book C bulk operations (status changes, exports) remain open.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).

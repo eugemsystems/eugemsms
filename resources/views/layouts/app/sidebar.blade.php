@@ -274,6 +274,9 @@
                                     </a>
 
                                     <div class="app-sidebar-heading">{{ __('Enrolment') }}</div>
+                                    <a href="{{ route('academic.allocation.bulk', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.allocation.bulk') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-group-line"></i> {{ __('Bulk allocation') }}
+                                    </a>
                                     <a href="{{ route('academic.allocation.classes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.allocation.classes') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-door-open-line"></i> {{ __('Class allocation') }}
                                     </a>

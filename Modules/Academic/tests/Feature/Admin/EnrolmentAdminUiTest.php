@@ -1,9 +1,12 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Modules\Academic\Livewire\Allocation\Bulk;
 use Modules\Academic\Livewire\Enrolment\BillingCheck;
 use Modules\Academic\Livewire\Enrolment\LearnerSubjects;
+use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\CurriculumFramework;
 use Modules\Academic\Models\LearnerSubjectEnrolment;
 use Modules\Academic\Models\Subject;
@@ -16,13 +19,16 @@ use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\GradeLevel;
+use Modules\Core\Models\House;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
+use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
 use Modules\People\Domain\Actions\CreateStudentAction;
 use Modules\People\Domain\DataObjects\CreateStudentData;
 use Modules\People\Models\Student;
+use Modules\People\Models\StudentTimelineEvent;
 
 /**
  * Book D ACA-02 §6 ⭐ admin UI — Class, Stream & Subject Enrolment.
@@ -173,4 +179,48 @@ it('surfaces a billing mismatch for a part-time learner whose add has not yet bi
         ->and($row['mismatch'])->toBeTrue()
         ->and($row['actualCount'])->toBe(1)
         ->and($row['billedCount'])->toBe(0);
+});
+
+it('places many learners in a class in one step, skipping the wrong grade level, the already-placed and whatever exceeds capacity', function (): void {
+    $f = enrolmentAdminFixture();
+    $user = enrolmentAdminUser($f, 'academic.allocation.manage');
+    $class = SchoolClass::factory()->for($f['school'])->for($f['year'])->for($f['gradeLevel'])->create(['capacity' => 2]);
+    $otherLevel = GradeLevel::factory()->for($f['school'])->for($f['section'], 'section')->create();
+    $a = enrolmentAdminStudent($f, 'FULL_TIME');
+    $b = enrolmentAdminStudent($f, 'FULL_TIME');
+    $c = enrolmentAdminStudent($f, 'FULL_TIME');
+    $wrong = enrolmentAdminStudent($f, 'FULL_TIME');
+    DB::table('students')->where('id', $wrong->id)->update(['grade_level_id' => $otherLevel->id]);
+
+    $screen = Livewire::actingAs($user)->test(Bulk::class, ['school' => $f['school']])
+        ->set('gradeLevelId', $f['gradeLevel']->id)->call('selectAll')->set('classId', $class->id)->call('applyClass');
+
+    $placed = ClassAllocation::where('class_id', $class->id)->where('status', 'confirmed')->count();
+    expect($placed)->toBe(2)->and(collect($screen->get('skipped'))->pluck('reason')->all())->toContain('The class is full.');
+
+    $screen->set('selected', [$a->id, $wrong->id])->call('applyClass');
+    $reasons = collect($screen->get('skipped'))->pluck('reason');
+    expect($reasons)->toContain('Already in this class.')->toContain('The learner\'s grade level is not this class\'s.');
+    expect(ClassAllocation::where('class_id', $class->id)->where('status', 'confirmed')->count())->toBe(2);
+});
+
+it('places learners in a house with a timeline line, skipping those already there and refusing an inactive house', function (): void {
+    $f = enrolmentAdminFixture();
+    $user = enrolmentAdminUser($f, 'academic.allocation.manage');
+    $house = House::factory()->for($f['school'])->create(['name' => 'Tiger', 'is_active' => true]);
+    $retired = House::factory()->for($f['school'])->create(['is_active' => false]);
+    $a = enrolmentAdminStudent($f, 'FULL_TIME');
+    $b = enrolmentAdminStudent($f, 'FULL_TIME');
+    $b->update(['house_id' => $house->id]);
+
+    $screen = Livewire::actingAs($user)->test(Bulk::class, ['school' => $f['school']])
+        ->set('selected', [$a->id, $b->id])->set('houseId', $house->id)->call('applyHouse');
+
+    expect($a->fresh()->house_id)->toBe($house->id)
+        ->and(collect($screen->get('skipped'))->pluck('reason')->all())->toBe(['Already in this house.'])
+        ->and(StudentTimelineEvent::where('student_id', $a->id)->where('event_type', 'house_allocated')->exists())->toBeTrue();
+
+    $screen->set('selected', [$a->id])->set('houseId', $retired->id)->call('applyHouse')->assertHasErrors(['houseId']);
+
+    Livewire::actingAs(enrolmentAdminUser($f))->test(Bulk::class, ['school' => $f['school']])->assertForbidden();
 });

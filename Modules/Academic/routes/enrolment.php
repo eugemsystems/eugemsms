@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Academic\Livewire\Allocation\Bulk as AllocationBulk;
 use Modules\Academic\Livewire\Allocation\Classes as AllocationClasses;
 use Modules\Academic\Livewire\Enrolment\BillingCheck;
 use Modules\Academic\Livewire\Enrolment\LearnerSubjects;
@@ -18,6 +19,7 @@ use Modules\Academic\Livewire\Selection\Form as SelectionForm;
  */
 Route::middleware(['auth', 'verified'])->prefix('schools/{school}/academic')->name('academic.')->group(function (): void {
     Route::livewire('allocation/classes', AllocationClasses::class)->name('allocation.classes');
+    Route::livewire('allocation/bulk', AllocationBulk::class)->name('allocation.bulk');
 
     Route::livewire('students/{student}/subjects', LearnerSubjects::class)->name('enrolment.subjects');
     Route::livewire('enrolment/billing-check', BillingCheck::class)->name('enrolment.billing-check');
