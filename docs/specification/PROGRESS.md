@@ -226,6 +226,8 @@ depends on them. Status per item below; anything not listed as done is still ope
 - **Pesepay live check.** With `api.pesepay.com` allowed, the host answers, the `authorization: <integration key>` header is
   the right one, but the supplied integration key is rejected (404 "Integration key record was not found"), so no
   sandbox payment has been completed yet.
+- **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
+  undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -234,7 +236,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
-ACA-04 period-mode marking; ACA-03 drag-and-drop; FIN-12 board pack (the prior-period view is the
+ACA-04 period-mode marking; FIN-12 board pack (the prior-period view is the
 Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
 
 ---
@@ -394,10 +396,9 @@ heuristic this screen computes itself — no Action produces one),
 see the new `CreateTimetableAction` below — then runs
 `GenerateTimetableAction` synchronously; no live progress/score curve/
 cancel, since the action itself is a synchronous, deliberately
-simplified greedy pass, not a queued annealing job), `Editor` (a plain
-add-one-slot form, not drag-and-drop — `CreateTimetableSlotAction`'s
-real four-level clash check still runs server-side and refuses with
-the conflict named), `Clashes` (runs the real `TimetableClashDetector`),
+simplified greedy pass, not a queued annealing job), `Editor` (a class grid you drag lessons across, plus the add-one-slot form — gap-closing pass:
+`MoveTimetableSlotAction`/`RemoveTimetableSlotAction` run the same four-level clash check and refuse
+with the conflict named; last move can be undone; locked, double and published lessons do not move), `Clashes` (runs the real `TimetableClashDetector`),
 `Views` (one filtered table standing in for the spec's five separate
 by-class/teacher/venue/learner/department views; "printable" stops at
 the browser's own print dialog — no export Action exists), `Publish`

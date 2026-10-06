@@ -10,6 +10,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Academic\Domain\Actions\CreateTimetableSlotAction;
+use Modules\Academic\Domain\Actions\MoveTimetableSlotAction;
+use Modules\Academic\Domain\Actions\RemoveTimetableSlotAction;
 use Modules\Academic\Domain\DataObjects\CreateTimetableSlotData;
 use Modules\Academic\Models\PeriodSlot;
 use Modules\Academic\Models\Subject;
@@ -25,14 +27,10 @@ use Modules\People\Models\Staff;
 
 /**
  * `Timetable\Editor` (Book E ACA-03 §3/§7 ⭐, `academic.timetable.edit`).
- * The spec asks for drag-and-drop with a clash panel updating as the
- * tile moves. This pass builds a plain add-one-slot form instead — the
- * same "real UX investment the backend doesn't require" simplification
- * `Marks\Entry` (Book D) made for its own grid. `CreateTimetableSlotAction`
- * already runs the real four-level clash check server-side and refuses
- * with the specific conflict named (`TimetableSlotClashException`); this
- * screen surfaces that refusal inline rather than live during a drag
- * that doesn't exist here. No drag, no undo — see `.ai/rules/academic.md`.
+ * A class timetable grid (cycle days across, periods down): drag a lesson tile to another cell to
+ * move it (`MoveTimetableSlotAction`), or use the add-one-lesson form. A move runs the same four
+ * clash levels as placing a lesson and is refused with the conflict named, leaving the lesson where
+ * it was; the last move can be undone. Locked, double and published lessons do not move.
  */
 #[Title('Timetable editor')]
 #[Layout('layouts.app')]
@@ -66,6 +64,79 @@ final class Editor extends Component
         abort_unless($timetable->school_id === $school->id, 404);
 
         $this->timetable = $timetable;
+    }
+
+    public ?int $gridClassId = null;
+
+    /** @var array{slot: int, day: int, period: int}|null */
+    public ?array $lastMove = null;
+
+    public ?string $clashMessage = null;
+
+    public function moveSlot(int $slotId, int $cycleDay, int $periodNumber): void
+    {
+        $this->authorizePermission('academic.timetable.edit');
+        $this->clashMessage = null;
+
+        $slot = TimetableSlot::query()->where('timetable_id', $this->timetable->id)->find($slotId);
+
+        if ($slot === null) {
+            return;
+        }
+
+        $from = ['slot' => $slot->id, 'day' => $slot->cycle_day, 'period' => $slot->period_number];
+
+        try {
+            app(MoveTimetableSlotAction::class)->execute($slot->id, $cycleDay, $periodNumber);
+        } catch (DomainException $e) {
+            $this->clashMessage = $e->getMessage();
+
+            return;
+        }
+
+        $this->lastMove = $from;
+    }
+
+    public function undoMove(): void
+    {
+        $this->authorizePermission('academic.timetable.edit');
+
+        if ($this->lastMove === null) {
+            return;
+        }
+
+        $this->clashMessage = null;
+
+        try {
+            app(MoveTimetableSlotAction::class)->execute($this->lastMove['slot'], $this->lastMove['day'], $this->lastMove['period']);
+        } catch (DomainException $e) {
+            $this->clashMessage = $e->getMessage();
+
+            return;
+        }
+
+        $this->lastMove = null;
+    }
+
+    public function removeSlot(int $slotId): void
+    {
+        $this->authorizePermission('academic.timetable.edit');
+
+        $slot = TimetableSlot::query()->where('timetable_id', $this->timetable->id)->find($slotId);
+
+        if ($slot === null) {
+            return;
+        }
+
+        try {
+            app(RemoveTimetableSlotAction::class)->execute($slot->id);
+        } catch (DomainException $e) {
+            $this->clashMessage = $e->getMessage();
+
+            return;
+        }
+
+        $this->lastMove = null;
     }
 
     public function addSlot(): void
@@ -118,6 +189,8 @@ final class Editor extends Component
         return view('academic::timetable.editor', [
             'slots' => TimetableSlot::where('timetable_id', $this->timetable->id)
                 ->orderBy('cycle_day')->orderBy('period_number')->get(),
+            'gridSlots' => $this->gridClassId === null ? collect() : TimetableSlot::where('timetable_id', $this->timetable->id)->where('class_id', $this->gridClassId)->with('subject:id,name')->get()->groupBy(fn (TimetableSlot $s): string => $s->cycle_day.'-'.$s->period_number),
+            'periods' => PeriodSlot::where('structure_id', $this->timetable->structure_id)->where('is_teachable', true)->orderBy('cycle_day')->orderBy('period_number')->get(),
             'subjects' => Subject::where('school_id', $this->school->id)->orderBy('name')->get(),
             'staff' => Staff::where('school_id', $this->school->id)->orderBy('first_name')->get(),
             'classes' => SchoolClass::where('school_id', $this->school->id)->orderBy('name')->get(),

@@ -2,6 +2,59 @@
     <h4 class="mb-1">{{ __('Timetable editor') }}</h4>
     <p class="text-body-secondary mb-4">{{ $timetable->name }} — {{ ucfirst($timetable->status) }}</p>
 
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <span>{{ __('Class grid — drag a lesson to move it') }}</span>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm w-auto" wire:model.live="gridClassId">
+                    <option value="">{{ __('Choose a class…') }}</option>
+                    @foreach ($classes as $class) <option value="{{ $class->id }}">{{ $class->name }}</option> @endforeach
+                </select>
+                @if ($lastMove)
+                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="undoMove">{{ __('Undo last move') }}</button>
+                @endif
+            </div>
+        </div>
+        @if ($clashMessage)
+            <div class="alert alert-danger rounded-0 mb-0 py-2 small" role="alert">{{ $clashMessage }}</div>
+        @endif
+        @if ($gridClassId)
+            @php($days = $periods->pluck('cycle_day')->unique()->sort()->values())
+            @php($numbers = $periods->pluck('period_number')->unique()->sort()->values())
+            <div class="table-responsive" x-data="{ dragging: null }">
+                <table class="table table-bordered table-sm mb-0 text-center align-middle">
+                    <thead><tr><th></th>@foreach ($days as $day)<th>{{ __('Day :n', ['n' => $day]) }}</th>@endforeach</tr></thead>
+                    <tbody>
+                        @foreach ($numbers as $number)
+                            <tr>
+                                <th class="text-body-secondary small">{{ __('P:n', ['n' => $number]) }}</th>
+                                @foreach ($days as $day)
+                                    @php($cell = $gridSlots->get($day.'-'.$number, collect()))
+                                    @if ($periods->contains(fn ($p) => $p->cycle_day === $day && $p->period_number === $number))
+                                        <td style="min-width:7rem;height:3.2rem" wire:key="cell-{{ $day }}-{{ $number }}"
+                                            x-on:dragover.prevent
+                                            x-on:drop.prevent="if (dragging) { $wire.moveSlot(dragging, {{ $day }}, {{ $number }}); dragging = null }">
+                                            @foreach ($cell as $tile)
+                                                <div class="badge text-bg-{{ $tile->is_locked ? 'secondary' : 'primary' }} w-100 py-2" wire:key="tile-{{ $tile->id }}"
+                                                     @if (! $tile->is_locked) draggable="true" x-on:dragstart="dragging = {{ $tile->id }}" style="cursor:grab" @endif>
+                                                    {{ $tile->subject?->name }}@if ($tile->is_locked) 🔒@endif
+                                                </div>
+                                            @endforeach
+                                        </td>
+                                    @else
+                                        <td class="table-light"></td>
+                                    @endif
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="card-body text-body-secondary small">{{ __('Choose a class to see and rearrange its week.') }}</div>
+        @endif
+    </div>
+
     <div class="row g-4">
         <div class="col-md-7">
             <div class="card">

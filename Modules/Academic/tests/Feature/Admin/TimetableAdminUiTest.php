@@ -20,6 +20,7 @@ use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
+use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\Term;
 use Modules\People\Models\Staff;
 
@@ -168,4 +169,53 @@ it('assigns substitute cover and updates the attendance session\'s staff_id (AC-
     expect(LessonSubstitution::find($substitution->id)->status)->toBe('assigned')
         ->and(LessonSubstitution::find($substitution->id)->cover_staff_id)->toBe($coverStaff->id)
         ->and(AttendanceSession::find($session->id)->staff_id)->toBe($coverStaff->id);
+});
+
+it('moves a lesson to another cell by drag, refuses a clash with the conflict named, and undoes the last move', function (): void {
+    $f = timetableAdminFixture();
+    $timetable = timetableAdminTimetable($f);
+    foreach ([[1, 1], [1, 2], [2, 1]] as [$day, $period]) {
+        PeriodSlot::factory()->for($f['school'])->create(['structure_id' => $f['structure']->id, 'cycle_day' => $day, 'period_number' => $period, 'is_teachable' => true]);
+    }
+    $teacher = Staff::factory()->for($f['school'])->create();
+    $other = Staff::factory()->for($f['school'])->create();
+    $class = SchoolClass::factory()->for($f['school'])->create();
+    $maths = Subject::factory()->for($f['school'])->create();
+    $english = Subject::factory()->for($f['school'])->create();
+    $mk = fn (int $day, int $period, Staff $staff, Subject $subject, bool $locked = false) => TimetableSlot::factory()->create([
+        'school_id' => $f['school']->id, 'timetable_id' => $timetable->id, 'term_id' => $f['term']->id, 'cycle_day' => $day, 'period_number' => $period,
+        'period_slot_id' => PeriodSlot::where('structure_id', $f['structure']->id)->where('cycle_day', $day)->where('period_number', $period)->value('id'),
+        'staff_id' => $staff->id, 'subject_id' => $subject->id, 'class_id' => $class->id, 'is_locked' => $locked,
+    ]);
+    $lesson = $mk(1, 1, $teacher, $maths);
+    $clashing = $mk(2, 1, $teacher, $english);
+    $user = timetableAdminUser($f, 'academic.timetable.view', 'academic.timetable.edit');
+
+    $screen = Livewire::actingAs($user)->test(Editor::class, ['school' => $f['school'], 'timetable' => $timetable])->set('gridClassId', $class->id);
+
+    $screen->call('moveSlot', $lesson->id, 1, 2);
+    expect($lesson->fresh()->period_number)->toBe(2)->and($screen->get('lastMove'))->not->toBeNull();
+
+    $screen->call('undoMove');
+    expect($lesson->fresh()->period_number)->toBe(1)->and($screen->get('lastMove'))->toBeNull();
+
+    $screen->call('moveSlot', $lesson->id, 2, 1);
+    expect($lesson->fresh()->cycle_day)->toBe(1)->and($screen->get('clashMessage'))->not->toBeNull();
+
+    $screen->call('moveSlot', $lesson->id, 1, 9);
+    expect($screen->get('clashMessage'))->toContain('not a teaching period');
+
+    $locked = $mk(1, 2, $other, $maths, true);
+    $screen->call('moveSlot', $locked->id, 2, 1);
+    expect($locked->fresh()->cycle_day)->toBe(1)->and($screen->get('clashMessage'))->toContain('locked');
+
+    $timetable->update(['status' => 'published']);
+    $screen->call('moveSlot', $lesson->id, 1, 2);
+    expect($lesson->fresh()->period_number)->toBe(1)->and($screen->get('clashMessage'))->toContain('published');
+
+    $timetable->update(['status' => 'draft']);
+    $screen->call('removeSlot', $clashing->id);
+    expect(TimetableSlot::find($clashing->id))->toBeNull();
+
+    Livewire::actingAs(timetableAdminUser($f, 'academic.timetable.view'))->test(Editor::class, ['school' => $f['school'], 'timetable' => $timetable])->call('moveSlot', $lesson->id, 1, 2)->assertForbidden();
 });
