@@ -23,7 +23,7 @@ class AcademicYearFactory extends Factory
         // tenancy isolation test) rarely collide on the (school_id,
         // name) unique index — 100 values was too narrow once dozens
         // of factories draw from it in a single test run.
-        $year = (string) fake()->numberBetween(1000, 9999);
+        $year = (string) fake()->unique()->numberBetween(1000, 9999);
 
         return [
             'school_id' => School::factory(),
