@@ -187,8 +187,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Also built**: teacher register endpoints
   (`teacher/classes`, `teacher/classes/{id}/attendance` GET/POST — offline-safe per-record idempotency keys,
   conflicts reported not overwritten) and a learner reading their own report cards, attendance and
-  timetable (never a fee balance). **Also built since**: teacher marks entry, guardian exeat, student attendance/timetable (see `routes/api.php`). **Not built yet** (no route in `routes/api.php`): homework and LMS, documents, the
-  `X-Academic-Year-Id`/`X-Term-Id` headers, `Accept-Language`, an OpenAPI document, and API keys/webhooks.
+  timetable (never a fee balance). **Also built since**: teacher marks entry, guardian exeat, student attendance/timetable (see `routes/api.php`). **Mobile/parent API gap pass (written, NOT run, NOT verified: no dependencies install in the sandbox, only `php -l` was run on each file).**
+  (1) `X-Academic-Year-Id`/`X-Term-Id` were already resolved and validated in `SetSessionContext` (attendance, timetable, exeats, marks use them); report cards now narrow to the named term/year only when a header is sent (history otherwise).
+  (2) `serp.api-locale` (`SetApiLocale`, first in the `serp.api` group) negotiates `Accept-Language` to en/sn/nd, falls back to en, sets `Content-Language`; no sn/nd translation files exist, so strings stay English.
+  (3) `GET students/{student}/documents` and `.../{document}/download` (ability `documents.read`): CORE-06 documents issued against the learner plus their published report cards; withheld cards, expired documents, other learners' and other schools' are 404. Assumptions: the file is streamed through the authenticated endpoint rather than the spec's signed redirect; `StudentDocument` (identity/permit file records) and invoice documents are not exposed (invoices keep their finance endpoints).
+  (4) `GET students/{student}/lms/courses` and `.../homework` (ability `homework.read`): read-only; marks/feedback shown only once marked. Assumptions: learner-scoped under `students/{student}` (not the spec's `lms/my-courses`) so guardian-to-learner authorisation is the same as every other parent endpoint; content files are listed with metadata/external URL but have no download endpoint; submit/mark/teacher LMS endpoints remain unbuilt.
+  (5) API keys/webhooks: skipped, INT-04 covers the base and no new gap was found. `docs/api/openapi.yaml` was not extended with the new routes. **Still not built:** LMS submit/mark/teacher endpoints, LMS content file download, translations. Cross-guardian and cross-school denial tests are in `GuardianPortalApiTest.php`.
 - **SAA vendor impersonation (BR-SAA-02-002).** Consent-gated by a structured grant, not a typed
   reference: the customer's own administrator (`core.support_access.manage`, screen
   `Core\Users\SupportAccess`) grants access for one named ticket for 1–72 hours and can withdraw it
@@ -262,7 +266,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 
 **Still open (not yet started in this pass)**:
 ACA-04 period-mode marking; FIN-12 board pack (the prior-period view is the
-Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface — homework/LMS and the `Accept-Language` header (no translations exist yet to select between); payment gateways other than Pesepay.
+Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface — LMS submit/mark/teacher endpoints and sn/nd translations (see the mobile/parent API gap pass above); payment gateways other than Pesepay.
 
 ---
 
