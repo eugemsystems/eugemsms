@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Modules\Academic\Domain\DataObjects\CloseCbtTestData;
+use Modules\Academic\Domain\DataObjects\SubmitAttemptData;
+use Modules\Academic\Models\CbtCandidateAttempt;
 use Modules\Academic\Models\CbtTest;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
@@ -16,6 +18,10 @@ use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
  */
 final class CloseCbtTestAction extends Action
 {
+    public function __construct(
+        private readonly SubmitAttemptAction $submitAttempt,
+    ) {}
+
     public function execute(CloseCbtTestData $data): CbtTest
     {
         $test = CbtTest::findOrFail($data->testId);
@@ -28,6 +34,11 @@ final class CloseCbtTestAction extends Action
         }
 
         return $this->transaction(function () use ($test): CbtTest {
+            // Closing ends the test for everyone: attempts still in flight are submitted with
+            // whatever they had saved (BR-ACA-09 time-limit rule), never left dangling.
+            CbtCandidateAttempt::query()->where('test_id', $test->id)->whereIn('status', ['in_progress', 'flagged'])->get()
+                ->each(fn (CbtCandidateAttempt $attempt): CbtCandidateAttempt => $this->submitAttempt->execute(new SubmitAttemptData($attempt->id, autoSubmitted: true)));
+
             $test->update(['status' => 'closed']);
 
             return $test->fresh();

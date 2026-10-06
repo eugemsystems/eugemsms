@@ -11,6 +11,7 @@ use Modules\Academic\Domain\Support\RuleBasedQuestionAssembler;
 use Modules\Academic\Models\AssessmentType;
 use Modules\Academic\Models\CbtTest;
 use Modules\Academic\Models\QuestionBankItem;
+use Modules\Academic\Models\Subject;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Models\Term;
 
@@ -35,6 +36,21 @@ final class CreateCbtTestAction extends Action
         if (! in_array($data->assemblyMethod, ['manual', 'rule_based'], true)) {
             throw new InvalidArgumentException("Unknown assembly method [{$data->assemblyMethod}].");
         }
+
+        if (trim($data->title) === '' || mb_strlen($data->title) > 200 || $data->durationMinutes < 1 || $data->durationMinutes > 600) {
+            throw new InvalidArgumentException('A test needs a title and a duration between 1 and 600 minutes.');
+        }
+
+        if ($data->closesAt->lessThanOrEqualTo($data->opensAt)) {
+            throw new InvalidArgumentException('A test must close after it opens.');
+        }
+
+        if ($data->maxTabSwitches !== null && $data->maxTabSwitches < 0) {
+            throw new InvalidArgumentException('The tab-switch limit cannot be negative.');
+        }
+
+        Subject::query()->where('school_id', $data->schoolId)->findOrFail($data->subjectId);
+        Term::query()->where('school_id', $data->schoolId)->findOrFail($data->termId);
 
         $questionIds = $data->assemblyMethod === 'manual'
             ? $this->validatedManualQuestionIds($data)
@@ -97,6 +113,15 @@ final class CreateCbtTestAction extends Action
             throw new InvalidArgumentException('A manually assembled test requires at least one question.');
         }
 
-        return $data->questionIds;
+        $unique = array_values(array_unique($data->questionIds));
+
+        // Every chosen question must be an active item in this school's own bank for this subject.
+        $valid = QuestionBankItem::query()->where('school_id', $data->schoolId)->where('subject_id', $data->subjectId)->where('is_active', true)->whereIn('id', $unique)->count();
+
+        if ($valid !== count($unique)) {
+            throw new InvalidArgumentException('Every chosen question must be an active question for this subject in your bank.');
+        }
+
+        return $unique;
     }
 }

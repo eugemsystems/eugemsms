@@ -429,6 +429,23 @@
                                     <a href="{{ route('academic.lms.spaces', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.lms.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-book-read-line"></i> {{ __('Course spaces') }}
                                     </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Computer-based testing') }}</div>
+                                    <a href="{{ route('academic.cbt.bank', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.bank') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-database-2-line"></i> {{ __('Question bank') }}
+                                    </a>
+                                    <a href="{{ route('academic.cbt.builder', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.builder') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-edit-line"></i> {{ __('Tests') }}
+                                    </a>
+                                    <a href="{{ route('academic.cbt.monitor', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.monitor') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-radar-line"></i> {{ __('Monitor') }}
+                                    </a>
+                                    <a href="{{ route('academic.cbt.marking', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.marking') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-edit-box-line"></i> {{ __('Manual marking') }}
+                                    </a>
+                                    <a href="{{ route('academic.cbt.item-analysis', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.item-analysis') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-2-line"></i> {{ __('Item analysis') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

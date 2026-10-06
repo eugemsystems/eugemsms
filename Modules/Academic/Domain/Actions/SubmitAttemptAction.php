@@ -33,7 +33,9 @@ final class SubmitAttemptAction extends Action
             );
         }
 
-        return $this->transaction(function () use ($attempt, $data): CbtCandidateAttempt {
+        $autoSubmitted = $data->autoSubmitted || $attempt->remainingSeconds() <= 0;
+
+        return $this->transaction(function () use ($attempt, $autoSubmitted): CbtCandidateAttempt {
             $questionIds = $attempt->test->question_ids ?? [];
             $questions = QuestionBankItem::query()->whereIn('id', $questionIds)->get()->keyBy('id');
             $responses = CbtResponse::query()->where('attempt_id', $attempt->id)->get();
@@ -59,7 +61,7 @@ final class SubmitAttemptAction extends Action
 
             $attempt->update([
                 'submitted_at' => Carbon::now(),
-                'auto_submitted' => $data->autoSubmitted,
+                'auto_submitted' => $autoSubmitted,
                 'raw_mark' => $rawMark,
                 'percent' => $totalMaxMark > 0 ? round(($rawMark / $totalMaxMark) * 100, 2) : null,
                 'status' => $needsManualMarking ? 'manual_marking_pending' : 'auto_marked',

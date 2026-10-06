@@ -236,6 +236,13 @@ class AcademicServiceProvider extends ModuleServiceProvider
      */
     private function registerPermissions(): void
     {
+        PermissionRegistry::register('CBT', [
+            'bank.manage' => ['description' => 'Maintain the question bank and view item analysis.'],
+            'test.manage' => ['description' => 'Build, schedule, close and publish computer-based tests.'],
+            'test.monitor' => ['description' => 'Watch a test in progress — attempts, remaining time and focus events.'],
+            'mark' => ['description' => 'Mark written responses and file uploads in the manual marking queue.'],
+        ]);
+
         PermissionRegistry::register('LMS', [
             'course.manage' => ['description' => 'Create course spaces and manage their content — a teacher does so only for groups they teach.'],
             'assignment.create' => ['description' => 'Create, publish and close assignments in course spaces.'],
@@ -320,6 +327,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/projects.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/exams.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/lms.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/cbt.php');
         });
     }
 

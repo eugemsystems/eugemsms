@@ -178,8 +178,8 @@ it('auto-submits with whatever was saved when the time limit is reached, losing 
     ));
     app(ScheduleCbtTestAction::class)->execute(new ScheduleCbtTestData(testId: $test->id));
     $attempt = app(StartAttemptAction::class)->execute(new StartAttemptData(testId: $test->id, studentId: $student->id));
-    $attempt->update(['started_at' => now()->subMinutes(15)]);
     app(SaveResponseAction::class)->execute(new SaveResponseData(attemptId: $attempt->id, questionId: $question->id, responseValue: [0]));
+    $attempt->update(['started_at' => now()->subMinutes(15)]);
 
     expect($attempt->fresh()->remainingSeconds())->toBe(0);
 

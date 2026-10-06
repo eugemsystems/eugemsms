@@ -1445,9 +1445,29 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 | FIN-07 | ✅ `Finance/Livewire/{Discounts,Scholarships}/`, `Reports/Discounts` |
 | PPL-06 | ✅ `People/Livewire/Alumni/` |
 | ACA-08 | ✅ `Academic/Livewire/Lms/` |
-| ACA-09 | ⬜ |
+| ACA-09 | ✅ `Academic/Livewire/Cbt/` (staff side) |
 | ACA-10 | ⬜ |
 | ACA-11 | ⬜ |
+
+**ACA-09 note.** Five staff screens under `academic.cbt.*` — `Cbt\Bank`, `Builder`,
+`Monitor`, `ManualMarking`, `ItemAnalysis` — and the `cbt.*` permissions (`bank.manage`,
+`test.manage`, `test.monitor`, `mark`). The candidate **Delivery** screen is deliberately not
+in the staff panel: test-taking belongs to the learner app against `/api/v1/cbt/*`, and no
+staff screen answers on a candidate's behalf. **Backend fixes** (the spec's headline rules
+were not actually enforced): `SaveResponseAction` accepted answers after time had run out
+and for questions not on the test — it now refuses both (BR-ACA-09-002, AC-ACA-09-006);
+`SubmitAttemptAction` marks any past-time submission auto-submitted; `CloseCbtTestAction`
+left in-flight attempts dangling — it now submits them with what they saved; new
+`AutoSubmitExpiredAttemptsAction` for attempts nobody came back to;
+`RecordFocusEventAction` now ignores events on unmonitored or finished attempts, validates the
+event type and applies `cbt.default_max_tab_switches` when a test sets no limit; question-bank
+and test creation validate type/difficulty, the correct answer, that auto-marking follows the
+type, chosen questions belonging to this subject and school, dates and duration; new
+`SetQuestionActiveAction`. **Known gaps:** matching items cannot be authored in the UI;
+fill-in answers match exactly (case-sensitive); the `flagged` status is lost when an attempt
+is submitted, so the monitor derives the review flag from the tab-switch count; no
+test-editing after scheduling (build a new test, as the Action docblock says); no
+scheduled sweep for expired attempts (on-demand button); the `/api/v1/cbt/*` endpoints.
 
 **ACA-08 note.** Six teacher/administrator screens under `academic.lms.*` —
 `Lms\CourseSpaces`, `CourseSpace`, `AssignmentCreate`, `Marking`, `NonSubmission`,
