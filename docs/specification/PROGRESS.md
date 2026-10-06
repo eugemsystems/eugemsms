@@ -173,6 +173,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   duplicate numbers refused.
 - **OPS-02 milestones and contractor.** Capital projects get milestones (payment percentages capped
   at 100%, completed only while in progress) and a named main contractor.
+- **BRD-06 consultations.** Recorded and listed on the Tier 3 clinical record.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -181,7 +182,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
-BRD-06 consultations; BRD-04 cost analytics;
+BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
@@ -565,13 +566,8 @@ guess), `Prescriptions`, `Consents`, `Immunisations`, `Incidents`,
 `Referrals` (folds make → return → charge), `Stock` (folds "Controlled
 register" — the same catalogue, filtered), `Outbreak` (new, aggregate-
 only read, no Action backs it — safe since it never selects a
-per-learner clinical field), `Screenings`. **Deliberately not built**:
-a `Consultations` screen — no Action anywhere creates a `Consultation`
-row (verified: the model/migration/factory exist, but zero Actions
-reference `Consultation::create`), the same "model exists, no Action
-ever wrote one" gap prior books hit for other tables; documented rather
-than patched with a new Action, since clinical consultation capture
-wasn't asked for and the screen list was already large. See
+per-learner clinical field), `Screenings`. Consultations (gap-closing pass): `Health\Record` records them through `RecordConsultationAction`
+(Tier 3, complaint/assessment/plan encrypted at rest, a visiting practitioner must be named). See
 `.ai/rules/welfare.md`.
 
 **BRD-07 note.** Built (`Livewire/Behaviour/`, `Sanctions/`,

@@ -105,4 +105,60 @@
             </div>
         </div>
     </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">{{ __('Consultations') }}</div>
+                <div class="list-group list-group-flush">
+                    @forelse ($consultations as $consultation)
+                        <div class="list-group-item" wire:key="consultation-{{ $consultation->id }}">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ str_replace('_', ' ', $consultation->consultation_type) }}</strong>
+                                <span class="text-body-secondary small">{{ $consultation->consulted_at->format('Y-m-d H:i') }} · {{ str_replace('_', ' ', $consultation->practitioner_type) }}@if ($consultation->external_practitioner) ({{ $consultation->external_practitioner }})@endif</span>
+                            </div>
+                            <div class="small">{{ $consultation->presenting_complaint }}</div>
+                            @if ($consultation->assessment) <div class="small text-body-secondary">{{ __('Assessment') }}: {{ $consultation->assessment }}</div> @endif
+                            @if ($consultation->plan) <div class="small text-body-secondary">{{ __('Plan') }}: {{ $consultation->plan }}</div> @endif
+                            @if ($consultation->follow_up_on) <div class="small">{{ __('Follow-up') }}: {{ $consultation->follow_up_on->format('Y-m-d') }}</div> @endif
+                        </div>
+                    @empty
+                        <div class="list-group-item text-center text-body-secondary">{{ __('No consultations recorded.') }}</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">{{ __('Record consultation') }}</div>
+                <div class="card-body">
+                    <select class="form-select mb-2" wire:model="consultationType">
+                        <option value="walk_in">{{ __('Walk-in') }}</option>
+                        <option value="scheduled">{{ __('Scheduled') }}</option>
+                        <option value="admission_review">{{ __('Admission review') }}</option>
+                        <option value="follow_up">{{ __('Follow-up') }}</option>
+                    </select>
+                    <select class="form-select mb-2" wire:model.live="practitionerType">
+                        <option value="nurse">{{ __('Nurse') }}</option>
+                        <option value="visiting_doctor">{{ __('Visiting doctor') }}</option>
+                        <option value="physiotherapist">{{ __('Physiotherapist') }}</option>
+                        <option value="dentist">{{ __('Dentist') }}</option>
+                    </select>
+                    @if ($practitionerType !== 'nurse')
+                        <input type="text" class="form-control mb-2" wire:model="externalPractitioner" placeholder="{{ __('Practitioner name') }}">
+                        @error('externalPractitioner') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                    @endif
+                    @error('practitionerStaffId') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                    <textarea class="form-control mb-2" rows="2" wire:model="presentingComplaint" placeholder="{{ __('Presenting complaint') }}"></textarea>
+                    @error('presentingComplaint') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                    <textarea class="form-control mb-2" rows="2" wire:model="assessment" placeholder="{{ __('Assessment (optional)') }}"></textarea>
+                    <textarea class="form-control mb-2" rows="2" wire:model="plan" placeholder="{{ __('Plan (optional)') }}"></textarea>
+                    <label class="form-label small mb-0">{{ __('Follow-up on (optional)') }}</label>
+                    <input type="date" class="form-control mb-2" wire:model="followUpOn">
+                    @error('followUpOn') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                    <button type="button" class="btn btn-primary btn-sm" wire:click="recordConsultation">{{ __('Record') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

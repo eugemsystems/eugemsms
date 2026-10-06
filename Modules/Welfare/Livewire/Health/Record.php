@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request as RequestFacade;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -16,12 +17,16 @@ use Modules\Core\Domain\Exceptions\InsufficientScopeException;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
+use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 use Modules\Welfare\Domain\Actions\DeclareMedicalConditionAction;
+use Modules\Welfare\Domain\Actions\RecordConsultationAction;
 use Modules\Welfare\Domain\Actions\ResolveMedicalTierAction;
 use Modules\Welfare\Domain\Actions\VerifyMedicalConditionAction;
 use Modules\Welfare\Domain\DataObjects\DeclareMedicalConditionData;
+use Modules\Welfare\Domain\DataObjects\RecordConsultationData;
 use Modules\Welfare\Domain\Support\MedicalTier;
+use Modules\Welfare\Models\Consultation;
 use Modules\Welfare\Models\MedicalCondition;
 use Modules\Welfare\Models\MedicalRecord;
 
@@ -76,6 +81,20 @@ final class Record extends Component
 
     public string $effectiveFrom = '';
 
+    public string $consultationType = 'walk_in';
+
+    public string $practitionerType = 'nurse';
+
+    public string $presentingComplaint = '';
+
+    public string $assessment = '';
+
+    public string $plan = '';
+
+    public string $externalPractitioner = '';
+
+    public string $followUpOn = '';
+
     public function mount(School $school, Student $student): void
     {
         $this->loadSchool($school);
@@ -127,6 +146,46 @@ final class Record extends Component
         $this->toast(__('Condition declared.'));
     }
 
+    public function recordConsultation(): void
+    {
+        $this->authorizePermission('health.clinical.manage');
+        $this->resetErrorBag();
+        $this->resolveTierOrAbort();
+
+        $this->validate([
+            'consultationType' => ['required', 'string'],
+            'presentingComplaint' => ['required', 'string', 'max:5000'],
+            'assessment' => ['nullable', 'string', 'max:5000'],
+            'plan' => ['nullable', 'string', 'max:5000'],
+            'followUpOn' => ['nullable', 'date'],
+        ]);
+
+        $staff = Staff::where('school_id', $this->school->id)->where('user_id', Auth::id())->first();
+
+        try {
+            app(RecordConsultationAction::class)->execute(new RecordConsultationData(
+                schoolId: $this->school->id,
+                studentId: $this->student->id,
+                consultationType: $this->consultationType,
+                presentingComplaint: $this->presentingComplaint,
+                practitionerType: $this->practitionerType,
+                consultedAt: now(),
+                assessment: $this->assessment !== '' ? $this->assessment : null,
+                plan: $this->plan !== '' ? $this->plan : null,
+                practitionerStaffId: $staff?->id,
+                externalPractitioner: $this->externalPractitioner !== '' ? $this->externalPractitioner : null,
+                followUpOn: $this->followUpOn !== '' ? Carbon::parse($this->followUpOn) : null,
+            ));
+        } catch (ValidationException $e) {
+            $this->setErrorBag($e->errors());
+
+            return;
+        }
+
+        $this->reset(['presentingComplaint', 'assessment', 'plan', 'followUpOn', 'externalPractitioner']);
+        $this->toast(__('Consultation recorded.'));
+    }
+
     public function verify(int $conditionId): void
     {
         $this->authorizePermission('health.clinical.manage');
@@ -160,6 +219,7 @@ final class Record extends Component
     {
         return view('welfare::health.record', [
             'record' => MedicalRecord::where('student_id', $this->student->id)->first(),
+            'consultations' => Consultation::where('student_id', $this->student->id)->orderByDesc('consulted_at')->limit(20)->get(),
             'conditions' => MedicalCondition::where('student_id', $this->student->id)->orderByDesc('effective_from')->get(),
         ]);
     }

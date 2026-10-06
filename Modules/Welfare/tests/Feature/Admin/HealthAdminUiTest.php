@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
@@ -13,6 +14,7 @@ use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\People\Models\Guardian;
+use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 use Modules\People\Models\StudentGuardian;
 use Modules\Welfare\Domain\Actions\DeclareMedicalConditionAction;
@@ -25,6 +27,7 @@ use Modules\Welfare\Livewire\Health\Record;
 use Modules\Welfare\Livewire\Health\SickBay;
 use Modules\Welfare\Livewire\Health\Stock;
 use Modules\Welfare\Models\ClinicStock;
+use Modules\Welfare\Models\Consultation;
 use Modules\Welfare\Models\MedicationAdministration;
 use Modules\Welfare\Models\SickBayAdmission;
 
@@ -179,4 +182,33 @@ it('refuses to receive controlled stock without a second, different witness', fu
         ->assertOk();
 
     expect($stock->refresh()->quantity_on_hand)->toEqual(5.0);
+});
+
+it('records a nurse consultation encrypted at rest and refuses a visiting practitioner with no name or a follow-up in the past (BRD-06)', function (): void {
+    $f = healthAdminFixture();
+    $nurse = healthAdminUser($f, 'health.clinical.view', 'health.clinical.manage');
+    Staff::factory()->for($f['school'])->create(['user_id' => $nurse->id]);
+
+    $screen = fn () => Livewire::actingAs($nurse)->test(Record::class, ['school' => $f['school'], 'student' => $f['student']]);
+
+    $screen()->set('presentingComplaint', 'Sore throat for two days')->set('plan', 'Rest and fluids')->call('recordConsultation')->assertHasNoErrors();
+
+    $consultation = Consultation::where('student_id', $f['student']->id)->firstOrFail();
+    expect($consultation->presenting_complaint)->toBe('Sore throat for two days')
+        ->and($consultation->practitioner_staff_id)->not->toBeNull()
+        ->and(DB::table('consultations')->where('id', $consultation->id)->value('presenting_complaint'))->not->toContain('Sore throat');
+
+    $screen()->set('practitionerType', 'visiting_doctor')->set('presentingComplaint', 'Rash')->call('recordConsultation')->assertHasErrors(['externalPractitioner']);
+    $screen()->set('presentingComplaint', 'Cough')->set('followUpOn', now()->subDay()->toDateString())->call('recordConsultation')->assertHasErrors(['followUpOn']);
+    $screen()->set('presentingComplaint', '')->call('recordConsultation')->assertHasErrors(['presentingComplaint']);
+
+    expect(Consultation::where('student_id', $f['student']->id)->count())->toBe(1);
+});
+
+it('refuses to record a consultation without the clinical manage permission', function (): void {
+    $f = healthAdminFixture();
+    $viewer = healthAdminUser($f, 'health.clinical.view');
+
+    Livewire::actingAs($viewer)->test(Record::class, ['school' => $f['school'], 'student' => $f['student']])
+        ->set('presentingComplaint', 'Headache')->call('recordConsultation')->assertForbidden();
 });
