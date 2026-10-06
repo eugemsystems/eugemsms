@@ -1,0 +1,86 @@
+# Auto-loaded in dev. Production must use: docker compose -f docker-compose.yml ...
+x-dev-app: &dev-app
+  build:
+    target: dev
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  image: eugemsms-app:dev
+  volumes:
+    - .:/var/www/html
+
+services:
+  app:
+    <<: *dev-app
+    environment:
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  web:
+    build:
+      target: web
+    volumes:
+      - ./public:/var/www/html/public:ro
+      - storage:/var/www/html/storage:ro
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+
+  worker:
+    <<: *dev-app
+    environment:
+      APP_ENV: local
+
+  db:
+    ports:
+      - "${DB_FORWARD_PORT:-3306}:3306"
+
+  # Vite dev server (HMR). Run `docker compose run --rm vite npm run build` for a one-off build instead.
+  vite:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Throwaway MySQL at root/P@55wordMYSQL, which NumberingConcurrencyTest hardcodes at 127.0.0.1:3306.
+  db_test:
+    image: mysql:8.4
+    profiles: ["test"]
+    environment:
+      MYSQL_ROOT_PASSWORD: "P@55wordMYSQL"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p'P@55wordMYSQL' --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Shares db_test's network namespace so 127.0.0.1:3306 is that MySQL.
+  # Use: docker compose run --rm mysql-tests   (runs the Pest suite, including NumberingConcurrencyTest)
+  mysql-tests:
+    <<: *dev-app
+    profiles: ["test"]
+    network_mode: "service:db_test"
+    depends_on:
+      db_test:
+        condition: service_healthy
+    environment:
+      APP_ENV: testing
+      WAIT_FOR_DB: "false"
+      RUN_MIGRATIONS: "false"
+    command: ["vendor/bin/pest"]
+    restart: "no"

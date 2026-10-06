@@ -1,0 +1,100 @@
+# Production-like stack:  docker compose -f docker-compose.yml up -d --build
+# Dev: plain `docker compose up` also loads docker-compose.override.yml.
+# All settings come from .env (cp .env.docker.example .env); compose reads the same file for ${VAR} interpolation.
+name: eugemsms
+
+x-app: &app
+  image: eugemsms-app:${APP_TAG:-latest}
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: production
+  env_file: .env
+  environment: &app-env
+    APP_KEY: ${APP_KEY:?set APP_KEY in .env (php artisan key:generate --show)}
+    DB_CONNECTION: mysql
+    DB_HOST: db
+    DB_PORT: "3306"
+    DB_DATABASE: ${DB_DATABASE:-eugemsms}
+    DB_USERNAME: ${DB_USERNAME:-eugemsms}
+    DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+  restart: unless-stopped
+  volumes:
+    - storage:/var/www/html/storage
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    environment:
+      <<: *app-env
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}   # only this service migrates
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\",9000)?0:1);'"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+
+  web:
+    image: eugemsms-web:${APP_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    volumes:
+      - storage:/var/www/html/storage:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/up >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+  # Queue worker(s) (QUEUE_CONNECTION=database) + `schedule:work` loop, under supervisord.
+  # The app uses neither Horizon nor Reverb, so neither is run.
+  worker:
+    <<: *app
+    command: ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+    environment:
+      <<: *app-env
+      QUEUE_PROCS: ${QUEUE_PROCS:-2}
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'artisan queue:work' >/dev/null && pgrep -f 'artisan schedule:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      app:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-eugemsms}
+      MYSQL_USER: ${DB_USERNAME:-eugemsms}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  dbdata:
+  storage:
