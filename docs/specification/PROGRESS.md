@@ -171,6 +171,8 @@ depends on them. Status per item below; anything not listed as done is still ope
   `Newsletters\Compose`, and a `comms.send_due_newsletters` job sends scheduled issues.
 - **FIN-08 contracts.** Record, renew and terminate supplier contracts; blacklisted suppliers and
   duplicate numbers refused.
+- **OPS-02 milestones and contractor.** Capital projects get milestones (payment percentages capped
+  at 100%, completed only while in progress) and a named main contractor.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -179,7 +181,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
-BRD-06 consultations; OPS-02 contractor/milestones; BRD-04 cost analytics;
+BRD-06 consultations; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
@@ -803,13 +805,10 @@ no Action ever created a row" gap prior books hit repeatedly — verified
 by grep), and `AdvanceCapitalProjectStatusAction` (forward-only
 planning→approved→in_progress; nothing in the shipped domain layer moved
 a capital project out of `planning`, and `CompleteCapitalProjectAction`
-requires `approved`/`in_progress`). **Deliberately not built**: a
-standalone "Contractor management" screen (no `is_contractor` flag or
-Action distinguishes a contractor `Supplier` from any other — `WorkOrders\Index`
-lets the user pick any supplier for `contractor_supplier_id`) and capital
-project milestones (`capital_project_milestones` has the same
-"model exists, no Action ever wrote one" gap, but no acceptance criterion
-in this book names milestone-level behaviour to build a UI against).
+requires `approved`/`in_progress`). Gap-closing pass: `Projects\Index` now has a Details panel to name the main contractor
+(`AssignCapitalProjectContractorAction`, active suppliers only) and to add and complete milestones
+(`AddCapitalProjectMilestoneAction`, `CompleteCapitalProjectMilestoneAction`). **Still not built**: a
+standalone "Contractor management" screen — nothing distinguishes a contractor supplier from any other.
 
 **OPS-01 note 🇿🇼.** Built (`Livewire/{Fleet,Compliance,Drivers,Routes,
 Assignment,Trips,Manifest,Fuel,FuelAnomalies,Incidents,RouteCosts}/`, 11

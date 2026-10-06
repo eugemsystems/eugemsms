@@ -21,9 +21,12 @@ use Modules\Operations\Livewire\Maintenance\Schedules\Index as SchedulesIndex;
 use Modules\Operations\Livewire\Maintenance\Triage as MaintenanceTriage;
 use Modules\Operations\Livewire\Maintenance\WorkOrders\Index as WorkOrdersIndex;
 use Modules\Operations\Livewire\Projects\Index as ProjectsIndex;
+use Modules\Operations\Models\CapitalProject;
+use Modules\Operations\Models\CapitalProjectMilestone;
 use Modules\Operations\Models\MaintenanceAsset;
 use Modules\Operations\Models\MaintenanceSchedule;
 use Modules\Operations\Models\WorkOrder;
+use Modules\Stores\Models\Supplier;
 
 /**
  * Book H2 OPS-02 admin-UI pass. Own, distinctly-named fixture.
@@ -160,4 +163,33 @@ it('generates a preventive work order through the Schedules screen when a calend
 
     expect($workOrder)->not->toBeNull();
     expect($workOrder->work_type)->toBe('preventive');
+});
+
+it('adds milestones within the 100% payment cap, completes them only while in progress, and assigns an active contractor (OPS-02)', function (): void {
+    $f = operationsAdminFixture();
+    $user = operationsAdminUser($f, 'maintenance.project.manage');
+    $project = CapitalProject::factory()->for($f['school'])->create(['status' => 'approved', 'starts_on' => now()->toDateString()]);
+    $active = Supplier::factory()->for($f['school'])->create(['status' => 'active']);
+    $pending = Supplier::factory()->for($f['school'])->create(['status' => 'pending_approval']);
+
+    $screen = fn () => Livewire::actingAs($user)->test(ProjectsIndex::class, ['school' => $f['school']])->call('select', $project->id);
+
+    $screen()->set('milestoneName', 'Foundations')->set('milestoneTargetDate', now()->addMonth()->toDateString())->set('milestonePaymentPercent', '60')->call('addMilestone')->assertHasNoErrors();
+    $screen()->set('milestoneName', 'Roof')->set('milestoneTargetDate', now()->addMonths(2)->toDateString())->set('milestonePaymentPercent', '50')->call('addMilestone')->assertHasErrors(['paymentPercent']);
+    $screen()->set('milestoneName', 'Too early')->set('milestoneTargetDate', now()->subYear()->toDateString())->call('addMilestone')->assertHasErrors(['targetDate']);
+
+    $milestone = CapitalProjectMilestone::where('project_id', $project->id)->firstOrFail();
+    expect($milestone->sequence)->toBe(1);
+
+    $screen()->call('completeMilestone', $milestone->id);
+    expect($milestone->fresh()->status)->toBe('pending');
+
+    $project->update(['status' => 'in_progress']);
+    $screen()->call('completeMilestone', $milestone->id);
+    expect($milestone->fresh()->status)->toBe('completed');
+
+    $screen()->set('contractorId', $pending->id)->call('assignContractor');
+    expect($project->fresh()->main_contractor_id)->toBeNull();
+    $screen()->set('contractorId', $active->id)->call('assignContractor');
+    expect($project->fresh()->main_contractor_id)->toBe($active->id);
 });
