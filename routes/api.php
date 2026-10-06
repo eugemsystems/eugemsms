@@ -17,6 +17,7 @@ use Modules\Core\Http\Controllers\Api\V1\MeController;
 use Modules\Finance\Http\Controllers\Api\V1\GatewayWebhookController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianFinanceController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianPaymentsController;
+use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 
 /*
@@ -34,6 +35,9 @@ use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 // Payment gateway result callbacks: public, authenticated by the gateway driver itself.
 Route::post('webhooks/payments/{driver}', [GatewayWebhookController::class, 'receive'])
     ->middleware(['serp.resolve-tenant', 'throttle:300,1']);
+
+// Machine-readable spec (Book J INT-04, BR-INT-04-010): public, generated from the live routes.
+Route::get('openapi.json', OpenApiController::class)->middleware('throttle:60,1')->name('api.openapi');
 
 Route::prefix('auth')->middleware(['serp.resolve-tenant', 'throttle:20,1'])->group(function (): void {
     Route::post('otp/request', [AuthController::class, 'requestOtp']);
