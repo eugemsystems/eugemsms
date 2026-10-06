@@ -219,6 +219,9 @@ depends on them. Status per item below; anything not listed as done is still ope
   the reason when there is no phone, no learner currently at the school, or the number belongs to another
   guardian or to vendor staff. Withdrawing unlinks the guardian, deactivates their membership of the school
   and signs every device out. No invitation message is sent yet.
+- **FIN-12 management reports.** `Financial\Management`: departmental (income, expense, net per cost centre,
+  with un-centred lines on their own row so it adds to the income statement) and fee collection (billed,
+  collected, outstanding and rate by grade level, voided invoices excluded).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -228,9 +231,8 @@ depends on them. Status per item below; anything not listed as done is still ope
 
 **Still open (not yet started in this pass)**:
 BRD-04 cost analytics;
-ACA-04 period-mode marking; ACA-03 drag-and-drop; FIN-12 departmental, collection,
-prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
-the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
+ACA-04 period-mode marking; ACA-03 drag-and-drop; FIN-12 board pack (the prior-period view is the
+Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
 
 ---
 

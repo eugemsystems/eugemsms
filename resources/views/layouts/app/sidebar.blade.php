@@ -1461,6 +1461,9 @@
                                     <a href="{{ route('reporting.income-statement', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.income-statement') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-funds-line"></i> {{ __('Income statement') }}
                                     </a>
+                                    <a href="{{ route('reporting.management', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.management') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pie-chart-2-line"></i> {{ __('Management reports') }}
+                                    </a>
                                     <a href="{{ route('reporting.balance-sheet', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('reporting.balance-sheet') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-scales-3-line"></i> {{ __('Balance sheet') }}
                                     </a>

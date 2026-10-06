@@ -21,6 +21,7 @@ use Modules\Reporting\Livewire\Export\Accounting as ExportAccounting;
 use Modules\Reporting\Livewire\Financial\BalanceSheet;
 use Modules\Reporting\Livewire\Financial\CashFlow;
 use Modules\Reporting\Livewire\Financial\IncomeStatement;
+use Modules\Reporting\Livewire\Financial\Management;
 use Modules\Reporting\Livewire\Financial\TrialBalance;
 use Modules\Reporting\Livewire\Schedules\Index as SchedulesIndex;
 use Modules\Reporting\Models\PeriodCloseChecklist;
@@ -104,6 +105,7 @@ it('renders every reporting screen for a fully-permissioned user', function (): 
     Livewire::actingAs($user)->test(IncomeStatement::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($user)->test(BalanceSheet::class, ['school' => $f['school']])->call('generate')->assertHasNoErrors()->assertSet('isBalanced', true);
     Livewire::actingAs($user)->test(CashFlow::class, ['school' => $f['school']])->call('generate')->assertHasNoErrors();
+    Livewire::actingAs($user)->test(Management::class, ['school' => $f['school']])->assertOk()->set('tab', 'collection')->assertOk();
     Livewire::actingAs($user)->test(Checklist::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($user)->test(SchedulesIndex::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($user)->test(ExportAccounting::class, ['school' => $f['school']])->assertOk();

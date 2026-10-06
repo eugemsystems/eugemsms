@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -17,20 +18,27 @@ use Modules\Core\Domain\Support\PeriodType;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\File;
+use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\School;
+use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
 use Modules\Finance\Domain\Actions\PostJournalAction;
 use Modules\Finance\Domain\DataObjects\JournalLineData;
 use Modules\Finance\Domain\DataObjects\PostJournalData;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\BankAccount;
+use Modules\Finance\Models\CostCentre;
+use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\Journal;
 use Modules\Finance\Models\JournalLine;
+use Modules\People\Models\Student;
 use Modules\Reporting\Domain\Actions\AcknowledgeCloseCheckAction;
 use Modules\Reporting\Domain\Actions\GenerateAccountingExportAction;
 use Modules\Reporting\Domain\Actions\GenerateBalanceSheetAction;
 use Modules\Reporting\Domain\Actions\GenerateCashFlowAction;
 use Modules\Reporting\Domain\Actions\GenerateClosePackAction;
+use Modules\Reporting\Domain\Actions\GenerateCollectionReportAction;
+use Modules\Reporting\Domain\Actions\GenerateDepartmentalReportAction;
 use Modules\Reporting\Domain\Actions\GenerateIncomeStatementAction;
 use Modules\Reporting\Domain\Actions\GenerateTrialBalanceAction;
 use Modules\Reporting\Domain\Actions\RunAndRecordCloseChecklistAction;
@@ -40,6 +48,7 @@ use Modules\Reporting\Domain\DataObjects\GenerateBalanceSheetData;
 use Modules\Reporting\Domain\DataObjects\GenerateCashFlowData;
 use Modules\Reporting\Domain\DataObjects\GenerateClosePackData;
 use Modules\Reporting\Domain\DataObjects\GenerateIncomeStatementData;
+use Modules\Reporting\Domain\DataObjects\GenerateManagementReportData;
 use Modules\Reporting\Domain\DataObjects\GenerateTrialBalanceData;
 use Modules\Reporting\Domain\DataObjects\RunAndRecordCloseChecklistData;
 use Modules\Reporting\Domain\Events\DuplicateAccountingExportAttempted;
@@ -328,4 +337,51 @@ it('reports bank movements by journal type between a computed opening and closin
         ->and($flow['inflows'])->toBe([['journal_type' => 'RECEIPT', 'amount_minor' => 20000]])
         ->and($flow['outflows'])->toBe([['journal_type' => 'PAYMENT', 'amount_minor' => 5000]])
         ->and($flow['closing_minor'])->toBe(85000);
+});
+
+it('splits income and expense by cost centre, keeping lines with no cost centre on their own row (BR-FIN-12-001)', function (): void {
+    $f = fin12Fixture();
+    $junior = CostCentre::factory()->for($f['school'])->create(['code' => 'JNR', 'name' => 'Junior school']);
+
+    foreach ([[$junior->id, 30000, 'income'], [$junior->id, 8000, 'expense'], [null, 5000, 'income']] as [$centre, $amount, $kind]) {
+        $account = $kind === 'income' ? $f['income'] : $f['expense'];
+        $incomeSide = $kind === 'income';
+        app(PostJournalAction::class)->execute(new PostJournalData(
+            schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id, journalType: 'MANUAL', narration: 'Split',
+            lines: [
+                new JournalLineData(accountId: $f['cash']->id, direction: $incomeSide ? 'DR' : 'CR', amount: Money::of($amount, Currency::USD)),
+                new JournalLineData(accountId: $account->id, direction: $incomeSide ? 'CR' : 'DR', amount: Money::of($amount, Currency::USD), costCentreId: $centre),
+            ],
+            effectiveAt: now(), postedByUserId: $f['user']->id,
+        ));
+    }
+
+    $report = app(GenerateDepartmentalReportAction::class)->execute(new GenerateManagementReportData($f['school']->id, now()->startOfMonth(), now()->endOfMonth(), 'USD'));
+    $byCode = collect($report['rows'])->keyBy('code');
+
+    expect($byCode['JNR']['income_minor'])->toBe(30000)->and($byCode['JNR']['expense_minor'])->toBe(8000)->and($byCode['JNR']['net_minor'])->toBe(22000)
+        ->and($byCode['—']['income_minor'])->toBe(5000)
+        ->and($report['total_net_minor'])->toBe(27000);
+});
+
+it('compares fees billed with fees collected by grade level and leaves voided invoices out', function (): void {
+    $f = fin12Fixture();
+    $level = GradeLevel::factory()->for($f['school'])->for(SchoolSection::factory()->for($f['school'])->create(), 'section')->create(['name' => 'Form 1']);
+    $student = Student::factory()->for($f['school'])->create();
+    DB::table('students')->where('id', $student->id)->update(['grade_level_id' => $level->id]);
+
+    foreach ([[40000, 30000, 10000, 'issued'], [20000, 0, 20000, 'issued'], [99999, 0, 99999, 'voided']] as $i => [$net, $paid, $balance, $status]) {
+        Invoice::unguarded(fn () => Invoice::query()->create([
+            'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'invoice_number' => "INV/00000{$i}",
+            'invoice_type' => 'term', 'student_id' => $student->id, 'billed_party_type' => 'guardian', 'billed_party_id' => 1,
+            'issue_date' => now()->toDateString(), 'due_date' => now()->toDateString(), 'gross_minor' => $net, 'net_minor' => $net,
+            'paid_minor' => $paid, 'balance_minor' => $balance, 'currency' => 'USD', 'status' => $status,
+        ]));
+    }
+
+    $report = app(GenerateCollectionReportAction::class)->execute(new GenerateManagementReportData($f['school']->id, now()->startOfMonth(), now()->endOfMonth(), 'USD'));
+
+    expect($report['rows'])->toHaveCount(1)->and($report['rows'][0]['grade_level'])->toBe('Form 1')->and($report['rows'][0]['learners'])->toBe(1)
+        ->and($report['total_billed_minor'])->toBe(60000)->and($report['total_paid_minor'])->toBe(30000)->and($report['total_outstanding_minor'])->toBe(30000)
+        ->and($report['rate_percent'])->toBe(50.0);
 });
