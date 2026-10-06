@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Modules\Academic\Domain\DataObjects\ChaseNonSubmittersData;
+use Modules\Academic\Domain\DataObjects\ListNonSubmittersData;
 use Modules\Academic\Models\Assignment;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Actions\Notifications\DispatchNotificationAction;
@@ -27,6 +28,7 @@ final class ChaseNonSubmittersAction extends Action
 
     public function __construct(
         private readonly DispatchNotificationAction $dispatchNotification,
+        private readonly ListNonSubmittersAction $nonSubmitters,
     ) {}
 
     /**
@@ -37,7 +39,12 @@ final class ChaseNonSubmittersAction extends Action
         $assignment = Assignment::findOrFail($data->assignmentId);
         $sent = 0;
 
-        foreach (Student::query()->whereIn('id', $data->studentIds)->get() as $student) {
+        // The id list comes from the caller; only learners who really have not submitted
+        // are reminded, so the action cannot be used to message arbitrary students.
+        $genuine = $this->nonSubmitters->execute(new ListNonSubmittersData($assignment->id))->pluck('id')->all();
+        $studentIds = array_values(array_intersect($data->studentIds, $genuine));
+
+        foreach (Student::query()->whereIn('id', $studentIds)->get() as $student) {
             if ($student->user_id === null) {
                 continue;
             }

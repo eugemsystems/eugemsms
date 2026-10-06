@@ -114,7 +114,7 @@ it('does not auto-queue a stream-only content item into the offline cache (AC-AC
 
     $item = app(CreateContentItemAction::class)->execute(new CreateContentItemData(
         courseSpaceId: $space->id, contentType: 'video', title: 'Practical Demo — Circular Motion.mp4',
-        fileSizeBytes: 18_000_000, isDownloadableOffline: false,
+        externalUrl: 'https://cdn.example.test/circular-motion.mp4', fileSizeBytes: 18_000_000, isDownloadableOffline: false,
     ));
 
     expect($item->file_size_bytes)->toBe(18_000_000);
@@ -128,7 +128,7 @@ it('records an offline download for a downloadable content item', function (): v
     $f = aca08Fixture();
     $space = app(CreateCourseSpaceAction::class)->execute(new CreateCourseSpaceData(teachingGroupId: $f['teachingGroup']->id));
     $item = app(CreateContentItemAction::class)->execute(new CreateContentItemData(
-        courseSpaceId: $space->id, contentType: 'note', title: 'Momentum Notes.pdf', fileSizeBytes: 340_000,
+        courseSpaceId: $space->id, contentType: 'note', title: 'Momentum Notes.pdf', externalUrl: 'https://cdn.example.test/momentum.pdf', fileSizeBytes: 340_000,
     ));
     app(PublishContentItemAction::class)->execute(new PublishContentItemData(contentItemId: $item->id));
 
@@ -143,7 +143,7 @@ it('makes content inaccessible once a learner\'s teaching-group enrolment ends (
     $f = aca08Fixture();
     $space = app(CreateCourseSpaceAction::class)->execute(new CreateCourseSpaceData(teachingGroupId: $f['teachingGroup']->id));
     $item = app(CreateContentItemAction::class)->execute(new CreateContentItemData(
-        courseSpaceId: $space->id, contentType: 'note', title: 'Notes',
+        courseSpaceId: $space->id, contentType: 'note', title: 'Notes', externalUrl: 'https://cdn.example.test/notes.pdf',
     ));
     app(PublishContentItemAction::class)->execute(new PublishContentItemData(contentItemId: $item->id));
     $student = aca08EnrolledStudent($f);
@@ -282,7 +282,7 @@ it('writes final marks through the normal ACA-05 mark-entry path when an assignm
 
     $assignment = app(CreateAssignmentAction::class)->execute(new CreateAssignmentData(
         courseSpaceId: $space->id, title: 'Graded Coursework', instructions: 'Complete the task.',
-        opensAt: now()->subDays(3), dueAt: now()->addDays(3), latePolicy: 'block', submissionType: 'file',
+        opensAt: now()->subDays(3), dueAt: now()->addDays(3), latePolicy: 'block', submissionType: 'both',
         createdByUserId: $f['user']->id, maxMark: 100, assessmentTypeId: $assessmentType->id,
     ));
 

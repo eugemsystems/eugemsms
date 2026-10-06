@@ -236,6 +236,13 @@ class AcademicServiceProvider extends ModuleServiceProvider
      */
     private function registerPermissions(): void
     {
+        PermissionRegistry::register('LMS', [
+            'course.manage' => ['description' => 'Create course spaces and manage their content — a teacher does so only for groups they teach.'],
+            'assignment.create' => ['description' => 'Create, publish and close assignments in course spaces.'],
+            'assignment.mark' => ['description' => 'Mark submissions, review similarity flags and chase non-submission.'],
+            'discussion.moderate' => ['description' => 'Lock or pin discussion threads and hide posts (with a reason).'],
+        ]);
+
         PermissionRegistry::register('ACADEMIC', [
             'curriculum.view' => ['description' => 'View the curriculum catalogue — frameworks, subjects, groups, offerings, pathways, prerequisites, syllabi.'],
             'curriculum.manage' => ['description' => 'Create curriculum frameworks, subjects, subject groups, level offerings, pathways, prerequisites, and syllabus entries.'],
@@ -312,6 +319,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/timetable.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/projects.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/exams.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/lms.php');
         });
     }
 

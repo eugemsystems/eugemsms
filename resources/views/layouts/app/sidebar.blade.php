@@ -417,6 +417,24 @@
                     @endif
 
                     @if ($sessionsSchool)
+                        @php $learningGroupActive = request()->routeIs('academic.lms.*') || request()->routeIs('academic.cbt.*') || request()->routeIs('academic.library.*') || request()->routeIs('academic.quality.*'); @endphp
+                        <div class="app-sidebar-group">
+                            <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $learningGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-learning" aria-expanded="{{ $learningGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-learning">
+                                <i class="ri ri-computer-line"></i> {{ __('Learning & Teaching') }}
+                                <i class="ri ri-arrow-right-s-line ms-auto app-sidebar-caret"></i>
+                            </a>
+                            <div class="collapse {{ $learningGroupActive ? 'show' : '' }}" id="sidebar-group-learning">
+                                <div class="app-sidebar-subnav">
+                                    <div class="app-sidebar-heading">{{ __('E-learning') }}</div>
+                                    <a href="{{ route('academic.lms.spaces', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.lms.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-read-line"></i> {{ __('Course spaces') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($sessionsSchool)
                         @php $boardingGroupActive = request()->routeIs('boarding.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $boardingGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-boarding" aria-expanded="{{ $boardingGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-boarding">

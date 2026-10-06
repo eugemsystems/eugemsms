@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\EnterMarkData;
 use Modules\Academic\Domain\DataObjects\MarkAssignmentSubmissionData;
 use Modules\Academic\Domain\Exceptions\MarkOutOfRangeException;
@@ -32,6 +33,14 @@ final class MarkAssignmentSubmissionAction extends Action
     {
         $submission = AssignmentSubmission::findOrFail($data->submissionId);
         $assignment = Assignment::findOrFail($submission->assignment_id);
+
+        if (! in_array($submission->status, ['submitted', 'marked'], true)) {
+            throw new InvalidArgumentException("A {$submission->status} submission cannot be marked.");
+        }
+
+        if ($data->feedback !== null && mb_strlen($data->feedback) > 5000) {
+            throw new InvalidArgumentException('Feedback is limited to 5,000 characters.');
+        }
 
         if ($assignment->max_mark !== null && ($data->rawMark < 0 || $data->rawMark > (float) $assignment->max_mark)) {
             throw MarkOutOfRangeException::forMark($data->rawMark, (float) $assignment->max_mark);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\SubmitAssignmentData;
 use Modules\Academic\Domain\Exceptions\AssignmentSubmissionBlockedException;
 use Modules\Academic\Domain\Exceptions\LearnerNotEnrolledException;
@@ -43,6 +44,29 @@ final class SubmitAssignmentAction extends Action
                 "Assignment #{$assignment->id} is not open for submission.",
                 ['assignment_id' => $assignment->id, 'status' => $assignment->status],
             );
+        }
+
+        if (Carbon::now()->lessThan($assignment->opens_at)) {
+            throw new InvalidStateTransitionException("Assignment #{$assignment->id} has not opened yet.", ['assignment_id' => $assignment->id]);
+        }
+
+        $hasFiles = ! empty($data->fileIds);
+        $hasText = $data->submittedText !== null && trim($data->submittedText) !== '';
+        $hasLink = $data->submittedLink !== null && trim($data->submittedLink) !== '';
+
+        $acceptable = match ($assignment->submission_type) {
+            'file' => $hasFiles,
+            'text' => $hasText,
+            'link' => $hasLink,
+            default => $hasFiles || $hasText || $hasLink,
+        };
+
+        if (! $acceptable) {
+            throw new InvalidArgumentException("This assignment takes a {$assignment->submission_type} submission.");
+        }
+
+        if ($hasLink && preg_match('#^https?://[^\s]+$#i', (string) $data->submittedLink) !== 1) {
+            throw new InvalidArgumentException('A submitted link must be an http or https address.');
         }
 
         if (! TeachingGroupMember::isActiveFor($data->studentId, $assignment->courseSpace->teaching_group_id)) {

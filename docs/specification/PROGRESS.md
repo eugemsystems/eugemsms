@@ -1444,10 +1444,31 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 |---|---|
 | FIN-07 | ✅ `Finance/Livewire/{Discounts,Scholarships}/`, `Reports/Discounts` |
 | PPL-06 | ✅ `People/Livewire/Alumni/` |
-| ACA-08 | ⬜ |
+| ACA-08 | ✅ `Academic/Livewire/Lms/` |
 | ACA-09 | ⬜ |
 | ACA-10 | ⬜ |
 | ACA-11 | ⬜ |
+
+**ACA-08 note.** Six teacher/administrator screens under `academic.lms.*` —
+`Lms\CourseSpaces`, `CourseSpace`, `AssignmentCreate`, `Marking`, `NonSubmission`,
+`Discussion` — and the `lms.*` permissions (`course.manage`, `assignment.create`,
+`assignment.mark`, `discussion.moderate`). Reach is enforced per space: a teacher manages only
+the spaces they teach, school-reach holders all (`AuthorizesCourseSpace`). Content shows its
+size before download with large and stream-only flags (AC-ACA-08-001); late penalty is fixed
+at marking (AC-ACA-08-002); similarity only flags (AC-ACA-08-003); a hidden post is kept
+with its moderator and reason. **Backend hardening:** content links must be http(s) and a
+file's size now comes from the stored file, an infected file is refused and an unscanned one
+cannot be published; assignment, discussion-thread and discussion-post inputs are validated;
+`SubmitAssignmentAction` enforces the declared submission type, the opening time and a
+valid link; `MarkAssignmentSubmissionAction` refuses unsubmitted work;
+`ChaseNonSubmittersAction` reminded any student id it was given — it now reminds only
+genuine non-submitters; discussion authorship is checked against the space; course-space
+teacher override must be this school's staff. New: `CloseAssignmentAction`,
+`SetDiscussionThreadStateAction`. **Known gaps:** the learner-facing surface (`/api/v1/lms/*`,
+offline submission queue, learner view of content/assignments/discussion) belongs to the
+API/Next.js/Flutter phase; file upload (content comes from the existing file vault or a
+link); rubric attachment; no content reorder/edit/archive; the 'both' submission type
+accepts any one of file, text or link.
 
 **PPL-06 note.** Seven screens under `alumni.*` (`Directory\Index`, `Directory\Show`,
 `Events\Index`, `Campaigns\Index`, `Pledges\Index`, `Donations\Record`,

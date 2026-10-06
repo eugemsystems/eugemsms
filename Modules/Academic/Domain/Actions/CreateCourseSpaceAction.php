@@ -9,6 +9,7 @@ use Modules\Academic\Domain\Exceptions\DuplicateCourseSpaceException;
 use Modules\Academic\Models\CourseSpace;
 use Modules\Academic\Models\TeachingGroup;
 use Modules\Core\Domain\Actions\Action;
+use Modules\People\Models\Staff;
 
 /**
  * ACT-CreateCourseSpace (Book K ACA-08 §2/BR-ACA-08-001). A course
@@ -21,6 +22,10 @@ final class CreateCourseSpaceAction extends Action
     public function execute(CreateCourseSpaceData $data): CourseSpace
     {
         $teachingGroup = TeachingGroup::findOrFail($data->teachingGroupId);
+
+        if ($data->teacherStaffId !== null) {
+            Staff::query()->where('school_id', $teachingGroup->school_id)->findOrFail($data->teacherStaffId);
+        }
 
         $exists = CourseSpace::query()
             ->where('school_id', $teachingGroup->school_id)

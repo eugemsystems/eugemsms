@@ -31,6 +31,26 @@ final class CreateAssignmentAction extends Action
     {
         $courseSpace = CourseSpace::findOrFail($data->courseSpaceId);
 
+        if (trim($data->title) === '' || mb_strlen($data->title) > 200 || trim($data->instructions) === '') {
+            throw new InvalidArgumentException('An assignment needs a title (up to 200 characters) and instructions.');
+        }
+
+        if (! in_array($data->submissionType, ['file', 'text', 'link', 'both'], true)) {
+            throw new InvalidArgumentException("[{$data->submissionType}] is not a submission type.");
+        }
+
+        if ($data->dueAt->lessThanOrEqualTo($data->opensAt)) {
+            throw new InvalidArgumentException('An assignment must be due after it opens.');
+        }
+
+        if ($data->maxMark !== null && $data->maxMark <= 0) {
+            throw new InvalidArgumentException('The maximum mark must be above zero.');
+        }
+
+        if ($data->latePenaltyPercentPerDay !== null && ($data->latePenaltyPercentPerDay < 0 || $data->latePenaltyPercentPerDay > 100)) {
+            throw new InvalidArgumentException('The daily late penalty must be between 0 and 100 percent.');
+        }
+
         if (! in_array($data->latePolicy, ['block', 'accept_penalised', 'accept_flagged'], true)) {
             throw new InvalidArgumentException("Unknown late policy [{$data->latePolicy}].");
         }
