@@ -246,3 +246,22 @@ it('serves a learner their own report cards and attendance, never a fee balance,
     $balances = $this->getJson('/api/v1/finance/balances')->assertOk()->json('data.0');
     expect($balances['student_id'])->toBe($own->ulid)->and($balances)->not->toHaveKey('balances');
 });
+
+it('narrows report cards to the term named by X-Term-Id and keeps the history without it', function (): void {
+    $f = guardianApiFixture();
+    $class = SchoolClass::factory()->for($f['school'])->create();
+    $term2 = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create(['number' => 2]);
+
+    foreach ([$f['term'], $term2] as $term) {
+        TermResult::unguarded(fn () => TermResult::query()->create([
+            'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $term->id, 'student_id' => $f['child']->id,
+            'class_id' => $class->id, 'status' => 'published', 'average_percent' => '70.00', 'published_at' => now(), 'subjects_taken' => 8, 'report_version' => 1,
+        ]));
+    }
+    Sanctum::actingAs($f['user'], ['*']);
+    $url = '/api/v1/students/'.$f['child']->ulid.'/report-cards';
+
+    expect($this->getJson($url)->assertOk()->json('data'))->toHaveCount(2)
+        ->and($this->getJson($url, ['X-Term-Id' => (string) $term2->id])->assertOk()->json('data'))->toHaveCount(1);
+    $this->getJson($url, ['X-Term-Id' => '999999'])->assertStatus(400);
+});

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Academic\Models\TermResult;
+use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Http\Support\ApiResponse;
 use Modules\Core\Models\Term;
 use Modules\People\Domain\Support\LinkedLearners;
@@ -31,6 +32,10 @@ final class ReportCardsController
         $results = TermResult::query()
             ->where('student_id', $link->student_id)
             ->whereIn('status', ['published', 'withheld'])
+            // History by default; an explicit X-Term-Id / X-Academic-Year-Id (already validated by the
+            // session middleware) narrows the list to that term or year.
+            ->when($request->hasHeader('X-Term-Id'), fn ($q) => $q->where('term_id', (int) SessionContext::termId()))
+            ->when(! $request->hasHeader('X-Term-Id') && $request->hasHeader('X-Academic-Year-Id'), fn ($q) => $q->whereIn('term_id', Term::query()->where('academic_year_id', (int) SessionContext::yearId())->select('id')))
             ->orderByDesc('term_id')
             ->get();
         $terms = Term::query()->whereIn('id', $results->pluck('term_id'))->get()->keyBy('id');
