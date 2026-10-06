@@ -27,6 +27,7 @@ tags:
   - name: Auth
   - name: Me
   - name: Guardian
+  - name: Teacher
   - name: Finance
   - name: Academics
   - name: Communications
@@ -156,7 +157,7 @@ paths:
   /guardians/me/children:
     get:
       tags: [Guardian]
-      summary: Learners the guardian is currently linked to (ability children.read)
+      summary: Learners the guardian is currently linked to (ability children.read). A learner signing in themselves uses the /students/{student}/... endpoints for their own id, without any fee balance.
       responses:
         "200": { description: OK }
   /finance/balances:
@@ -245,6 +246,52 @@ paths:
         - { name: student, in: path, required: true, schema: { type: string } }
       responses:
         "200": { description: OK }
+  /teacher/classes:
+    get:
+      tags: [Teacher]
+      summary: Classes the teacher may mark (ability attendance.mark). School or section reach sees every class; narrower reach sees the classes they are class teacher of or teach on the timetable.
+      responses:
+        "200": { description: OK }
+  /teacher/classes/{class}/attendance:
+    get:
+      tags: [Teacher]
+      summary: The class register for a day — learners alphabetically with any mark already made, plus reason codes
+      parameters:
+        - { name: class, in: path, required: true, schema: { type: string } }
+        - { name: date, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not a class you may mark }
+    post:
+      tags: [Teacher]
+      summary: Submit marks. Built for offline — every record carries its own idempotency_key, so replaying a queued request is harmless; a mark that conflicts with one already stored is returned in `conflicts` and never overwritten.
+      parameters:
+        - { name: class, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, records]
+              properties:
+                date: { type: string, format: date, description: Not in the future and inside the current term }
+                records:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [student, status, idempotency_key]
+                    properties:
+                      student: { type: string }
+                      status: { type: string, enum: [present, absent, late, excused] }
+                      reason_code_id: { type: integer, nullable: true }
+                      minutes_late: { type: integer, nullable: true }
+                      note: { type: string, nullable: true }
+                      idempotency_key: { type: string, maxLength: 64 }
+      responses:
+        "200": { description: Saved; data.conflicts lists any learner whose existing mark differs }
+        "422": { description: Bad date, status, key or a learner not on this register }
   /communications/notices:
     get:
       tags: [Communications]

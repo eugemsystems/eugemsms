@@ -184,8 +184,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   Parent endpoints only ever see their own linked, currently effective learners; balances are absent
   without `may_view_full_balance`; a withheld report card carries no marks and no reason.
   **Security fix found on the way:** a revoked Sanctum token (logout, refresh rotation, device removal)
-  kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Not built yet**: teacher and
-  student endpoint families, attendance, boarding/exeat, timetable, documents, payment initiation, the
+  kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Also built**: teacher register endpoints
+  (`teacher/classes`, `teacher/classes/{id}/attendance` GET/POST — offline-safe per-record idempotency keys,
+  conflicts reported not overwritten) and a learner reading their own report cards, attendance and
+  timetable (never a fee balance). **Not built yet**: teacher marks entry, homework and LMS, attendance, boarding/exeat, timetable, documents, payment initiation, the
   `X-Academic-Year-Id`/`X-Term-Id` headers, `Accept-Language`, an OpenAPI document, and API keys/webhooks.
 - **SAA vendor impersonation (BR-SAA-02-002).** Consent-gated by a structured grant, not a typed
   reference: the customer's own administrator (`core.support_access.manage`, screen

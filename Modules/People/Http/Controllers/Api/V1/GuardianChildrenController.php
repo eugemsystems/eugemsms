@@ -22,7 +22,7 @@ final class GuardianChildrenController
         /** @var User $user */
         $user = $request->user();
 
-        return ApiResponse::ok($linked->forUser($user)->map(fn ($link): array => [
+        return ApiResponse::ok($linked->forUser($user)->reject(fn ($link): bool => $link->relationship === 'self')->map(fn ($link): array => [
             'id' => $link->student->ulid,
             'admission_number' => $link->student->admission_number,
             'first_name' => $link->student->first_name,

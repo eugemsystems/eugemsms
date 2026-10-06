@@ -229,3 +229,20 @@ it('registers a push device in place, lists the inbox with an unread count and l
     expect($this->getJson('/api/v1/communications/inbox')->json('meta.unread_count'))->toBe(0);
     $this->deleteJson('/api/v1/me/devices/'.$id)->assertOk();
 });
+
+it('serves a learner their own report cards and attendance, never a fee balance, and never lists them as someone\'s child', function (): void {
+    $f = guardianApiFixture();
+    $learnerUser = User::factory()->create(['tenant_id' => $f['school']->tenant_id]);
+    $learnerUser->schools()->attach($f['school'], ['status' => 'active', 'is_primary' => true]);
+    $own = Student::factory()->for($f['school'])->create(['user_id' => $learnerUser->id, 'status' => 'active']);
+    guardianApiInvoice($f, $own);
+    Sanctum::actingAs($learnerUser, ['*']);
+
+    $this->getJson('/api/v1/students/'.$own->ulid.'/attendance')->assertOk();
+    $this->getJson('/api/v1/students/'.$own->ulid.'/report-cards')->assertOk();
+    $this->getJson('/api/v1/students/'.$f['child']->ulid.'/attendance')->assertStatus(404);
+    expect($this->getJson('/api/v1/guardians/me/children')->json('data'))->toBe([]);
+
+    $balances = $this->getJson('/api/v1/finance/balances')->assertOk()->json('data.0');
+    expect($balances['student_id'])->toBe($own->ulid)->and($balances)->not->toHaveKey('balances');
+});

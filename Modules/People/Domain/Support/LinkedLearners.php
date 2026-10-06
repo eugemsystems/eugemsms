@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Modules\People\Domain\Support;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Modules\People\Models\Guardian;
+use Modules\People\Models\Student;
 use Modules\People\Models\StudentGuardian;
 
 /**
@@ -25,7 +26,7 @@ final class LinkedLearners
     {
         $guardianIds = Guardian::query()->where('user_id', $user->id)->pluck('id');
 
-        return StudentGuardian::query()
+        $links = StudentGuardian::query()
             ->whereIn('guardian_id', $guardianIds)
             ->where('status', 'active')
             ->whereDate('effective_from', '<=', now()->toDateString())
@@ -33,7 +34,29 @@ final class LinkedLearners
             ->with('student')
             ->get()
             ->filter(fn (StudentGuardian $link): bool => $link->student !== null)
-            ->values();
+            ->all();
+
+        return Collection::make([...$links, ...$this->ownRecords($user)])->values();
+    }
+
+    /**
+     * A learner who signs in themselves sees their own record. It comes back as an unsaved
+     * `self` link with every guardian-only permission off — in particular no fee balance, which a
+     * learner sees only if the school decides so — so the same endpoints serve the learner app.
+     *
+     * @return array<int, StudentGuardian>
+     */
+    private function ownRecords(User $user): array
+    {
+        return Student::query()->where('user_id', $user->id)->where('status', 'active')->get()
+            ->map(function (Student $student): StudentGuardian {
+                $link = new StudentGuardian([
+                    'school_id' => $student->school_id, 'student_id' => $student->id, 'relationship' => 'self', 'status' => 'active',
+                ]);
+                $link->setRelation('student', $student);
+
+                return $link;
+            })->all();
     }
 
     public function linkFor(User $user, string $studentUlid): ?StudentGuardian

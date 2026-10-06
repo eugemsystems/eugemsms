@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Academic\Http\Controllers\Api\V1\ReportCardsController;
 use Modules\Academic\Http\Controllers\Api\V1\StudentAcademicsController;
+use Modules\Academic\Http\Controllers\Api\V1\TeacherAttendanceController;
 use Modules\Comms\Http\Controllers\Api\V1\DevicesController;
 use Modules\Comms\Http\Controllers\Api\V1\InboxController;
 use Modules\Comms\Http\Controllers\Api\V1\NoticesController;
@@ -64,6 +65,10 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
 
     Route::get('students/{student}/attendance', [StudentAcademicsController::class, 'attendance'])->middleware('serp.token-ability:attendance.read');
     Route::get('students/{student}/timetable', [StudentAcademicsController::class, 'timetable'])->middleware('serp.token-ability:timetable.read');
+
+    Route::get('teacher/classes', [TeacherAttendanceController::class, 'classes'])->middleware('serp.token-ability:attendance.mark');
+    Route::get('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'register'])->middleware('serp.token-ability:attendance.mark');
+    Route::post('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'mark'])->middleware('serp.token-ability:attendance.mark');
 
     Route::get('communications/inbox', [InboxController::class, 'index'])->middleware('serp.token-ability:notices.read');
     Route::post('communications/inbox/{notification}/read', [InboxController::class, 'read'])->middleware('serp.token-ability:notices.read');
