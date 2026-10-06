@@ -4,6 +4,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
@@ -34,6 +35,7 @@ use Modules\Fiscal\Domain\DataObjects\RaiseFiscalCreditNoteData;
 use Modules\Fiscal\Domain\DataObjects\RegisterFiscalDeviceData;
 use Modules\Fiscal\Domain\DataObjects\RouteReceiptForFiscalisationData;
 use Modules\Fiscal\Domain\Events\FiscalReconciliationException;
+use Modules\Fiscal\Models\FiscalAuditLogEntry;
 use Modules\Fiscal\Models\FiscalDevice;
 use Modules\Fiscal\Models\FiscalReceipt;
 use Modules\People\Models\Student;
@@ -350,4 +352,41 @@ it('retro-fits OPS-03 farm sales for real through RecordFarmSaleAction without a
     $fiscalReceipt = FiscalReceipt::findOrFail($sale->fiscal_receipt_id);
     expect($fiscalReceipt->source_type)->toBe('farm_sale')
         ->and($fiscalReceipt->status)->toBe('accepted');
+});
+
+it('logs every request to and response from the FDMS gateway in the append-only audit log (BR-FIN-13-012)', function (): void {
+    $f = fin13Fixture();
+
+    $fiscalReceipt = app(RouteReceiptForFiscalisationAction::class)->execute(new RouteReceiptForFiscalisationData(
+        schoolId: $f['school']->id, sourceType: 'fee_component', sourceId: 1, receiptType: 'fiscal_invoice',
+        currency: 'USD', invoiceNumber: 'RCT/000077', receiptDate: now(),
+        lines: [['source_identifier' => 'UNIFORM', 'description' => 'Uniform', 'amount_minor' => 5000]],
+        paymentMethods: ['cash'], performedByUserId: $f['user']->id,
+    ));
+
+    $entry = FiscalAuditLogEntry::query()->where('event_type', 'submit_receipt')->firstOrFail();
+
+    expect($fiscalReceipt->status)->toBe('accepted')
+        ->and($entry->reference)->toBe('RCT/000077')
+        ->and($entry->device_id)->toBe($f['device']->id)
+        ->and($entry->request_payload['total_minor'])->toBe(5000)
+        ->and($entry->response_payload['accepted'])->toBeTrue()
+        ->and($entry->duration_ms)->not->toBeNull()
+        ->and(fn () => $entry->update(['reference' => 'tampered']))->toThrow(InvalidStateTransitionException::class);
+});
+
+it('logs an unreachable FDMS attempt and still queues the receipt offline (BR-FIN-13-012, AC-FIN-13-001)', function (): void {
+    $f = fin13Fixture();
+
+    $fiscalReceipt = app(RouteReceiptForFiscalisationAction::class)->execute(new RouteReceiptForFiscalisationData(
+        schoolId: $f['school']->id, sourceType: 'fee_component', sourceId: 1, receiptType: 'fiscal_invoice',
+        currency: 'USD', invoiceNumber: 'RCT/000078', receiptDate: now(),
+        lines: [['source_identifier' => 'UNIFORM', 'description' => 'Uniform', 'amount_minor' => 5000]],
+        paymentMethods: ['cash'], performedByUserId: $f['user']->id, simulate: 'unreachable',
+    ));
+
+    $entry = FiscalAuditLogEntry::query()->where('reference', 'RCT/000078')->firstOrFail();
+
+    expect($fiscalReceipt->status)->toBe('offline_queued')
+        ->and($entry->response_payload['unreachable'])->toBeTrue();
 });

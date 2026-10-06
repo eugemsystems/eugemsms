@@ -159,8 +159,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   the statement screen; downloads are recorded. Still open: a receipt download button.
 - **FIN-10 capitalisation.** Capital PO lines and capitalisable stock items name an asset category
   and now capitalise automatically on receipt/issue (see FIN-10 note).
+- **FIN-13 audit log.** Every FDMS request/response is written to `fiscal_audit_log` by a driver
+  decorator; a failed log write never blocks the fiscal call.
 
-**Still open (not yet started in this pass)**: FIN-13 fiscal audit log writes; FIN-11 forecast maths;
+**Still open (not yet started in this pass)**: FIN-11 forecast maths;
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
 board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
@@ -1017,10 +1019,8 @@ manual credit-note raising for a source module that doesn't wire
 (offline depth/oldest/drain), `Reports\ZReports` (read-only),
 `Reconciliation\Index` ⭐ (runs the real
 `ReconcileFiscalisationAction` on demand), `Audit\Index` (read-only).
-**A real, documented backend gap found but NOT closed this pass**:
-no Action anywhere ever writes a `fiscal_audit_log` row — closing it
-needs wiring a log write into six existing call sites, broader than
-this book's narrow create-only gap-filling mandate. See
+The audit log (BR-FIN-13-012) is written by `AuditedFiscalGatewayDriver`, a decorator that logs
+every gateway request and response (gap closed in the post-Book-K pass). See
 `.ai/rules/fiscal.md`.
 
 **FIN-14 note.** Built (`Livewire/{Pos,Products,SpendPoints,Wallets,

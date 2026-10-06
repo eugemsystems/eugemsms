@@ -22,6 +22,7 @@ use Modules\Fiscal\Domain\Actions\ReconcileFiscalisationAction;
 use Modules\Fiscal\Domain\Contracts\FiscalGatewayDriver;
 use Modules\Fiscal\Domain\Listeners\RouteFarmSaleListener;
 use Modules\Fiscal\Domain\Listeners\RouteFinanceReceiptListener;
+use Modules\Fiscal\Domain\Support\AuditedFiscalGatewayDriver;
 use Modules\Fiscal\Domain\Support\CloseChecks\FiscalisationReconciledCheck;
 use Modules\Fiscal\Domain\Support\FakeFiscalGatewayDriver;
 use Modules\Fiscal\Models\FiscalAuditLogEntry;
@@ -80,13 +81,9 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * lifecycle" screen in. `Receipts\Retry` also hosts a manual
  * "raise credit note" control for a receipt whose source module
  * doesn't yet wire `RaiseFiscalCreditNoteAction` automatically.
- * **A real, documented backend gap found but NOT closed this
- * pass**: no Action anywhere ever writes a `fiscal_audit_log` row
- * (`Audit\Index`'s own docblock) — BR-FIN-13-012 is unimplemented
- * despite being a named rule; closing it needs wiring a log write
- * into six existing Actions' call sites, real business logic
- * broader than this book's "narrow create-only Action" gap-filling
- * mandate, so it is surfaced honestly rather than improvised past.
+ * The audit log (BR-FIN-13-012) is written by
+ * `AuditedFiscalGatewayDriver`, a decorator around whichever driver is
+ * bound, so every request and response is logged in one place.
  */
 class FiscalServiceProvider extends ModuleServiceProvider
 {
@@ -98,7 +95,7 @@ class FiscalServiceProvider extends ModuleServiceProvider
     {
         parent::register();
 
-        $this->app->bind(FiscalGatewayDriver::class, FakeFiscalGatewayDriver::class);
+        $this->app->bind(FiscalGatewayDriver::class, fn (): FiscalGatewayDriver => new AuditedFiscalGatewayDriver(new FakeFiscalGatewayDriver));
     }
 
     public function boot(): void

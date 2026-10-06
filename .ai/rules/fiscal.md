@@ -19,7 +19,7 @@ creation, matching `CreateFiscalisationRuleAction` exactly), `Days\Index`
 manual credit-note raising — see below), `Queue\Status` (offline
 queue depth/oldest/drain), `Reports\ZReports` (read-only), `Reconciliation\Index`
 ⭐ (runs the real `ReconcileFiscalisationAction` on demand),
-`Audit\Index` (read-only — see the documented gap below).
+`Audit\Index` (read-only; rows written by the gateway decorator).
 
 ## `Devices\Index` folds in Certificate lifecycle
 
@@ -42,23 +42,15 @@ credit note" control on an accepted receipt is the manual fallback
 for those paths, placed here rather than on a new route since
 correction is already this screen's theme.
 
-## A real, documented backend gap found but NOT closed this pass: `fiscal_audit_log` has no writer anywhere
+## `fiscal_audit_log` is written by `AuditedFiscalGatewayDriver`
 
-`fiscal_audit_log` has a real migration/model/factory, but no Action
-in the domain layer (`RegisterFiscalDeviceAction`, `OpenFiscalDayAction`,
-`CloseFiscalDayAction`, `SubmitFiscalReceiptAction`,
-`DrainOfflineFiscalQueueAction`, `CompileAndSubmitZReportAction`)
-ever writes a row to it — verified by grep; only
-`FiscalAuditLogEntryFactory`, called from `FiscalServiceProvider`'s
-own tenancy-isolation-test registration, ever creates one.
-BR-FIN-13-012 ("every request and response is logged verbatim...
-append-only") is therefore not actually implemented despite being a
-named rule. Unlike this book's two narrow create-only gap-fills
-(`CreatePayGradeNotchAction`, `CreateReportDefinitionAction`), closing
-this one needs wiring a log write into SIX existing call sites — real
-business logic broader than this pass's gap-filling mandate — so it
-is surfaced here honestly rather than improvised past. `Audit\Index`
-is built and ready; it renders correctly empty today.
+BR-FIN-13-012 is implemented by a decorator around the bound
+`FiscalGatewayDriver` (`FiscalServiceProvider::register()`), not by log
+writes in each Action. Any new driver is wrapped automatically; never call
+a driver that bypasses the binding. Private key refs and certificate bodies
+are deliberately not logged, and a failed log write is swallowed so it can
+never block a fiscal call. `http_status` stays null until a real driver
+exposes it through the contract.
 
 ## Permissions are registered under ONE module code, `FISCAL`
 

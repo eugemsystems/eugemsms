@@ -15,24 +15,9 @@ use Modules\Fiscal\Models\FiscalAuditLogEntry;
 
 /**
  * `Fiscal\Audit\Index` (Book H3 FIN-13 §7, `fiscal.audit.view`).
- * Read-only raw-payload viewer. **Documented backend gap, found
- * during this pass, not closed by it**: `fiscal_audit_log` has a
- * real migration/model/factory, but no Action anywhere in the
- * domain layer (`RegisterFiscalDeviceAction`, `OpenFiscalDayAction`,
- * `CloseFiscalDayAction`, `SubmitFiscalReceiptAction`,
- * `DrainOfflineFiscalQueueAction`, `CompileAndSubmitZReportAction`)
- * ever writes a row to it (verified by grep — only
- * `FiscalAuditLogEntryFactory`, called by `FiscalServiceProvider`'s
- * own tenancy-isolation-test registration, ever creates one).
- * BR-FIN-13-012 ("every request and response is logged verbatim...
- * append-only") is therefore not actually implemented despite being
- * a named rule. Closing this honestly needs wiring a log write into
- * every one of those call sites — real business logic, not a narrow
- * create-only Action the way `CreatePayGradeNotchAction`/
- * `CreateReportDefinitionAction` closed this pass's other two gaps —
- * so it is deliberately left as a documented gap rather than
- * improvised past. This screen is built and ready for when that
- * wiring lands; it renders correctly empty today.
+ * Read-only raw-payload viewer. Rows are written by
+ * `AuditedFiscalGatewayDriver` (BR-FIN-13-012), which wraps every
+ * gateway call.
  */
 #[Title('Fiscal audit log')]
 #[Layout('layouts.app')]
