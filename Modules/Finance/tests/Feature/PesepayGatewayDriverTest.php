@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Http;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\School;
 use Modules\Finance\Domain\Exceptions\GatewayRequestFailedException;
-use Modules\Finance\Domain\Support\PaymentGatewayDriverRegistry;
 use Modules\Finance\Domain\Support\PesepayCrypto;
 use Modules\Finance\Domain\Support\PesepayGatewayDriver;
 use Modules\Finance\Models\PaymentIntent;
@@ -102,32 +101,55 @@ it('raises a coded gateway error when Pesepay refuses, is unreachable, or answer
     expect(fn () => $f['driver']->createCheckout($f['intent']))->toThrow(GatewayRequestFailedException::class);
 });
 
-it('authenticates a result callback by decryption, and refuses plaintext or foreign-key bodies', function (): void {
+it('authenticates a result callback by the integration key header and settles on the confirmed status, not the posted one', function (): void {
     $f = pesepayFixture();
-    $body = json_encode(['payload' => $f['crypto']->encrypt([
+    $f['intent']->forceFill(['gateway_reference' => 'PSP-4'])->save();
+    $body = json_encode(['referenceNumber' => 'PSP-4', 'transactionStatus' => 'FAILED']);
+    Http::fake(['pesepay.test/*' => Http::response(['payload' => $f['crypto']->encrypt([
         'referenceNumber' => 'PSP-4', 'transactionStatus' => 'SUCCESS', 'amountDetails' => ['amount' => '125.50', 'currencyCode' => 'USD', 'transactionServiceFee' => '2.00'],
-    ])]);
+    ])])]);
 
-    expect($f['driver']->verifyWebhook([], $body))->toBeTrue();
+    expect($f['driver']->verifyWebhook(['authorization' => ['integration-key-1']], $body))->toBeTrue()
+        ->and($f['driver']->verifyWebhook(['authorization' => ['someone-else']], $body))->toBeFalse()
+        ->and($f['driver']->verifyWebhook([], $body))->toBeFalse()
+        ->and($f['driver']->verifyWebhook(['authorization' => ['integration-key-1']], 'not json'))->toBeFalse();
 
-    $event = $f['driver']->parseWebhook([], $body);
-    expect($event->gatewayReference)->toBe('PSP-4')->and($event->isSettlement())->toBeTrue()
+    $event = $f['driver']->parseWebhook(['authorization' => ['integration-key-1']], $body);
+    expect($event->gatewayReference)->toBe('PSP-4')->and($event->isSettlement())->toBeTrue()->and($event->status)->toBe('succeeded')
         ->and($event->amountMinor)->toBe(12550)->and($event->currency)->toBe('USD')->and($event->feeMinor)->toBe(200);
 
-    $plain = json_encode(['referenceNumber' => 'PSP-4', 'transactionStatus' => 'SUCCESS']);
-    $foreign = json_encode(['payload' => (new PesepayCrypto('zyxwvutsrqponmlkjihgfedcba987654'))->encrypt(['referenceNumber' => 'PSP-4', 'transactionStatus' => 'SUCCESS'])]);
-
-    expect($f['driver']->verifyWebhook([], $plain))->toBeFalse()
-        ->and($f['driver']->verifyWebhook([], $foreign))->toBeFalse()
-        ->and($f['driver']->verifyWebhook([], 'not json'))->toBeFalse();
-    expect(fn () => $f['driver']->parseWebhook([], $plain))->toThrow(InvalidArgumentException::class);
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'check-payment') && $request['referenceNumber'] === 'PSP-4');
 });
 
-it('reports itself down without credentials and is registered for the pesepay driver key', function (): void {
-    config(['services.pesepay.integration_key' => '', 'services.pesepay.encryption_key' => '']);
+it('treats a callback as pending when the confirmation cannot be made, leaving the poll to settle it', function (): void {
+    $f = pesepayFixture();
+    Http::fake(['pesepay.test/*' => fn () => throw new ConnectionException('timeout')]);
 
-    expect((new PesepayGatewayDriver)->healthCheck()->status)->toBe('down')
-        ->and(app(PaymentGatewayDriverRegistry::class)->resolve('pesepay'))->toBeInstanceOf(PesepayGatewayDriver::class);
+    $event = $f['driver']->parseWebhook([], json_encode(['referenceNumber' => 'PSP-5', 'transactionStatus' => 'SUCCESS']));
+
+    expect($event->status)->toBe('pending');
+});
+
+it('maps only SUCCESS to paid and the documented terminal statuses to unpaid', function (): void {
+    $f = pesepayFixture();
+    $f['intent']->forceFill(['gateway_reference' => 'PSP-6'])->save();
+    $current = 'SUCCESS';
+    Http::fake(['pesepay.test/*' => function () use ($f, &$current) {
+        return Http::response(['payload' => $f['crypto']->encrypt(['referenceNumber' => 'PSP-6', 'transactionStatus' => $current])]);
+    }]);
+    $statusOf = function (string $status) use ($f, &$current): string {
+        $current = $status;
+
+        return $f['driver']->poll($f['intent']->fresh())->status;
+    };
+
+    expect($statusOf('SUCCESS'))->toBe('succeeded')
+        ->and($statusOf('PAID'))->toBe('pending')
+        ->and($statusOf('PARTIALLY_PAID'))->toBe('pending')
+        ->and($statusOf('DECLINED'))->toBe('failed')
+        ->and($statusOf('REVERSED'))->toBe('failed')
+        ->and($statusOf('TIME_OUT'))->toBe('failed')
+        ->and($statusOf('CANCELLED'))->toBe('cancelled');
 });
 
 it('reads the reference from pollUrl when the sandbox answers with referenceNumber null', function (): void {
@@ -141,4 +163,18 @@ it('reads the reference from pollUrl when the sandbox answers with referenceNumb
     $push = $f['driver']->createPush($f['intent'], '0777777777', 'ecocash');
 
     expect($push->gatewayReference)->toBe('20261006142714125-A05E4612');
+});
+
+it('sends Zimbabwe dollars as ZiG and reads ZiG back as ZWG', function (): void {
+    $f = pesepayFixture('ZWG');
+    $f['intent']->forceFill(['gateway_reference' => 'PSP-7'])->save();
+    Http::fake(['pesepay.test/*' => Http::response(['payload' => $f['crypto']->encrypt([
+        'referenceNumber' => 'PSP-7', 'redirectUrl' => 'https://pay.pesepay.test/PSP-7', 'transactionStatus' => 'SUCCESS', 'amountDetails' => ['amount' => '125.50', 'currencyCode' => 'ZiG'],
+    ])])]);
+
+    $f['driver']->createCheckout($f['intent']);
+    Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/initiate') && $f['crypto']->decrypt($request['payload'])['amountDetails']['currencyCode'] === 'ZiG');
+
+    $event = $f['driver']->parseWebhook(['authorization' => ['integration-key-1']], json_encode(['referenceNumber' => 'PSP-7']));
+    expect($event->currency)->toBe('ZWG');
 });

@@ -53,7 +53,7 @@ final class IngestGatewayWebhookAction extends Action
         return $this->transaction(function () use ($data, $driver, $payloadHash, $signatureValid): GatewayWebhook {
             $webhook = GatewayWebhook::create([
                 'driver' => $data->driver,
-                'raw_headers' => $data->headers,
+                'raw_headers' => array_diff_key($data->headers, array_flip(['authorization', 'cookie', 'x-api-key'])),
                 'raw_payload' => $data->body,
                 'payload_hash' => $payloadHash,
                 'signature_valid' => $signatureValid,
@@ -79,6 +79,12 @@ final class IngestGatewayWebhookAction extends Action
             }
 
             $webhook->update(['intent_id' => $intent->id]);
+
+            if ($event->status === 'pending') {
+                $webhook->update(['processing_status' => 'failed', 'processing_error' => 'The result could not be confirmed with the gateway yet; the scheduled poll will settle it.']);
+
+                return $webhook;
+            }
 
             if ($event->isSettlement()) {
                 $this->settlePayment->execute(new SettleGatewayPaymentData(

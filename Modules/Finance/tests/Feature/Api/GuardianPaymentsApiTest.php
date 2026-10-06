@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\TestCase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
@@ -64,19 +67,33 @@ function payApiFixture(bool $gatewayActive = true): array
 /**
  * @param  array<string, mixed>  $f
  */
-function payApiFakeGateway(array $f, string $reference = 'PSP-100'): void
+function payApiFakeGateway(array $f, string $reference = 'PSP-100', string $confirmedStatus = 'PENDING'): void
 {
-    Http::fake(['pesepay.test/*' => Http::response(['payload' => $f['crypto']->encrypt(['referenceNumber' => $reference, 'redirectUrl' => 'https://pay.pesepay.test/'.$reference, 'transactionStatus' => 'PENDING'])])]);
+    Http::fake(['pesepay.test/*' => function (Request $request) use ($f, $reference, $confirmedStatus) {
+        if (str_contains($request->url(), 'check-payment')) {
+            return Http::response(['payload' => $f['crypto']->encrypt([
+                'referenceNumber' => $reference, 'transactionStatus' => $confirmedStatus, 'amountDetails' => ['amount' => '50.00', 'currencyCode' => 'USD'],
+            ])]);
+        }
+
+        return Http::response(['payload' => $f['crypto']->encrypt(['referenceNumber' => $reference, 'redirectUrl' => 'https://pay.pesepay.test/'.$reference, 'transactionStatus' => 'PENDING'])]);
+    }]);
 }
 
 /**
- * @param  array<string, mixed>  $f
+ * Pesepay's result callback: plain JSON, authenticated by the merchant's integration key.
  */
-function payApiCallback(array $f, string $reference, string $status = 'SUCCESS', string $amount = '50.00'): string
+function payApiCallback(string $reference, string $status = 'SUCCESS'): string
 {
-    return (string) json_encode(['payload' => $f['crypto']->encrypt([
-        'referenceNumber' => $reference, 'transactionStatus' => $status, 'amountDetails' => ['amount' => $amount, 'currencyCode' => 'USD'],
-    ])]);
+    return (string) json_encode(['referenceNumber' => $reference, 'transactionStatus' => $status]);
+}
+
+/**
+ * @param  array<string, string>  $headers
+ */
+function payApiDeliver(TestCase $test, string $body, string $key = 'integration-key-1'): TestResponse
+{
+    return $test->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_AUTHORIZATION' => $key], $body);
 }
 
 it('lists the gateways a parent can pay with, hiding inactive ones', function (): void {
@@ -136,19 +153,19 @@ it('refuses another family\'s learner, a bad amount, an unsupported method and a
 
 it('settles a payment from the gateway callback exactly once and shows the receipt to the parent', function (): void {
     $f = payApiFixture();
-    payApiFakeGateway($f, 'PSP-300');
+    payApiFakeGateway($f, 'PSP-300', 'SUCCESS');
     Sanctum::actingAs($f['user'], ['*']);
     $id = $this->postJson('/api/v1/finance/payments', ['student' => $f['child']->ulid, 'amount_minor' => 5000, 'currency' => 'USD'], ['Idempotency-Key' => 'k-7'])->json('data.id');
 
-    $callback = payApiCallback($f, 'PSP-300');
-    $this->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json'], $callback)
+    $callback = payApiCallback('PSP-300');
+    payApiDeliver($this, $callback)
         ->assertOk()->assertJsonPath('data.processing_status', 'processed');
 
     $intent = PaymentIntent::withoutGlobalScopes()->where('ulid', $id)->firstOrFail();
     expect($intent->status)->toBe('succeeded')->and($intent->receipt_id)->not->toBeNull()
         ->and(Receipt::withoutGlobalScopes()->count())->toBe(1);
 
-    $this->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json'], $callback)->assertOk();
+    payApiDeliver($this, $callback)->assertOk();
     expect(Receipt::withoutGlobalScopes()->count())->toBe(1)->and(GatewayWebhook::count())->toBe(1);
 
     $shown = $this->getJson('/api/v1/finance/payments/'.$id)->assertOk();
@@ -161,11 +178,11 @@ it('records a forged or unmatched callback as failed and settles nothing', funct
     Sanctum::actingAs($f['user'], ['*']);
     $this->postJson('/api/v1/finance/payments', ['student' => $f['child']->ulid, 'amount_minor' => 5000, 'currency' => 'USD'], ['Idempotency-Key' => 'k-8']);
 
-    $forged = (string) json_encode(['referenceNumber' => 'PSP-400', 'transactionStatus' => 'SUCCESS', 'amountDetails' => ['amount' => '50.00', 'currencyCode' => 'USD']]);
-    $this->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json'], $forged)->assertOk()->assertJsonPath('data.processing_status', 'failed');
+    $forged = payApiCallback('PSP-400');
+    payApiDeliver($this, $forged, 'not-the-key')->assertOk()->assertJsonPath('data.processing_status', 'failed');
 
-    $unknown = payApiCallback($f, 'PSP-NOPE');
-    $this->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json'], $unknown)->assertOk()->assertJsonPath('data.processing_status', 'failed');
+    $unknown = payApiCallback('PSP-NOPE');
+    payApiDeliver($this, $unknown)->assertOk()->assertJsonPath('data.processing_status', 'failed');
 
     expect(PaymentIntent::withoutGlobalScopes()->first()->status)->toBe('pending')->and(Receipt::withoutGlobalScopes()->count())->toBe(0);
     $this->postJson('/api/v1/webhooks/payments/nonexistent', ['x' => 1])->assertStatus(404);
@@ -173,11 +190,11 @@ it('records a forged or unmatched callback as failed and settles nothing', funct
 
 it('marks a payment failed when the gateway reports failure, and lets a parent see only their own payments', function (): void {
     $f = payApiFixture();
-    payApiFakeGateway($f, 'PSP-500');
+    payApiFakeGateway($f, 'PSP-500', 'FAILED');
     Sanctum::actingAs($f['user'], ['*']);
     $id = $this->postJson('/api/v1/finance/payments', ['student' => $f['child']->ulid, 'amount_minor' => 5000, 'currency' => 'USD'], ['Idempotency-Key' => 'k-9'])->json('data.id');
 
-    $this->call('POST', '/api/v1/webhooks/payments/pesepay', [], [], [], ['CONTENT_TYPE' => 'application/json'], payApiCallback($f, 'PSP-500', 'FAILED'))->assertOk();
+    payApiDeliver($this, payApiCallback('PSP-500', 'FAILED'))->assertOk();
 
     expect($this->getJson('/api/v1/finance/payments/'.$id)->json('data.status'))->toBe('failed');
 

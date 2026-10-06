@@ -201,7 +201,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   existing banner to return, as CORE-05 already does; a separate-subdomain session would need
   per-tenant hosts. Customer-side notification when a session opens is not built.
 - **FIN-05 Pesepay gateway, parent payments API.** `PesepayGatewayDriver` (hosted checkout, EcoCash push,
-  polling, result callback authenticated by decryption with the merchant key), public
+  polling, result callback authenticated by the integration-key header and confirmed with check-payment), public
   `POST /api/v1/webhooks/payments/{driver}`, and `finance/payment-methods`, `POST finance/payments`
   (Idempotency-Key required), `GET finance/payments/{id}`. Keys are read from `PESEPAY_INTEGRATION_KEY` /
   `PESEPAY_ENCRYPTION_KEY` (never committed) or a school's own gateway row. **Not verified against the live
@@ -228,6 +228,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   check-payment returns the status. Finding fixed: make-payment returns `referenceNumber: null` with the reference only in
   `pollUrl`; the driver now reads it from there. Sandbox is USD-only (EcoCash, Visa, Mastercard); not yet exercised: a
   redirect checkout, the result callback to a public URL, and the Visa/CABS cards.
+- **Pesepay docs pass.** Read the developer docs end to end and corrected: the result callback is plain JSON with the
+  integration key in `Authorization` (not encrypted) and is confirmed with check-payment before settling (an unconfirmable
+  callback is recorded and the scheduled poll settles it); the callback's key header is never stored; only `SUCCESS` is
+  paid and every documented terminal status maps to failed/cancelled; ZWG is sent as `ZiG`. Live sandbox, USD: redirect
+  initiate (redirectUrl + referenceNumber), EcoCash make-payment success/failure and check-payment all confirmed. Not
+  exercised live: a real result callback (needs a public HTTPS URL) and card entry on the hosted page (browser-only).
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from

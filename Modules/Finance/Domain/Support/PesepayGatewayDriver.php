@@ -40,11 +40,13 @@ use Modules\Finance\Models\PaymentIntent;
  */
 final class PesepayGatewayDriver implements PaymentGatewayDriver
 {
-    private const array SUCCESS = ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID'];
+    /** `SUCCESS` is the only status Pesepay documents as "paid". */
+    private const array SUCCESS = ['SUCCESS'];
 
-    private const array FAILED = ['FAILED', 'DECLINED', 'REJECTED', 'ERROR', 'EXPIRED', 'TIMEOUT'];
+    /** Terminal and unpaid (docs: Transaction statuses). REVERSED is a paid-then-refunded multi-leg EcoCash payment. */
+    private const array FAILED = ['FAILED', 'TERMINATED', 'TIME_OUT', 'CLOSED', 'CLOSED_PERIOD_ELAPSED', 'INSUFFICIENT_FUNDS', 'ERROR', 'DECLINED', 'AUTHORIZATION_FAILED', 'SERVICE_UNAVAILABLE', 'REVERSED'];
 
-    private const array CANCELLED = ['CANCELLED', 'CANCELED'];
+    private const array CANCELLED = ['CANCELLED'];
 
     public function key(): string
     {
@@ -108,23 +110,55 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
         return $this->statusResult($response, $intent->gateway_reference);
     }
 
+    /**
+     * The result callback is plain JSON that carries the merchant's own integration key in its
+     * `Authorization` header (Pesepay docs: Verifying callbacks). The key is compared in constant
+     * time against the key of the gateway the referenced payment was made through.
+     */
     public function verifyWebhook(array $headers, string $body): bool
     {
-        return $this->openWebhook($body) !== null;
+        $data = json_decode($body, true);
+        $reference = is_array($data) ? ($data['referenceNumber'] ?? null) : null;
+
+        if (! is_string($reference) || $reference === '') {
+            return false;
+        }
+
+        $sent = $headers['authorization'] ?? $headers['Authorization'] ?? '';
+        $sent = is_array($sent) ? (string) ($sent[0] ?? '') : (string) $sent;
+        $expected = $this->credentials($this->gatewayForReference($reference))['integration_key'];
+
+        return $expected !== '' && $sent !== '' && hash_equals($expected, $sent);
     }
 
+    /**
+     * The callback body proves nothing on its own, so the outcome is confirmed server-to-server
+     * with Check Payment Status and that answer is what settles. If the confirmation cannot be made
+     * right now the event is `pending`, and the scheduled poll settles the payment instead.
+     */
     public function parseWebhook(array $headers, string $body): WebhookEvent
     {
-        $data = $this->openWebhook($body) ?? throw new InvalidArgumentException('The Pesepay result is not a payload this merchant can open.');
-        $reference = $data['referenceNumber'] ?? null;
+        $data = json_decode($body, true);
+        $reference = is_array($data) ? ($data['referenceNumber'] ?? null) : null;
 
         if (! is_string($reference) || $reference === '') {
             throw new InvalidArgumentException('The Pesepay result carries no reference number.');
         }
 
-        $amount = (array) ($data['amountDetails'] ?? []);
-        $status = $this->mapStatus((string) ($data['transactionStatus'] ?? ''));
-        $currency = strtoupper((string) ($amount['currencyCode'] ?? $amount['merchantCurrencyCode'] ?? 'USD'));
+        $credentials = $this->credentials($this->gatewayForReference($reference));
+
+        try {
+            $confirmed = $this->decode(
+                $this->request($credentials)->get($this->url('v1/payments/check-payment'), ['referenceNumber' => $reference]),
+                $credentials,
+            );
+        } catch (ConnectionException|GatewayRequestFailedException) {
+            return new WebhookEvent(eventType: 'settlement', gatewayReference: $reference, status: 'pending', amountMinor: 0, currency: 'USD');
+        }
+
+        $amount = (array) ($confirmed['amountDetails'] ?? []);
+        $status = $this->mapStatus((string) ($confirmed['transactionStatus'] ?? ''));
+        $currency = $this->fromPesepayCurrency((string) ($amount['currencyCode'] ?? 'USD'));
 
         return new WebhookEvent(
             eventType: 'settlement',
@@ -133,8 +167,8 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
             amountMinor: $this->toMinor((string) ($amount['amount'] ?? '0'), $currency),
             currency: $currency,
             feeMinor: isset($amount['transactionServiceFee']) ? $this->toMinor((string) $amount['transactionServiceFee'], $currency) : null,
-            failureCode: $status === 'failed' ? (string) ($data['transactionStatusCode'] ?? 'FAILED') : null,
-            failureMessage: $status === 'failed' ? (string) ($data['transactionStatusDescription'] ?? $data['message'] ?? 'The payment failed.') : null,
+            failureCode: $status === 'failed' ? (string) ($confirmed['transactionStatusCode'] ?? 'FAILED') : null,
+            failureMessage: $status === 'failed' ? (string) ($confirmed['transactionStatusDescription'] ?? 'The payment failed.') : null,
         );
     }
 
@@ -178,7 +212,7 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
         $currency = Currency::from($intent->currency);
 
         return [
-            'amountDetails' => ['amount' => (float) Money::of($intent->amount_minor, $currency)->toDecimal(), 'currencyCode' => $intent->currency],
+            'amountDetails' => ['amount' => (float) Money::of($intent->amount_minor, $currency)->toDecimal(), 'currencyCode' => $intent->currency === 'ZWG' ? 'ZiG' : $intent->currency],
             'merchantReference' => $intent->reference,
             'reasonForPayment' => $intent->purpose === 'fees' ? 'School fees' : ucfirst($intent->purpose),
             'resultUrl' => (string) config('services.pesepay.result_url'),
@@ -238,7 +272,7 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
     {
         $status = $this->mapStatus((string) ($data['transactionStatus'] ?? ''));
         $amount = (array) ($data['amountDetails'] ?? []);
-        $currency = strtoupper((string) ($amount['currencyCode'] ?? 'USD'));
+        $currency = $this->fromPesepayCurrency((string) ($amount['currencyCode'] ?? 'USD'));
 
         return new PaymentStatusResult(
             status: $status,
@@ -262,23 +296,20 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Pesepay calls the Zimbabwe gold-backed currency `ZiG`; this system's code for it is `ZWG`.
      */
-    private function openWebhook(string $body): ?array
+    private function fromPesepayCurrency(string $code): string
     {
-        $credentials = $this->credentials(null);
+        $code = strtoupper(trim($code));
 
-        if (strlen($credentials['encryption_key']) !== 32) {
-            return null;
-        }
+        return $code === 'ZIG' ? 'ZWG' : $code;
+    }
 
-        $decoded = json_decode($body, true);
+    private function gatewayForReference(string $reference): ?PaymentGateway
+    {
+        $gatewayId = PaymentIntent::withoutGlobalScopes()->where('gateway_reference', $reference)->value('gateway_id');
 
-        if (! is_array($decoded) || ! isset($decoded['payload']) || ! is_string($decoded['payload'])) {
-            return null;
-        }
-
-        return (new PesepayCrypto($credentials['encryption_key']))->decrypt($decoded['payload']);
+        return $gatewayId === null ? null : PaymentGateway::withoutGlobalScopes()->whereKey($gatewayId)->first();
     }
 
     private function methodCode(string $method, string $currency): string

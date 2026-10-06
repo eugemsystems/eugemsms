@@ -328,7 +328,7 @@ paths:
     post:
       tags: [Webhooks]
       security: []
-      summary: Payment gateway result callback (server to server). Authenticated by the gateway driver — Pesepay bodies must decrypt with the merchant key. A forged or unmatched body is recorded as failed and settles nothing; always 200 for a known driver.
+      summary: Payment gateway result callback (server to server). Authenticated by the gateway driver — Pesepay posts plain JSON carrying the merchant's integration key in the Authorization header; the outcome is then confirmed with Pesepay's check-payment before anything settles. A forged or unmatched body is recorded as failed and settles nothing; always 200 for a known driver.
       parameters:
         - { name: driver, in: path, required: true, schema: { type: string, example: pesepay } }
       responses:
