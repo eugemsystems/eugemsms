@@ -148,8 +148,8 @@ depends on them. Status per item below; anything not listed as done is still ope
   (beneficiaries bill the sponsor through a real fee liability; budget envelope and beneficiary
   limit enforced), guardian verification, the contact-update approval queue, E.164 phone
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
-  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging duplicate learners (guardian merge is built),
-  duplicate learners and guardians (needs a design that respects append-only financial records),
+  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging duplicate learners (needs a design that respects
+  append-only financial records; guardian merge is built),
   the
   structured appraisal rubric, the public application form and `/api/v1` endpoints.
 
