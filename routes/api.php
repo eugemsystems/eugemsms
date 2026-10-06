@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Academic\Http\Controllers\Api\V1\GuardianLmsController;
 use Modules\Academic\Http\Controllers\Api\V1\ReportCardsController;
 use Modules\Academic\Http\Controllers\Api\V1\StudentAcademicsController;
 use Modules\Academic\Http\Controllers\Api\V1\TeacherAttendanceController;
@@ -66,6 +67,9 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
 
     Route::get('students/{student}/documents', [GuardianDocumentsController::class, 'index'])->middleware('serp.token-ability:documents.read');
     Route::get('students/{student}/documents/{document}/download', [GuardianDocumentsController::class, 'download'])->middleware('serp.token-ability:documents.read');
+
+    Route::get('students/{student}/lms/courses', [GuardianLmsController::class, 'courses'])->middleware('serp.token-ability:homework.read');
+    Route::get('students/{student}/homework', [GuardianLmsController::class, 'homework'])->middleware('serp.token-ability:homework.read');
 
     Route::get('finance/balances', [GuardianFinanceController::class, 'balances'])->middleware('serp.token-ability:fees.read');
     Route::get('finance/invoices', [GuardianFinanceController::class, 'invoices'])->middleware('serp.token-ability:fees.read');

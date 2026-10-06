@@ -3,6 +3,12 @@
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Modules\Academic\Models\Assignment;
+use Modules\Academic\Models\AssignmentSubmission;
+use Modules\Academic\Models\ContentItem;
+use Modules\Academic\Models\CourseSpace;
+use Modules\Academic\Models\TeachingGroup;
+use Modules\Academic\Models\TeachingGroupMember;
 use Modules\Core\Models\Document;
 use Modules\Academic\Models\TermResult;
 use Modules\Comms\Models\Notice;
@@ -307,4 +313,35 @@ it('lists and downloads a linked learner\'s documents, hiding withheld cards, ot
     }
     $this->getJson('/api/v1/students/'.$stranger->ulid.'/documents')->assertStatus(404);
     $this->get('/api/v1/students/'.$stranger->ulid.'/documents/'.$strangers->ulid.'/download')->assertStatus(404);
+});
+
+it('shows a linked learner only their own homework and course content, with marks once marked', function (): void {
+    $f = guardianApiFixture();
+    $stranger = Student::factory()->for($f['school'])->create();
+    $group = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id]);
+    $otherGroup = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id]);
+    TeachingGroupMember::factory()->create(['school_id' => $f['school']->id, 'teaching_group_id' => $group->id, 'student_id' => $f['child']->id]);
+    TeachingGroupMember::factory()->create(['school_id' => $f['school']->id, 'teaching_group_id' => $otherGroup->id, 'student_id' => $stranger->id]);
+    $space = CourseSpace::factory()->create(['teaching_group_id' => $group->id]);
+    $otherSpace = CourseSpace::factory()->create(['teaching_group_id' => $otherGroup->id]);
+    ContentItem::factory()->create(['course_space_id' => $space->id, 'title' => 'Visible notes', 'published_at' => now()->subDay()]);
+    ContentItem::factory()->create(['course_space_id' => $space->id, 'title' => 'Draft notes', 'published_at' => null]);
+    $mine = Assignment::factory()->create(['course_space_id' => $space->id, 'title' => 'Mine']);
+    Assignment::factory()->create(['course_space_id' => $space->id, 'title' => 'Draft', 'status' => 'draft']);
+    Assignment::factory()->create(['course_space_id' => $otherSpace->id, 'title' => 'Not mine']);
+    AssignmentSubmission::factory()->create([
+        'assignment_id' => $mine->id, 'student_id' => $f['child']->id, 'status' => 'marked', 'final_mark' => '80.00', 'feedback' => 'Good',
+    ]);
+    Sanctum::actingAs($f['user'], ['*']);
+    $base = '/api/v1/students/'.$f['child']->ulid;
+
+    $homework = $this->getJson($base.'/homework')->assertOk()->json('data');
+    expect(collect($homework)->pluck('title')->all())->toBe(['Mine'])
+        ->and($homework[0]['submission']['feedback'])->toBe('Good');
+
+    $courses = $this->getJson($base.'/lms/courses')->assertOk()->json('data');
+    expect($courses)->toHaveCount(1)->and(collect($courses[0]['content'])->pluck('title')->all())->toBe(['Visible notes']);
+
+    $this->getJson('/api/v1/students/'.$stranger->ulid.'/homework')->assertStatus(404);
+    $this->getJson('/api/v1/students/'.$stranger->ulid.'/lms/courses')->assertStatus(404);
 });
