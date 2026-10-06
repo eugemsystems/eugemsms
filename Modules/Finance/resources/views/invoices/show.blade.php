@@ -10,6 +10,7 @@
         <span class="badge fs-6 {{ match ($invoice->status) { 'paid' => 'text-bg-success', 'voided' => 'text-bg-secondary', 'written_off' => 'text-bg-dark', 'overdue' => 'text-bg-danger', default => 'text-bg-warning' } }}">
             {{ \Illuminate\Support\Str::headline($invoice->status) }}
         </span>
+                <button type="button" class="btn btn-outline-secondary" wire:click="download">{{ __('Print / download') }}</button>
         @if (! in_array($invoice->status, ['voided', 'paid', 'written_off']))
             <a href="{{ route('finance.invoices.void', ['school' => $school, 'invoice' => $invoice]) }}" class="btn btn-outline-danger" wire:navigate>{{ __('Void') }}</a>
         @endif

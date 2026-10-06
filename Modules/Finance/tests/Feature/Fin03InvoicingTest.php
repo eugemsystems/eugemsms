@@ -1,6 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Storage;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
+use Modules\Core\Models\Document;
 use Modules\Finance\Domain\Actions\ActivateFeeStructureAction;
 use Modules\Finance\Domain\Actions\ApproveBillingRunAction;
 use Modules\Finance\Domain\Actions\ComputeBillingRunAction;
@@ -8,6 +10,7 @@ use Modules\Finance\Domain\Actions\CreateCreditNoteAction;
 use Modules\Finance\Domain\Actions\CreateFeeComponentAction;
 use Modules\Finance\Domain\Actions\CreateFeeStructureAction;
 use Modules\Finance\Domain\Actions\IssueInvoicesForAssignmentAction;
+use Modules\Finance\Domain\Actions\RenderInvoiceDocumentAction;
 use Modules\Finance\Domain\Actions\VoidInvoiceAction;
 use Modules\Finance\Domain\DataObjects\ActivateFeeStructureData;
 use Modules\Finance\Domain\DataObjects\ApproveBillingRunData;
@@ -152,4 +155,23 @@ it('posts a credit note as Dr Fee Income / Cr Fee Debtors, never as a receipt (A
 
     $feeBillingTotal = Journal::where('journal_type', 'FEE_BILLING')->count();
     expect($feeBillingTotal)->toBe(0);
+});
+
+it('renders a printable invoice when it is issued, once, and never lets a failure block the invoice (BR-FIN-03-021)', function (): void {
+    $f = fin02Fixture();
+    fullTimeStructure($f);
+    $student = fin02Student($f);
+    $student->update(['first_name' => '<b>Tendai</b>']);
+
+    $run = app(ComputeBillingRunAction::class)->execute(new ComputeBillingRunData($f['school']->id, $f['year']->id, $f['term']->id, $f['user']->id, studentIds: [$student->id]));
+    app(ApproveBillingRunAction::class)->execute(new ApproveBillingRunData($run->id, $f['user']->id));
+    $assignment = LearnerFeeAssignment::where('student_id', $student->id)->first();
+    $invoice = app(IssueInvoicesForAssignmentAction::class)->execute(new IssueInvoicesForAssignmentData($assignment->id, $f['user']->id))->first();
+
+    $document = Document::where('document_type', 'invoice')->where('documentable_id', $invoice->id)->firstOrFail();
+    $html = Storage::disk('local')->get($document->file_path);
+
+    expect($html)->toContain($invoice->invoice_number)->and($html)->not->toContain('<b>Tendai</b>')->and($html)->toContain('&lt;b&gt;Tendai')
+        ->and(app(RenderInvoiceDocumentAction::class)->execute($invoice, $f['user']->id)->id)->toBe($document->id)
+        ->and(Document::where('document_type', 'invoice')->count())->toBe(1);
 });

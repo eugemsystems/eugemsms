@@ -153,8 +153,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   bulk operations and bulk class allocation, house allocation, guardian portal access, the
   structured appraisal rubric, the public application form and `/api/v1` endpoints.
 
-**Still open (not yet started in this pass)**: Finance invoice/receipt/statement documents are not
-rendered; FIN-10 capitalisation listeners; FIN-13 fiscal audit log writes; FIN-11 forecast maths;
+- **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
+  issued (listeners never block the invoice or receipt); statements render on demand from journal
+  lines. Templates are registered versioned defaults. "Print / download" on the invoice screen and
+  the statement screen; downloads are recorded. Still open: a receipt download button.
+
+**Still open (not yet started in this pass)**: FIN-10 capitalisation listeners; FIN-13 fiscal audit log writes; FIN-11 forecast maths;
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
 board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the

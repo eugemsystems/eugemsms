@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
@@ -13,6 +14,7 @@ use Modules\Core\Domain\Support\Currency;
 use Modules\Core\Domain\Support\Money;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\Document;
 use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
@@ -153,6 +155,25 @@ it('lists invoices and shows one in detail', function (): void {
     Livewire::actingAs($user)
         ->test(InvoiceShow::class, ['school' => $f['school'], 'invoice' => $invoice])
         ->assertSee($component->name);
+});
+
+it('downloads the printable invoice document once, however often it is requested', function (): void {
+    Storage::fake('local');
+    $f = debtorAdminFixture();
+    $user = debtorAdminUser($f['school'], 'finance.invoice.view');
+    $student = debtorAdminStudent($f, $user);
+    $invoice = Invoice::factory()->for($f['school'])->create([
+        'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'student_id' => $student->id,
+        'gross_minor' => 5000, 'net_minor' => 5000, 'balance_minor' => 5000, 'currency' => 'USD',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(InvoiceShow::class, ['school' => $f['school'], 'invoice' => $invoice])
+        ->call('download')
+        ->call('download')
+        ->assertFileDownloaded(str_replace('/', '-', $invoice->invoice_number).'.html');
+
+    expect(Document::query()->where('documentable_id', $invoice->id)->count())->toBe(1);
 });
 
 it('refuses to void an invoice with an allocated payment, and voids a clean one with a reversal (AC-FIN-03-002/003)', function (): void {

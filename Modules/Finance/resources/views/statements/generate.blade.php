@@ -76,6 +76,7 @@
             <div class="card-header d-flex justify-content-between">
                 <span>{{ __('Opening balance') }}: {{ number_format($statement->openingBalanceMinor / 100, 2) }} {{ $statement->currency }}</span>
                 <span>{{ __('Closing balance') }}: {{ number_format($statement->closingBalanceMinor / 100, 2) }} {{ $statement->currency }}</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="download">{{ __('Print / download') }}</button>
             </div>
             <div class="table-responsive">
                 <table class="table mb-0">

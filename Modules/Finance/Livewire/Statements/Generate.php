@@ -6,16 +6,21 @@ namespace Modules\Finance\Livewire\Statements;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Core\Domain\Actions\Documents\RecordDocumentDownloadAction;
+use Modules\Core\Domain\DataObjects\Documents\RecordDocumentDownloadData;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
 use Modules\Finance\Domain\Actions\GenerateStatementAction;
+use Modules\Finance\Domain\Actions\RenderStatementDocumentAction;
 use Modules\Finance\Domain\DataObjects\GenerateStatementData;
 use Modules\People\Models\Guardian;
 use Modules\People\Models\Student;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * `Finance\Statements\Generate` (Book B FIN-03 §5/BR-FIN-03-009/021,
@@ -120,6 +125,27 @@ final class Generate extends Component
         }
 
         $this->hasGenerated = true;
+    }
+
+    /**
+     * The statement as a verifiable document, built from journal lines
+     * (BR-FIN-03-009) and rendered from the template in force now.
+     */
+    public function download(): ?StreamedResponse
+    {
+        $this->authorizePermission('finance.statement.generate');
+
+        if ($this->selectedPartyId === null || ! $this->hasGenerated) {
+            return null;
+        }
+
+        $document = app(RenderStatementDocumentAction::class)->execute(new GenerateStatementData(
+            schoolId: $this->school->id, subledgerType: $this->subledgerType, subledgerId: $this->selectedPartyId, currency: $this->currency,
+            from: Carbon::parse($this->from), to: Carbon::parse($this->to),
+        ), (int) auth()->id());
+        app(RecordDocumentDownloadAction::class)->execute(new RecordDocumentDownloadData($document->id));
+
+        return Storage::disk('local')->download($document->file_path, 'statement-'.$this->from.'-'.$this->to.'.html');
     }
 
     public function render(): View

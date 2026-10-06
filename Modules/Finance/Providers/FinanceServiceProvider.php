@@ -35,14 +35,18 @@ use Modules\Finance\Console\Commands\SendFeeRemindersCommand;
 use Modules\Finance\Console\Tasks\PollPendingPaymentIntentsTask;
 use Modules\Finance\Domain\Contracts\CurrencyConverter;
 use Modules\Finance\Domain\Contracts\DiscountResolver;
+use Modules\Finance\Domain\Events\InvoiceIssued;
+use Modules\Finance\Domain\Events\ReceiptPosted;
 use Modules\Finance\Domain\Listeners\EndAwardsOnLearnerWithdrawnListener;
 use Modules\Finance\Domain\Listeners\RaiseMidTermSubjectChangeBillingListener;
+use Modules\Finance\Domain\Listeners\RenderIssuedDocumentsListener;
 use Modules\Finance\Domain\Support\AwardDiscountResolver;
 use Modules\Finance\Domain\Support\CloseChecks\AllTillSessionsClosedCheck;
 use Modules\Finance\Domain\Support\CloseChecks\NoDraftInvoicesCheck;
 use Modules\Finance\Domain\Support\CloseChecks\SuspenseBalanceCheck;
 use Modules\Finance\Domain\Support\CloseChecks\TrialBalanceBalancesCheck;
 use Modules\Finance\Domain\Support\FakePaymentGatewayDriver;
+use Modules\Finance\Domain\Support\FinanceDocumentTemplates;
 use Modules\Finance\Domain\Support\PaymentGatewayDriverRegistry;
 use Modules\Finance\Domain\Support\RateResolvingCurrencyConverter;
 use Modules\Finance\Models\Account;
@@ -138,6 +142,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
         $this->registerPermissions();
         $this->registerLivewireRoutes();
         $this->registerScheduledTasks();
+        FinanceDocumentTemplates::registerVariables();
         LearnerClearanceRegistry::register('fees', function (int $schoolId, int $studentId): array {
             $owed = (int) Invoice::query()->where('student_id', $studentId)->where('balance_minor', '>', 0)->sum('balance_minor');
 
@@ -347,6 +352,8 @@ class FinanceServiceProvider extends ModuleServiceProvider
      */
     private function registerEventListeners(): void
     {
+        Event::listen(InvoiceIssued::class, [RenderIssuedDocumentsListener::class, 'onInvoiceIssued']);
+        Event::listen(ReceiptPosted::class, [RenderIssuedDocumentsListener::class, 'onReceiptPosted']);
         Event::listen(SubjectEnrolmentAdded::class, [RaiseMidTermSubjectChangeBillingListener::class, 'handleAdded']);
         Event::listen(SubjectEnrolmentDropped::class, [RaiseMidTermSubjectChangeBillingListener::class, 'handleDropped']);
         Event::listen(LearnerWithdrawn::class, EndAwardsOnLearnerWithdrawnListener::class);
