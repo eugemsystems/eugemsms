@@ -9,6 +9,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Modules\Comms\Console\Tasks\CheckComplaintSlasTask;
+use Modules\Comms\Console\Tasks\EscalateUnreadUrgentNoticesTask;
+use Modules\Comms\Console\Tasks\RunDueScanRulesTask;
+use Modules\Comms\Domain\Actions\CheckGatewayHealthAction;
+use Modules\Comms\Domain\Actions\PurgeExpiredRecordingsAction;
+use Modules\Comms\Domain\Actions\RebuildCalendarAction;
 use Modules\Comms\Domain\DataObjects\AutomationEntityDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationEventDefinition;
 use Modules\Comms\Domain\DataObjects\AutomationScanRecord;
@@ -60,6 +66,7 @@ use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationChannelDriverRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\Notification;
@@ -113,6 +120,7 @@ class CommsServiceProvider extends ModuleServiceProvider
         $this->registerChannelDrivers();
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerAutomationEntities();
         $this->registerAutomationEvents();
         $this->registerDashboardWidgets();
@@ -675,5 +683,84 @@ class CommsServiceProvider extends ModuleServiceProvider
                 'sort_order' => 0,
             ]);
         }
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.check_complaint_slas',
+            moduleCode: 'COM-08',
+            name: 'Check Complaint SLAs',
+            cron: '*/30 * * * *',
+            handler: CheckComplaintSlasTask::class,
+            description: 'Warns of approaching and breached complaint SLAs.',
+            alertIfNotRunWithinMinutes: 120,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.escalate_unread_urgent_notices',
+            moduleCode: 'COM-06',
+            name: 'Escalate Unread Urgent Notices',
+            cron: '*/30 * * * *',
+            handler: EscalateUnreadUrgentNoticesTask::class,
+            description: 'Alerts the poster of an urgent notice with a low read rate.',
+            alertIfNotRunWithinMinutes: 120,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.run_due_scan_rules',
+            moduleCode: 'COM-04',
+            name: 'Run Due Scan Rules',
+            cron: '*/15 * * * *',
+            handler: RunDueScanRulesTask::class,
+            description: 'Runs scheduled-scan automation rules whose cron expression has come due.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.check_gateway_health',
+            moduleCode: 'COM-01',
+            name: 'Check Message Gateway Health',
+            cron: '*/30 * * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckGatewayHealthAction::class)->execute($school->id);
+
+                return $r->count().' gateway(s) checked';
+            },
+            description: 'Probes every active messaging gateway.',
+            alertIfNotRunWithinMinutes: 120,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.purge_expired_recordings',
+            moduleCode: 'COM-07',
+            name: 'Purge Expired Meeting Recordings',
+            cron: '30 1 * * *',
+            handler: static function (School $school): string {
+                $n = app(PurgeExpiredRecordingsAction::class)->execute($school->id);
+
+                return $n.' recording(s) purged';
+            },
+            description: 'Deletes meeting recordings past their retention period.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.rebuild_calendar',
+            moduleCode: 'COM-06',
+            name: 'Rebuild Calendar',
+            cron: '0 2 * * *',
+            handler: static function (School $school): string {
+                $n = app(RebuildCalendarAction::class)->execute($school->id);
+
+                return $n.' event(s) rebuilt';
+            },
+            description: 'Reconciles the school calendar with every registered event source.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

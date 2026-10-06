@@ -14,6 +14,7 @@ use Modules\Core\Domain\DataObjects\Scheduling\ScheduledTaskDefinitionData;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
@@ -30,6 +31,7 @@ use Modules\Finance\Console\Commands\Seeders\SeedFinanceSchoolSetupCommand;
 use Modules\Finance\Console\Commands\Seeders\SeedFinanceTillCommand;
 use Modules\Finance\Console\Commands\Seeders\SeedFinanceUsersCommand;
 use Modules\Finance\Console\Commands\SendFeeRemindersCommand;
+use Modules\Finance\Console\Tasks\PollPendingPaymentIntentsTask;
 use Modules\Finance\Domain\Contracts\CurrencyConverter;
 use Modules\Finance\Domain\Contracts\DiscountResolver;
 use Modules\Finance\Domain\Listeners\EndAwardsOnLearnerWithdrawnListener;
@@ -147,6 +149,16 @@ class FinanceServiceProvider extends ModuleServiceProvider
      */
     private function registerScheduledTasks(): void
     {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'finance.poll_pending_intents',
+            moduleCode: 'FIN-05',
+            name: 'Poll Pending Payment Intents',
+            cron: '*/5 * * * *',
+            handler: PollPendingPaymentIntentsTask::class,
+            description: 'Polls gateways for intents whose webhook never arrived.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
         ScheduledTaskRegistry::register(new ScheduledTaskDefinitionData(
             key: 'finance.send_fee_reminders',
             moduleCode: 'FIN-03',

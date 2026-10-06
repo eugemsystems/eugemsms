@@ -9,9 +9,12 @@ use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Utilities\Domain\Actions\CheckTokenReconciliationAction;
+use Modules\Utilities\Domain\Actions\CheckUncreditedTokensAction;
 use Modules\Utilities\Models\Generator;
 use Modules\Utilities\Models\GeneratorRun;
 use Modules\Utilities\Models\LoadSheddingSchedule;
@@ -77,6 +80,7 @@ class UtilitiesServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -200,5 +204,40 @@ class UtilitiesServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(WaterReading::class, fn (School $school): WaterReading => WaterReading::factory()->for($school)->create());
 
         TenantModelRegistry::register(LoadSheddingSchedule::class, fn (School $school): LoadSheddingSchedule => LoadSheddingSchedule::factory()->for($school)->create());
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'utilities.check_uncredited_tokens',
+            moduleCode: 'OPS-04',
+            name: 'Check Uncredited Prepaid Tokens',
+            cron: '5 * * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckUncreditedTokensAction::class)->execute($school->id);
+
+                return $r->count().' token(s) flagged';
+            },
+            description: 'Flags prepaid tokens bought but not credited within the configured window.',
+            alertIfNotRunWithinMinutes: 180,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'utilities.check_token_reconciliation',
+            moduleCode: 'OPS-04',
+            name: 'Reconcile Prepaid Tokens',
+            cron: '15 3 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckTokenReconciliationAction::class)->execute($school->id, now()->startOfMonth(), now());
+
+                return $r->count().' meter(s) outside tolerance';
+            },
+            description: 'Compares tokens bought against units credited, month to date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

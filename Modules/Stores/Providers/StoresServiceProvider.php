@@ -12,12 +12,20 @@ use Modules\Boarding\Domain\Support\StoreIssuanceProvider;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\CostCentre;
+use Modules\Stores\Domain\Actions\CheckBudgetVarianceAction;
+use Modules\Stores\Domain\Actions\CheckContractExpiryAction;
+use Modules\Stores\Domain\Actions\CheckExpiringLotsAction;
+use Modules\Stores\Domain\Actions\CheckInsuranceExpiryAction;
+use Modules\Stores\Domain\Actions\CheckTaxClearanceExpiryAction;
+use Modules\Stores\Domain\Actions\CheckUnderInsuranceAction;
+use Modules\Stores\Domain\Actions\ReconcileAssetRegisterAction;
 use Modules\Stores\Domain\Events\InvoiceMatched;
 use Modules\Stores\Domain\Events\PurchaseOrderApproved;
 use Modules\Stores\Domain\Listeners\CreateBudgetCommitmentOnPurchaseOrderApprovedListener;
@@ -182,6 +190,7 @@ class StoresServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerEventListeners();
         $this->registerPermissions();
@@ -575,5 +584,110 @@ class StoresServiceProvider extends ModuleServiceProvider
         $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
 
         return [$store, $item, $term, $year];
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_budget_variance',
+            moduleCode: 'FIN-11',
+            name: 'Check Budget Variance',
+            cron: '0 7 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckBudgetVarianceAction::class)->execute($school->id);
+
+                return $r->count().' line(s) flagged';
+            },
+            description: 'Alerts when a budget line\'s variance crosses the alert threshold.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_contract_expiry',
+            moduleCode: 'FIN-08',
+            name: 'Check Supplier Contract Expiry',
+            cron: '5 7 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckContractExpiryAction::class)->execute($school->id);
+
+                return $r->count().' contract(s) flagged';
+            },
+            description: 'Alerts on supplier contracts nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_insurance_expiry',
+            moduleCode: 'FIN-10',
+            name: 'Check Asset Insurance Expiry',
+            cron: '10 7 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckInsuranceExpiryAction::class)->execute($school->id);
+
+                return $r->count().' policy(ies) flagged';
+            },
+            description: 'Alerts on asset insurance policies nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_under_insurance',
+            moduleCode: 'FIN-10',
+            name: 'Check Under-Insured Assets',
+            cron: '15 7 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckUnderInsuranceAction::class)->execute($school->id);
+
+                return $r->count().' asset(s) flagged';
+            },
+            description: 'Flags assets insured for less than their carrying value.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.reconcile_asset_register',
+            moduleCode: 'FIN-10',
+            name: 'Reconcile Asset Register',
+            cron: '20 4 * * *',
+            handler: static function (School $school): string {
+                $r = app(ReconcileAssetRegisterAction::class)->execute($school->id);
+
+                return $r->count().' categor(ies) checked';
+            },
+            description: 'Checks the asset register against the ledger per category.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_tax_clearance_expiry',
+            moduleCode: 'FIN-08',
+            name: 'Check Supplier Tax Clearance Expiry',
+            cron: '40 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckTaxClearanceExpiryAction::class)->execute($school->id);
+
+                return $r->count().' alert(s)';
+            },
+            description: 'Alerts on supplier tax clearance certificates nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_expiring_lots',
+            moduleCode: 'FIN-09',
+            name: 'Check Expiring Stock Lots',
+            cron: '50 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckExpiringLotsAction::class)->execute($school->id);
+
+                return $r->count().' lot(s) flagged';
+            },
+            description: 'Alerts on stock lots crossing an expiry alert threshold.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

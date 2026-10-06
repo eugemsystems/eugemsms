@@ -225,12 +225,12 @@ it('computes final percent from the subject coursework weight, ranks the class, 
     $coursework = app(CreateAssessmentAction::class)->execute(new CreateAssessmentData(
         schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
         assessmentTypeId: $types['coursework'], subjectId: $f['subject']->id, title: 'Test 1',
-        maxMark: 100, weightPercent: 100, createdByUserId: $f['user']->id,
+        maxMark: 100, weightPercent: 40, createdByUserId: $f['user']->id,
     ));
     $exam = app(CreateAssessmentAction::class)->execute(new CreateAssessmentData(
         schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
         assessmentTypeId: $types['examination'], subjectId: $f['subject']->id, title: 'End of Term Exam',
-        maxMark: 100, weightPercent: 100, createdByUserId: $f['user']->id,
+        maxMark: 100, weightPercent: 60, createdByUserId: $f['user']->id,
     ));
 
     app(EnterMarkAction::class)->execute(new EnterMarkData($coursework->id, $studentA->id, $f['user']->id, rawMark: 80));

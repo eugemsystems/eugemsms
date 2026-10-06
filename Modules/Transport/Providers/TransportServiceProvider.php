@@ -9,9 +9,13 @@ use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Transport\Domain\Actions\CheckCumulativeFuelAnomalyAction;
+use Modules\Transport\Domain\Actions\CheckDriverDocumentExpiryAction;
+use Modules\Transport\Domain\Actions\CheckVehicleComplianceExpiryAction;
 use Modules\Transport\Models\Driver;
 use Modules\Transport\Models\FuelLog;
 use Modules\Transport\Models\LearnerTransport;
@@ -75,6 +79,7 @@ class TransportServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -206,5 +211,54 @@ class TransportServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(FuelLog::class, fn (School $school): FuelLog => FuelLog::factory()->for($school)->create());
 
         TenantModelRegistry::register(VehicleIncident::class, fn (School $school): VehicleIncident => VehicleIncident::factory()->for($school)->create());
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'transport.check_vehicle_compliance_expiry',
+            moduleCode: 'OPS-01',
+            name: 'Check Vehicle Compliance Expiry',
+            cron: '0 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckVehicleComplianceExpiryAction::class)->execute($school->id);
+
+                return $r->count().' alert(s)';
+            },
+            description: 'Alerts on vehicle fitness, insurance and licence documents nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'transport.check_driver_document_expiry',
+            moduleCode: 'OPS-01',
+            name: 'Check Driver Document Expiry',
+            cron: '5 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckDriverDocumentExpiryAction::class)->execute($school->id);
+
+                return $r->count().' alert(s)';
+            },
+            description: 'Alerts on driver licences and medicals nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'transport.check_fuel_anomalies',
+            moduleCode: 'OPS-01',
+            name: 'Check Cumulative Fuel Anomalies',
+            cron: '0 4 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckCumulativeFuelAnomalyAction::class)->execute($school->id);
+
+                return $r->count().' anomaly(ies)';
+            },
+            description: 'Flags vehicles whose cumulative fuel use drifts from their baseline.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

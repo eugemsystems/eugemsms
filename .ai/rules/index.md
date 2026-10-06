@@ -4,6 +4,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 
 | Applies to | Rule file |
 | --- | --- |
+| Modules/Academic/Domain/Actions/*Report*.php | .ai/rules/academic-domain-actions.md |
 | Modules/Academic/** | .ai/rules/academic.md |
 | Modules/People/Domain/Actions/*Application*.php | .ai/rules/actions.md |
 | Modules/Core/Domain/Support/Auth/SchoolTeamResolver.php, Modules/Core/Domain/Support/Auth/*.php | .ai/rules/auth.md |

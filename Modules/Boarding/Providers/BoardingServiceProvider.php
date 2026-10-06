@@ -8,6 +8,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Modules\Boarding\Console\Tasks\AdvanceEscalationLaddersTask;
+use Modules\Boarding\Console\Tasks\CheckOverdueExeatsTask;
+use Modules\Boarding\Console\Tasks\CheckRollCallsMissedTask;
+use Modules\Boarding\Console\Tasks\CheckVisitorsNotSignedOutTask;
 use Modules\Boarding\Domain\Listeners\EndAllocationOnResidencyChangeListener;
 use Modules\Boarding\Domain\Support\EloquentLiveOccupancyProvider;
 use Modules\Boarding\Domain\Support\LiveOccupancyProvider;
@@ -54,6 +58,7 @@ use Modules\Boarding\Models\VisitorLogEntry;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -184,6 +189,7 @@ class BoardingServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerEventListeners();
         $this->registerPermissions();
@@ -648,5 +654,52 @@ class BoardingServiceProvider extends ModuleServiceProvider
         $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
 
         return [$student, $term, $year];
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'boarding.check_roll_calls_missed',
+            moduleCode: 'BRD-02',
+            name: 'Check Missed Roll Calls',
+            cron: '*/15 * * * *',
+            handler: CheckRollCallsMissedTask::class,
+            description: 'Opens an incident for any mandatory roll call that was not conducted.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'boarding.advance_escalation_ladders',
+            moduleCode: 'BRD-02',
+            name: 'Advance Missing-Learner Escalation',
+            cron: '*/5 * * * *',
+            handler: AdvanceEscalationLaddersTask::class,
+            description: 'Moves open missing-learner incidents up their escalation ladder on elapsed time.',
+            alertIfNotRunWithinMinutes: 30,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'boarding.check_overdue_exeats',
+            moduleCode: 'BRD-03',
+            name: 'Check Overdue Exeats',
+            cron: '*/10 * * * *',
+            handler: CheckOverdueExeatsTask::class,
+            description: 'Flags learners not back from an exeat by their return time.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'boarding.check_visitors_not_signed_out',
+            moduleCode: 'BRD-03',
+            name: 'Check Visitors Not Signed Out',
+            cron: '0 20 * * *',
+            handler: CheckVisitorsNotSignedOutTask::class,
+            description: 'Flags every visitor still signed in at the evening check.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

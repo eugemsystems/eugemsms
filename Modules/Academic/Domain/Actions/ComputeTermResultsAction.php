@@ -88,6 +88,12 @@ final class ComputeTermResultsAction extends Action
         $conductGrade = $this->rebuildBehaviourPointBalance->execute($student->school_id, $student->id, $term->id)->conduct_grade;
 
         return $this->transaction(function () use ($student, $term, $allocation, $subjectsTaken, $subjectsPassed, $totalMarks, $averagePercent, $totalPoints, $aggregate, $attendanceSummary, $promotion, $conductGrade): TermResult {
+            $existing = TermResult::query()->where('term_id', $term->id)->where('student_id', $student->id)->first();
+
+            // A result already past review keeps its status: recomputing numbers
+            // must never silently un-publish, un-approve or un-withhold a report.
+            $keepStatus = $existing !== null && in_array($existing->status, ['reviewed', 'approved', 'published', 'withheld'], true);
+
             $result = TermResult::updateOrCreate(
                 ['school_id' => $student->school_id, 'term_id' => $term->id, 'student_id' => $student->id],
                 [
@@ -102,7 +108,7 @@ final class ComputeTermResultsAction extends Action
                     'attendance_percent' => $attendanceSummary->attendance_percent,
                     'conduct_grade' => $conductGrade,
                     'promotion_recommendation' => $promotion,
-                    'status' => 'computed',
+                    'status' => $keepStatus ? $existing->status : 'computed',
                 ],
             );
 

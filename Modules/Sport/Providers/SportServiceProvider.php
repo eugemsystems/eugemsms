@@ -11,9 +11,11 @@ use Modules\Boarding\Domain\Events\InspectionRecorded;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Sport\Domain\Actions\CheckOverdueEquipmentAction;
 use Modules\Sport\Domain\Listeners\RecordHousePointsFromBehaviourListener;
 use Modules\Sport\Domain\Listeners\RecordHousePointsFromInspectionListener;
 use Modules\Sport\Models\Activity;
@@ -83,6 +85,7 @@ class SportServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerListeners();
         $this->registerPermissions();
@@ -199,5 +202,26 @@ class SportServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(Award::class, fn (School $school): Award => Award::factory()->for($school)->create());
 
         TenantModelRegistry::register(EquipmentIssue::class, fn (School $school): EquipmentIssue => EquipmentIssue::factory()->create(['school_id' => $school->id]));
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'sport.check_overdue_equipment',
+            moduleCode: 'OPS-07',
+            name: 'Check Overdue Equipment',
+            cron: '30 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckOverdueEquipmentAction::class)->execute($school->id);
+
+                return $r->count().' overdue item(s)';
+            },
+            description: 'Flags equipment issued out and not returned by its due date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

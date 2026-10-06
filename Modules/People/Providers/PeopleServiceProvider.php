@@ -13,6 +13,7 @@ use Modules\Comms\Models\CalendarEvent;
 use Modules\Core\Domain\DataObjects\Files\FileCategoryDefinition;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -24,6 +25,8 @@ use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\DiscountScheme;
+use Modules\People\Console\Tasks\ExpireLapsedOffersTask;
+use Modules\People\Domain\Actions\CheckStaffDocumentExpiryAction;
 use Modules\People\Domain\Events\LearnerStatusChanged;
 use Modules\People\Domain\Listeners\CreateAlumniRecordOnGraduationListener;
 use Modules\People\Models\AlumniCareerUpdate;
@@ -77,6 +80,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerEventListeners();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -561,5 +565,36 @@ class PeopleServiceProvider extends ModuleServiceProvider
         return Alumnus::factory()->create([
             'school_id' => $school->id, 'student_id' => $student->id, 'final_grade_level_id' => $gradeLevel->id,
         ]);
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'people.expire_lapsed_offers',
+            moduleCode: 'PPL-02',
+            name: 'Expire Lapsed Offers',
+            cron: '10 0 * * *',
+            handler: ExpireLapsedOffersTask::class,
+            description: 'Lapses offers past their expiry and returns the place to the waitlist.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'people.check_staff_document_expiry',
+            moduleCode: 'PPL-04',
+            name: 'Check Staff Document Expiry',
+            cron: '20 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckStaffDocumentExpiryAction::class)->execute($school->id);
+
+                return count($r).' alert(s)';
+            },
+            description: 'Alerts on staff documents and certificates nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

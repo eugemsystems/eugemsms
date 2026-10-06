@@ -11,6 +11,7 @@ use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\IntegrityCheckRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -19,6 +20,7 @@ use Modules\Core\Models\Term;
 use Modules\People\Models\Guardian;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
+use Modules\Welfare\Console\Tasks\RebuildBehaviourBalancesTask;
 use Modules\Welfare\Domain\Support\SafeguardingAuditChainCheck;
 use Modules\Welfare\Domain\Support\SafeguardingRouter;
 use Modules\Welfare\Domain\Support\SafeguardingRouterImpl;
@@ -152,6 +154,7 @@ class WelfareServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerIntegrityChecks();
         $this->registerPermissions();
@@ -544,5 +547,22 @@ class WelfareServiceProvider extends ModuleServiceProvider
         $term = Term::factory()->for($school)->for($year, 'academicYear')->create();
 
         return [$student, $term, $year];
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'welfare.rebuild_behaviour_balances',
+            moduleCode: 'BRD-07',
+            name: 'Rebuild Behaviour Point Balances',
+            cron: '30 2 * * *',
+            handler: RebuildBehaviourBalancesTask::class,
+            description: 'Rebuilds cached behaviour-point balances from the records.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

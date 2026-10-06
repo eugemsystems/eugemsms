@@ -47,6 +47,8 @@ use Modules\People\Models\Student;
  * @property string $status
  * @property string|null $withheld_reason
  * @property int|null $report_document_id
+ * @property int $report_version
+ * @property Carbon|null $report_generated_at
  * @property Carbon|null $published_at
  * @property int|null $approved_by
  */
@@ -66,13 +68,15 @@ class TermResult extends Model
         'subjects_passed', 'total_marks', 'average_percent', 'total_points', 'aggregate',
         'class_position', 'class_size', 'level_position', 'level_size', 'attendance_percent',
         'conduct_grade', 'class_teacher_comment', 'head_comment', 'promotion_recommendation',
-        'status', 'withheld_reason', 'report_document_id', 'published_at', 'approved_by',
+        'status', 'withheld_reason', 'report_document_id', 'report_version', 'report_generated_at', 'published_at', 'approved_by',
     ];
 
     protected function casts(): array
     {
         return [
             'published_at' => 'datetime',
+            'report_generated_at' => 'datetime',
+            'report_version' => 'integer',
         ];
     }
 

@@ -11,16 +11,23 @@ use Livewire\Livewire;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Core\Models\Tenant;
 use Modules\Finance\Models\Journal;
 use Modules\Intelligence\Domain\DataObjects\RiskIndicatorResult;
+use Modules\Saas\Domain\Actions\CheckSupportTicketSlaAction;
+use Modules\Saas\Domain\Actions\ComputeTenantHealthSnapshotAction;
+use Modules\Saas\Domain\Actions\RecordModuleAdoptionAction;
+use Modules\Saas\Domain\Actions\RenewSubscriptionAction;
 use Modules\Saas\Domain\DataObjects\ChurnRiskIndicatorDefinition;
 use Modules\Saas\Domain\DataObjects\ModuleAdoptionSignalDefinition;
 use Modules\Saas\Domain\Registry\ChurnRiskIndicatorRegistry;
 use Modules\Saas\Domain\Registry\ModuleAdoptionSignalRegistry;
 use Modules\Saas\Models\ModuleAdoptionScore;
+use Modules\Saas\Models\Subscription;
 use Modules\Saas\Models\SupportTicket;
 use Modules\Saas\Models\TrainingCompletion;
 use Modules\Welfare\Models\SickBayAdmission;
@@ -42,6 +49,7 @@ class SaasServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerModuleAdoptionSignals();
         $this->registerChurnRiskIndicators();
@@ -281,5 +289,82 @@ class SaasServiceProvider extends ModuleServiceProvider
         $end = $start->copy()->endOfMonth();
 
         return [$start->toDateTimeString(), $end->toDateTimeString()];
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.renew_subscriptions',
+            moduleCode: 'SAA-01',
+            name: 'Renew Subscriptions',
+            cron: '0 1 * * *',
+            handler: static function (): string {
+                $count = 0;
+
+                foreach (Subscription::query()->where('status', 'active')->where('auto_renew', true)->whereDate('current_period_end', '<=', now()->toDateString())->pluck('id') as $subscriptionId) {
+                    app(RenewSubscriptionAction::class)->execute((int) $subscriptionId);
+                    $count++;
+                }
+
+                return "{$count} subscription(s) renewed";
+            },
+            description: 'Rolls every auto-renewing subscription whose period has ended into the next period and issues its invoice.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.compute_tenant_health',
+            moduleCode: 'SAA-02',
+            name: 'Compute Tenant Health',
+            cron: '30 3 * * *',
+            handler: static function (): string {
+                $count = 0;
+
+                foreach (Tenant::query()->where('status', 'active')->pluck('id') as $tenantId) {
+                    app(ComputeTenantHealthSnapshotAction::class)->execute((int) $tenantId);
+                    $count++;
+                }
+
+                return "{$count} tenant(s) snapshotted";
+            },
+            description: 'Takes the nightly health snapshot of every active tenant.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.check_support_ticket_slas',
+            moduleCode: 'SAA-03',
+            name: 'Check Support Ticket SLAs',
+            cron: '*/30 * * * *',
+            handler: static function (): string {
+                $count = 0;
+
+                foreach (SupportTicket::query()->whereNotIn('status', ['resolved', 'closed'])->pluck('id') as $ticketId) {
+                    app(CheckSupportTicketSlaAction::class)->execute((int) $ticketId);
+                    $count++;
+                }
+
+                return "{$count} ticket(s) checked";
+            },
+            description: 'Warns of approaching and breached vendor support SLAs.',
+            alertIfNotRunWithinMinutes: 120,
+        );
+        ScheduledTaskHandlerRegistry::register(
+            key: 'saas.record_module_adoption',
+            moduleCode: 'SAA-03',
+            name: 'Record Module Adoption',
+            cron: '0 3 * * *',
+            handler: static function (School $school): string {
+                $r = app(RecordModuleAdoptionAction::class)->execute($school->id);
+
+                return count($r).' module(s) scored';
+            },
+            description: 'Scores each school\'s module adoption for the current month.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

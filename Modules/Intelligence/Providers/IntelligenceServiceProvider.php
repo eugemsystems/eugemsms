@@ -22,12 +22,16 @@ use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Invoice;
+use Modules\Intelligence\Domain\Actions\ComputeFeeDefaultRiskAction;
 use Modules\Intelligence\Domain\Actions\GetKpiValueAction;
+use Modules\Intelligence\Domain\Actions\MarkOfflineHardwareDevicesAction;
+use Modules\Intelligence\Domain\Actions\RebuildWarehouseSnapshotAction;
 use Modules\Intelligence\Domain\DataObjects\HardwareScanRouteDefinition;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
 use Modules\Intelligence\Domain\DataObjects\ReportEntityDefinition;
@@ -83,6 +87,7 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerHardwareScanRoutes();
         $this->registerReportFields();
         $this->registerNotificationKeys();
@@ -595,5 +600,54 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
                 method: $deviceSource ?? 'hardware', recordedByUserId: $recordedByUserId,
             )),
         ));
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.compute_fee_default_risk',
+            moduleCode: 'INT-03',
+            name: 'Compute Fee Default Risk',
+            cron: '45 3 * * *',
+            handler: static function (School $school): string {
+                $r = app(ComputeFeeDefaultRiskAction::class)->execute($school->id);
+
+                return count($r).' household(s) scored';
+            },
+            description: 'Recomputes which households are at risk of defaulting on fees.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.mark_offline_hardware',
+            moduleCode: 'INT-04',
+            name: 'Mark Offline Hardware Devices',
+            cron: '*/15 * * * *',
+            handler: static function (School $school): string {
+                $r = app(MarkOfflineHardwareDevicesAction::class)->execute($school->id);
+
+                return count($r).' device(s) marked offline';
+            },
+            description: 'Marks hardware devices that have missed their heartbeat window as offline.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.rebuild_warehouse',
+            moduleCode: 'INT-01',
+            name: 'Rebuild Warehouse Snapshots',
+            cron: '30 3 * * *',
+            handler: static function (School $school): string {
+                $r = app(RebuildWarehouseSnapshotAction::class)->execute($school->id);
+
+                return count($r).' snapshot(s) rebuilt';
+            },
+            description: 'Rebuilds the nightly warehouse snapshots after every other nightly job has run.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

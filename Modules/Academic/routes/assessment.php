@@ -8,8 +8,14 @@ use Modules\Academic\Livewire\Assessment\Types;
 use Modules\Academic\Livewire\Grading\Scales;
 use Modules\Academic\Livewire\Marks\Amend;
 use Modules\Academic\Livewire\Marks\Entry;
+use Modules\Academic\Livewire\ReportCards\Publish as ReportCardsPublish;
+use Modules\Academic\Livewire\ReportCards\Run as ReportCardRun;
+use Modules\Academic\Livewire\ReportCards\Withheld as ReportCardsWithheld;
+use Modules\Academic\Livewire\Results\Analytics;
 use Modules\Academic\Livewire\Results\Comments;
 use Modules\Academic\Livewire\Results\Compute;
+use Modules\Academic\Livewire\Results\Review;
+use Modules\Academic\Livewire\Results\Transcripts;
 
 /**
  * Book D ACA-05 §6 — Assessment, Grading & Report Cards admin screens
@@ -27,4 +33,10 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/academic')->na
 
     Route::livewire('results/compute', Compute::class)->name('results.compute');
     Route::livewire('results/comments', Comments::class)->name('results.comments');
+    Route::livewire('results/review', Review::class)->name('results.review');
+    Route::livewire('results/transcripts', Transcripts::class)->name('results.transcripts');
+    Route::livewire('results/analytics', Analytics::class)->name('results.analytics');
+    Route::livewire('report-cards/run', ReportCardRun::class)->name('report-cards.run');
+    Route::livewire('report-cards/withheld', ReportCardsWithheld::class)->name('report-cards.withheld');
+    Route::livewire('report-cards/publish', ReportCardsPublish::class)->name('report-cards.publish');
 });

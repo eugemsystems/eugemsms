@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Academic\Domain\Actions\CheckAssessmentWeightsAction;
 use Modules\Academic\Domain\Actions\ComputeTermResultsAction;
 use Modules\Academic\Domain\Actions\ComputeTermSubjectResultsAction;
 use Modules\Academic\Domain\Actions\RecomputeSubjectPositionsAction;
@@ -34,12 +35,9 @@ use Modules\Core\Models\SchoolClass;
  * Runs the full `ComputeTermSubjectResultsAction` ->
  * `RecomputeSubjectPositionsAction` -> `ComputeTermResultsAction` ->
  * `RecomputeTermPositionsAction` pipeline for every learner in a
- * chosen class. The exception report (weight totals ≠ 100%) is
- * advisory here, not a block: `ComputeTermSubjectResultsAction` itself
- * does not refuse computation on a shortfall the way AC-ACA-05-001
- * describes — a genuine, documented gap (see `.ai/rules/academic.md`)
- * — so this screen computes the shortfall list itself and surfaces it
- * alongside the results rather than silently proceeding.
+ * chosen class. A subject whose assessment weights do not total 100%
+ * blocks the run and is named with its total (BR-ACA-05-004,
+ * AC-ACA-05-001); `ComputeTermSubjectResultsAction` enforces the same rule.
  */
 #[Title('Compute results')]
 #[Layout('layouts.app')]
@@ -74,6 +72,17 @@ final class Compute extends Component
 
             return;
         }
+
+        $problems = app(CheckAssessmentWeightsAction::class)->execute($termId);
+
+        if ($problems !== []) {
+            $this->weightExceptions = array_map(fn (array $p): string => sprintf('%s: %s%%', $p['subject'], number_format($p['total_percent'], 1)), $problems);
+            $this->toast(__('Results cannot be computed until every subject\'s assessment weights total 100%.'), 'danger');
+
+            return;
+        }
+
+        $this->weightExceptions = [];
 
         $studentIds = ClassAllocation::where('class_id', $this->classId)->where('term_id', $termId)->where('status', 'confirmed')->pluck('student_id');
         $touchedSubjectIds = [];
@@ -111,27 +120,7 @@ final class Compute extends Component
             classId: (int) $this->classId,
         ));
 
-        $this->computeWeightExceptions($termId);
-
         $this->toast(__('Results computed for :count learner(s).', ['count' => $studentIds->count()]));
-    }
-
-    private function computeWeightExceptions(int $termId): void
-    {
-        $this->weightExceptions = [];
-
-        $totals = Assessment::where('term_id', $termId)
-            ->get()
-            ->groupBy('subject_id')
-            ->map(fn ($group) => (float) $group->sum('weight_percent'));
-
-        foreach ($totals as $subjectId => $total) {
-            if (abs($total - 100.0) > 0.01) {
-                $subject = Subject::find($subjectId);
-                $label = $subject !== null ? $subject->name : "#{$subjectId}";
-                $this->weightExceptions[] = sprintf('%s: %s%%', $label, number_format($total, 1));
-            }
-        }
     }
 
     public function render(): View

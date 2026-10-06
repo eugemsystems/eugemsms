@@ -25,9 +25,9 @@ final class HtmlDocumentRenderer implements DocumentRenderer
      */
     public function render(DocumentTemplate $template, array $data): string
     {
-        $body = $this->templateRenderer->render($template->content, $data);
-        $header = $template->header_content !== null ? $this->templateRenderer->render($template->header_content, $data) : '';
-        $footer = $template->footer_content !== null ? $this->templateRenderer->render($template->footer_content, $data) : '';
+        $body = $this->templateRenderer->render($template->content, $data, true);
+        $header = $template->header_content !== null ? $this->templateRenderer->render($template->header_content, $data, true) : '';
+        $footer = $template->footer_content !== null ? $this->templateRenderer->render($template->footer_content, $data, true) : '';
         $styles = $template->styles ?? '';
 
         return <<<HTML

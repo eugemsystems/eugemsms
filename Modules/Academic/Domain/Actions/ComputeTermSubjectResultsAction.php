@@ -7,6 +7,7 @@ namespace Modules\Academic\Domain\Actions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Modules\Academic\Domain\DataObjects\ComputeTermSubjectResultsData;
+use Modules\Academic\Domain\Exceptions\AssessmentWeightsIncompleteException;
 use Modules\Academic\Domain\Support\ContinuousAssessmentProvider;
 use Modules\Academic\Models\AssessmentMark;
 use Modules\Academic\Models\GradingScale;
@@ -46,6 +47,7 @@ final class ComputeTermSubjectResultsAction extends Action
 {
     public function __construct(
         private readonly ContinuousAssessmentProvider $continuousAssessment,
+        private readonly CheckAssessmentWeightsAction $checkWeights,
     ) {}
 
     public function execute(ComputeTermSubjectResultsData $data): TermSubjectResult
@@ -53,6 +55,12 @@ final class ComputeTermSubjectResultsAction extends Action
         $student = Student::findOrFail($data->studentId);
         $subject = Subject::findOrFail($data->subjectId);
         $year = AcademicYear::findOrFail($data->academicYearId);
+
+        $weightProblems = $this->checkWeights->execute($data->termId, [$data->subjectId]);
+
+        if ($weightProblems !== []) {
+            throw AssessmentWeightsIncompleteException::forSubjects($weightProblems);
+        }
 
         $marks = AssessmentMark::query()
             ->where('student_id', $data->studentId)

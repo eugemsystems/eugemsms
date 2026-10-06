@@ -6,12 +6,17 @@ namespace Modules\Operations\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Modules\Core\Domain\Actions\Scheduling\ResolveSystemActorAction;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Operations\Domain\Actions\CheckOverdueCriticalAssetAction;
+use Modules\Operations\Domain\Actions\CheckUnverifiedWorkOrdersAction;
+use Modules\Operations\Domain\Actions\GeneratePreventiveWorkOrdersAction;
 use Modules\Operations\Models\CapitalProject;
 use Modules\Operations\Models\CapitalProjectMilestone;
 use Modules\Operations\Models\FaultReport;
@@ -65,6 +70,7 @@ class OperationsServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -190,5 +196,54 @@ class OperationsServiceProvider extends ModuleServiceProvider
 
             return CapitalProjectMilestone::factory()->create(['school_id' => $school->id, 'project_id' => $project->id]);
         });
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'operations.check_overdue_critical_assets',
+            moduleCode: 'OPS-02',
+            name: 'Check Overdue Critical Assets',
+            cron: '15 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckOverdueCriticalAssetAction::class)->execute($school->id);
+
+                return $r->count().' asset(s) flagged';
+            },
+            description: 'Flags critical assets whose preventive maintenance is overdue.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'operations.check_unverified_work_orders',
+            moduleCode: 'OPS-02',
+            name: 'Check Unverified Work Orders',
+            cron: '20 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckUnverifiedWorkOrdersAction::class)->execute($school->id);
+
+                return $r->count().' work order(s) escalated';
+            },
+            description: 'Escalates completed work orders still waiting for the requester to verify.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'operations.generate_preventive_work_orders',
+            moduleCode: 'OPS-02',
+            name: 'Generate Preventive Work Orders',
+            cron: '0 5 * * *',
+            handler: static function (School $school): string {
+                $r = app(GeneratePreventiveWorkOrdersAction::class)->execute($school->id, app(ResolveSystemActorAction::class)->execute());
+
+                return $r->generated->count().' work order(s) generated';
+            },
+            description: 'Raises a work order for every calendar-based maintenance schedule that has fallen due.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

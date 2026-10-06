@@ -18,7 +18,7 @@
 
     @if ($weightExceptions !== [])
         <div class="alert alert-warning">
-            <strong>{{ __('Weight shortfall/excess (advisory — not blocked):') }}</strong>
+            <strong>{{ __('Results blocked — assessment weights must total 100% for:') }}</strong>
             <ul class="mb-0 mt-1">
                 @foreach ($weightExceptions as $exception)
                     <li>{{ $exception }}</li>

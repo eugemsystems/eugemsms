@@ -11,11 +11,14 @@ use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
 use Modules\Farm\Domain\Events\FarmSaleRecorded;
 use Modules\Finance\Domain\Events\ReceiptPosted;
+use Modules\Fiscal\Domain\Actions\CheckCertificateExpiryAction;
+use Modules\Fiscal\Domain\Actions\ReconcileFiscalisationAction;
 use Modules\Fiscal\Domain\Contracts\FiscalGatewayDriver;
 use Modules\Fiscal\Domain\Listeners\RouteFarmSaleListener;
 use Modules\Fiscal\Domain\Listeners\RouteFinanceReceiptListener;
@@ -104,6 +107,7 @@ class FiscalServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerListeners();
         $this->registerCloseChecklistItems();
@@ -232,5 +236,40 @@ class FiscalServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(FiscalZReport::class, fn (School $school): FiscalZReport => FiscalZReport::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(FiscalAuditLogEntry::class, fn (School $school): FiscalAuditLogEntry => FiscalAuditLogEntry::factory()->for($school)->create());
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'fiscal.check_certificate_expiry',
+            moduleCode: 'FIN-13',
+            name: 'Check Fiscal Certificate Expiry',
+            cron: '10 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckCertificateExpiryAction::class)->execute($school->id);
+
+                return $r->count().' certificate(s) flagged';
+            },
+            description: 'Alerts on fiscal device certificates nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'fiscal.reconcile',
+            moduleCode: 'FIN-13',
+            name: 'Reconcile Fiscalisation',
+            cron: '45 * * * *',
+            handler: static function (School $school): string {
+                $r = app(ReconcileFiscalisationAction::class)->execute($school->id);
+
+                return $r->count().' receipt(s) unreconciled';
+            },
+            description: 'Finds receipts not fiscalised within the reconciliation window.',
+            alertIfNotRunWithinMinutes: 180,
+        );
     }
 }

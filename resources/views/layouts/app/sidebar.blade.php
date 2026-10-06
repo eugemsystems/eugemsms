@@ -296,6 +296,24 @@
                                     <a href="{{ route('academic.results.comments', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.results.comments') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-chat-3-line"></i> {{ __('Comment bank') }}
                                     </a>
+                                    <a href="{{ route('academic.results.review', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.results.review') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-check-double-line"></i> {{ __('Review results') }}
+                                    </a>
+                                    <a href="{{ route('academic.report-cards.run', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.report-cards.run') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Generate report cards') }}
+                                    </a>
+                                    <a href="{{ route('academic.report-cards.withheld', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.report-cards.withheld') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-lock-line"></i> {{ __('Withheld reports') }}
+                                    </a>
+                                    <a href="{{ route('academic.report-cards.publish', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.report-cards.publish') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-send-plane-line"></i> {{ __('Publish report cards') }}
+                                    </a>
+                                    <a href="{{ route('academic.results.transcripts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.results.transcripts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-graduation-cap-line"></i> {{ __('Transcripts') }}
+                                    </a>
+                                    <a href="{{ route('academic.results.analytics', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.results.analytics') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-box-line"></i> {{ __('Performance analytics') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

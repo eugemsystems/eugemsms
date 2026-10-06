@@ -9,11 +9,13 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
+use Modules\Payroll\Domain\Actions\CheckStatutoryReturnDeadlinesAction;
 use Modules\Payroll\Domain\Support\CloseChecks\PayrollPostedAndReturnsPreparedCheck;
 use Modules\Payroll\Models\PayComponent;
 use Modules\Payroll\Models\PayGrade;
@@ -110,6 +112,7 @@ class PayrollServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerCloseChecklistItems();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -297,5 +300,26 @@ class PayrollServiceProvider extends ModuleServiceProvider
         });
 
         TenantModelRegistry::register(StatutoryReturn::class, fn (School $school): StatutoryReturn => StatutoryReturn::factory()->for($school)->create());
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'payroll.check_return_deadlines',
+            moduleCode: 'PPL-05',
+            name: 'Check Statutory Return Deadlines',
+            cron: '10 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckStatutoryReturnDeadlinesAction::class)->execute($school->id);
+
+                return count($r).' alert(s)';
+            },
+            description: 'Alerts on statutory returns approaching their due date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

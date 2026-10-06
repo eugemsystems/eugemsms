@@ -10,9 +10,12 @@ use Modules\Boarding\Models\MovementCheckpoint;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Security\Domain\Actions\CheckMissedPatrolsAction;
+use Modules\Security\Domain\Actions\CheckOverdueKeysAction;
 use Modules\Security\Models\Contractor;
 use Modules\Security\Models\ContractorSiteVisit;
 use Modules\Security\Models\ContractorWorker;
@@ -81,6 +84,7 @@ class SecurityServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -202,5 +206,40 @@ class SecurityServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(EmergencyDrill::class, fn (School $school): EmergencyDrill => EmergencyDrill::factory()->for($school)->create());
 
         TenantModelRegistry::register(MusterMark::class, fn (School $school): MusterMark => MusterMark::factory()->for($school)->create());
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'security.check_missed_patrols',
+            moduleCode: 'OPS-06',
+            name: 'Check Missed Patrols',
+            cron: '*/10 * * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckMissedPatrolsAction::class)->execute($school->id);
+
+                return $r->count().' patrol(s) missed';
+            },
+            description: 'Flags guard patrols that have passed their grace window without a scan.',
+            alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'security.check_overdue_keys',
+            moduleCode: 'OPS-06',
+            name: 'Check Overdue Keys',
+            cron: '40 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckOverdueKeysAction::class)->execute($school->id);
+
+                return $r->count().' key(s) overdue';
+            },
+            description: 'Flags keys and cards issued out and not returned by their due date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

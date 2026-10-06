@@ -59,7 +59,7 @@ it('lists scheduled tasks with their last run', function (): void {
     $task = ScheduledTask::factory()->create(['name' => 'Nightly Backup']);
     ScheduledTaskRun::factory()->create(['task_id' => $task->id, 'status' => 'completed']);
 
-    Livewire::test(Tasks::class)->assertSee('Nightly Backup')->assertSee('Completed');
+    Livewire::test(Tasks::class)->set('search', 'Nightly Backup')->assertSee('Nightly Backup')->assertSee('Completed');
 });
 
 it('checks scheduled task freshness and toasts a summary', function (): void {

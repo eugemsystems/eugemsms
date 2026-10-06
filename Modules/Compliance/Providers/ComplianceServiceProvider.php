@@ -6,6 +6,12 @@ namespace Modules\Compliance\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Modules\Compliance\Domain\Actions\CheckDocumentExpiryAction;
+use Modules\Compliance\Domain\Actions\CheckPolicyReviewDueAction;
+use Modules\Compliance\Domain\Actions\CheckRetentionScheduleCoverageAction;
+use Modules\Compliance\Domain\Actions\CheckStatutorySchoolReturnDeadlinesAction;
+use Modules\Compliance\Domain\Actions\CheckZimsecDeadlinesAction;
+use Modules\Compliance\Domain\Actions\RunDataQualityChecksAction;
 use Modules\Compliance\Domain\Registry\PersonalDataTableRegistry;
 use Modules\Compliance\Models\Consent;
 use Modules\Compliance\Models\ConsentType;
@@ -29,6 +35,7 @@ use Modules\Compliance\Models\ZimsecResult;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
@@ -127,6 +134,7 @@ class ComplianceServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerPersonalDataTables();
         $this->registerPermissions();
@@ -303,5 +311,96 @@ class ComplianceServiceProvider extends ModuleServiceProvider
                 'sort_order' => 0,
             ]);
         }
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.check_document_expiry',
+            moduleCode: 'CMP-04',
+            name: 'Check Document Expiry',
+            cron: '25 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckDocumentExpiryAction::class)->execute($school->id);
+
+                return count($r).' alert(s)';
+            },
+            description: 'Alerts on registered compliance documents nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.check_policy_review_due',
+            moduleCode: 'CMP-04',
+            name: 'Check Policy Review Due',
+            cron: '35 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckPolicyReviewDueAction::class)->execute($school->id);
+
+                return $r->count().' policy(ies) overdue';
+            },
+            description: 'Flags policies past their review date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.check_statutory_return_deadlines',
+            moduleCode: 'CMP-02',
+            name: 'Check Statutory Return Deadlines',
+            cron: '45 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckStatutorySchoolReturnDeadlinesAction::class)->execute($school->id);
+
+                return count($r).' alert(s)';
+            },
+            description: 'Alerts on MoPSE and statutory school returns approaching their due date.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.run_data_quality_checks',
+            moduleCode: 'CMP-02',
+            name: 'Run Data Quality Checks',
+            cron: '0 1 * * 1',
+            handler: static function (School $school): string {
+                $r = app(RunDataQualityChecksAction::class)->execute($school->id);
+
+                return $r->count().' check(s) run';
+            },
+            description: 'Weekly check of the learner and staff fields that cause Ministry rejection.',
+            alertIfNotRunWithinMinutes: 11000,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.check_zimsec_deadlines',
+            moduleCode: 'CMP-01',
+            name: 'Check ZIMSEC Deadlines',
+            cron: '0 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckZimsecDeadlinesAction::class)->execute($school->id);
+
+                return count($r).' alert(s)';
+            },
+            description: 'Raises the configured alerts for approaching ZIMSEC registration and results deadlines.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'compliance.check_retention_coverage',
+            moduleCode: 'CMP-03',
+            name: 'Check Retention Schedule Coverage',
+            cron: '30 2 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckRetentionScheduleCoverageAction::class)->execute($school->id);
+
+                return count($r).' uncovered table(s)';
+            },
+            description: 'Flags tables holding personal data with no active retention rule.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

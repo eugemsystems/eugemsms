@@ -20,6 +20,7 @@ use Modules\Academic\Models\AssessmentMarkVersion;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\GradingScale;
 use Modules\Academic\Models\Subject;
+use Modules\Academic\Models\TermResult;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 
@@ -54,6 +55,7 @@ final class AmendMarkAction extends Action
         private readonly RecomputeSubjectPositionsAction $recomputeSubjectPositions,
         private readonly ComputeTermResultsAction $computeTermResults,
         private readonly RecomputeTermPositionsAction $recomputeTermPositions,
+        private readonly RegenerateReportCardAction $regenerateReportCard,
     ) {}
 
     public function execute(AmendMarkData $data): AssessmentMarkVersion
@@ -131,9 +133,53 @@ final class AmendMarkAction extends Action
             return $version;
         });
 
+        $before = $this->publishedPositions($assessment->term_id, $data->studentId);
+
         $this->cascadeRecompute($assessment, $data->studentId);
 
+        if ($wasPublished) {
+            $this->regenerateAffectedReportCards($assessment->term_id, $data->studentId, $data->changedByUserId, $before);
+        }
+
         return $version;
+    }
+
+    /**
+     * Class and level positions of every published report card in the
+     * amended learner's class, so the cards that move can be found afterwards.
+     *
+     * @return array<int, array{class: int|null, level: int|null}>
+     */
+    private function publishedPositions(int $termId, int $studentId): array
+    {
+        $classId = TermResult::query()->where('term_id', $termId)->where('student_id', $studentId)->value('class_id');
+
+        if ($classId === null) {
+            return [];
+        }
+
+        return TermResult::query()->where('term_id', $termId)->where('class_id', $classId)->where('status', 'published')
+            ->get(['student_id', 'class_position', 'level_position'])
+            ->mapWithKeys(fn (TermResult $r): array => [$r->student_id => ['class' => $r->class_position, 'level' => $r->level_position]])
+            ->all();
+    }
+
+    /**
+     * BR-ACA-05-010/011: the amended learner's card and every published card
+     * whose position moved are regenerated, so the set of cards never
+     * disagrees with itself.
+     *
+     * @param  array<int, array{class: int|null, level: int|null}>  $before
+     */
+    private function regenerateAffectedReportCards(int $termId, int $amendedStudentId, int $userId, array $before): void
+    {
+        foreach (TermResult::query()->where('term_id', $termId)->whereIn('student_id', array_keys($before))->where('status', 'published')->get() as $result) {
+            $moved = ($before[$result->student_id]['class'] ?? null) !== $result->class_position || ($before[$result->student_id]['level'] ?? null) !== $result->level_position;
+
+            if (($result->student_id === $amendedStudentId || $moved) && $result->report_document_id !== null) {
+                $this->regenerateReportCard->execute($result, $userId);
+            }
+        }
     }
 
     private function cascadeRecompute(Assessment $assessment, int $studentId): void

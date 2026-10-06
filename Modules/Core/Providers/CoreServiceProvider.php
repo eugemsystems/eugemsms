@@ -18,6 +18,7 @@ use Modules\Core\Console\Commands\InstallVerifyCommand;
 use Modules\Core\Console\Commands\RunHealthChecksCommand;
 use Modules\Core\Console\Commands\RunIntegrityChecksCommand;
 use Modules\Core\Console\Commands\RunRestoreTestCommand;
+use Modules\Core\Console\Commands\RunScheduledTaskCommand;
 use Modules\Core\Console\Commands\SchedulerHeartbeatCommand;
 use Modules\Core\Console\Commands\SeedDemoDatasetCommand;
 use Modules\Core\Console\Commands\SeedZimbabweCommand;
@@ -146,6 +147,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         RunRestoreTestCommand::class,
         CheckScheduledTaskFreshnessCommand::class,
         HardenAppendOnlyTablesCommand::class,
+        RunScheduledTaskCommand::class,
     ];
 
     public function register(): void

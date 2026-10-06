@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Modules\Academic\Console\Tasks\AutoSubmitExpiredCbtAttemptsTask;
+use Modules\Academic\Console\Tasks\SendLibraryOverdueRemindersTask;
 use Modules\Academic\Domain\Events\SubjectEnrolmentAdded;
 use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
 use Modules\Academic\Domain\Listeners\AutoCreateProjectOnLateEnrolmentListener;
@@ -15,6 +17,7 @@ use Modules\Academic\Domain\Listeners\CreateSubstitutionsForApprovedLeaveListene
 use Modules\Academic\Domain\Listeners\ExemptProjectOnSubjectDropListener;
 use Modules\Academic\Domain\Support\ContinuousAssessmentProvider;
 use Modules\Academic\Domain\Support\EloquentContinuousAssessmentProvider;
+use Modules\Academic\Domain\Support\ReportCardTemplate;
 use Modules\Academic\Models\AcquisitionRequest;
 use Modules\Academic\Models\Assessment;
 use Modules\Academic\Models\AssessmentInstrument;
@@ -98,6 +101,7 @@ use Modules\Academic\Models\Venue;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\AcademicYear;
@@ -218,7 +222,9 @@ class AcademicServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
+        ReportCardTemplate::registerVariables();
         $this->registerEventListeners();
         $this->registerPermissions();
         $this->registerLivewireRoutes();
@@ -295,7 +301,12 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'result.amend' => ['description' => 'Amend a mark on an assessment that has not yet published.', 'dangerous' => true],
             'result.amend_published' => ['description' => 'Amend a mark on an already-published assessment, recomputing class and level positions.', 'dangerous' => true],
             'result.compute' => ['description' => 'Run the results computation and position-recomputation pipeline for a class; publish an assessment.'],
-            'result.comment' => ['description' => 'Add an entry to the results comment bank.'],
+            'result.comment' => ['description' => 'Add an entry to the results comment bank, and write class-teacher and head comments on a learner\'s term result.'],
+            'result.review' => ['description' => 'Review computed term results and approve them for report card generation.'],
+            'report_card.view' => ['description' => 'See generated and withheld report cards.'],
+            'report_card.generate' => ['description' => 'Generate report cards for a class or level.'],
+            'report_card.publish' => ['description' => 'Publish report cards to guardians; a withheld card is released only once its fee balance clears.', 'dangerous' => true],
+            'transcript.generate' => ['description' => 'Generate a verifiable transcript from a learner\'s published results.', 'dangerous' => true],
 
             // Book E ACA-03 — Timetable & Scheduling Engine.
             'timetable.view' => ['description' => 'View timetables, clashes, and schedule views.'],
@@ -371,6 +382,23 @@ class AcademicServiceProvider extends ModuleServiceProvider
      */
     private function registerNotificationKeys(): void
     {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'academic.report_card_published',
+            variables: ['student.first_name', 'term.id'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardians',
+            isUrgent: false,
+            isTransactional: true,
+        ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'academic.report_card_amended',
+            variables: ['student.first_name', 'term.id'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardians',
+            isUrgent: false,
+            isTransactional: true,
+        ));
         NotificationKeyRegistry::register(new NotificationKeyDefinition(
             key: 'attendance.unexplained_absence',
             variables: ['guardian.name', 'student.first_name', 'student.last_name', 'date'],
@@ -1367,5 +1395,32 @@ class AcademicServiceProvider extends ModuleServiceProvider
         $subject = Subject::factory()->for($school)->create(['framework_id' => CurriculumFramework::factory()->for($school)->create()->id]);
 
         return CbtTest::factory()->create(['school_id' => $school->id, 'term_id' => $term->id, 'subject_id' => $subject->id]);
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'academic.auto_submit_expired_cbt_attempts',
+            moduleCode: 'ACA-09',
+            name: 'Auto-Submit Expired CBT Attempts',
+            cron: '* * * * *',
+            handler: AutoSubmitExpiredCbtAttemptsTask::class,
+            description: 'Submits CBT attempts whose time has run out.',
+            alertIfNotRunWithinMinutes: 15,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'academic.send_library_overdue_reminders',
+            moduleCode: 'ACA-10',
+            name: 'Send Library Overdue Reminders',
+            cron: '0 8 * * *',
+            handler: SendLibraryOverdueRemindersTask::class,
+            description: 'Reminds borrowers of overdue loans before any fine is charged.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

@@ -10,9 +10,11 @@ use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
 use Modules\Core\Models\School;
+use Modules\Wallet\Domain\Actions\ReconcileWalletLiabilityAction;
 use Modules\Wallet\Domain\Support\CloseChecks\WalletLiabilityReconcilesCheck;
 use Modules\Wallet\Models\SpendPoint;
 use Modules\Wallet\Models\StudentWallet;
@@ -84,6 +86,7 @@ class WalletServiceProvider extends ModuleServiceProvider
 
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
+        $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         $this->registerCloseChecklistItems();
         $this->registerPermissions();
@@ -199,5 +202,26 @@ class WalletServiceProvider extends ModuleServiceProvider
         TenantModelRegistry::register(WalletSale::class, fn (School $school): WalletSale => WalletSale::factory()->create(['school_id' => $school->id]));
 
         TenantModelRegistry::register(WalletSaleLine::class, fn (School $school): WalletSaleLine => WalletSaleLine::factory()->create(['school_id' => $school->id]));
+    }
+
+    /**
+     * Per-school periodic jobs, run by `serp:run-task`. Each handler only
+     * calls the module's existing Action for one school.
+     */
+    private function registerScheduledTasks(): void
+    {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'wallet.reconcile_liability',
+            moduleCode: 'FIN-14',
+            name: 'Reconcile Wallet Liability',
+            cron: '30 4 * * *',
+            handler: static function (School $school): string {
+                $r = app(ReconcileWalletLiabilityAction::class)->execute($school->id);
+
+                return count($r).' difference(s) found';
+            },
+            description: 'Checks the sum of student wallets against the ledger\'s wallet liability account.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
     }
 }

@@ -16,6 +16,12 @@ use Modules\Core\Domain\Registry\TemplateFilterRegistry;
  */
 final class TemplateRenderer
 {
+    /**
+     * HTML renderers set this so a value from the data (a learner's name, a
+     * comment) can never inject markup into the stored document.
+     */
+    private bool $escapeHtml = false;
+
     public function __construct(
         private readonly TemplateParser $parser,
     ) {}
@@ -23,9 +29,15 @@ final class TemplateRenderer
     /**
      * @param  array<string, mixed>  $data
      */
-    public function render(string $content, array $data): string
+    public function render(string $content, array $data, bool $escapeHtml = false): string
     {
-        return $this->renderNodes($this->parser->parse($content), $data);
+        $this->escapeHtml = $escapeHtml;
+
+        try {
+            return $this->renderNodes($this->parser->parse($content), $data);
+        } finally {
+            $this->escapeHtml = false;
+        }
     }
 
     /**
@@ -60,7 +72,9 @@ final class TemplateRenderer
             $value = TemplateFilterRegistry::apply($filter['name'], $value, $filter['args']);
         }
 
-        return (string) $value;
+        $text = (string) $value;
+
+        return $this->escapeHtml ? htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : $text;
     }
 
     /**
