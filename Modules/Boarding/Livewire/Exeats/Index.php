@@ -13,6 +13,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Boarding\Domain\Actions\RequestExeatAction;
 use Modules\Boarding\Domain\DataObjects\RequestExeatData;
+use Modules\Boarding\Domain\Support\ExeatEligibility;
 use Modules\Boarding\Models\Exeat;
 use Modules\Boarding\Models\ExeatType;
 use Modules\Core\Domain\Exceptions\DomainException;
@@ -92,6 +93,8 @@ final class Index extends Component
             return;
         }
 
+        $learner = Student::query()->find((int) $this->studentId);
+
         try {
             app(RequestExeatAction::class)->execute(new RequestExeatData(
                 schoolId: $this->school->id,
@@ -109,6 +112,8 @@ final class Index extends Component
                 requestSource: 'phone_recorded',
                 requestedByUserId: (int) Auth::id(),
                 collectingGuardianId: $this->collectingGuardianId,
+                feeArrearsExceedThreshold: $learner !== null && app(ExeatEligibility::class)->arrearsExceedThreshold($learner),
+                isSuspended: $learner !== null && app(ExeatEligibility::class)->isSuspended($learner),
             ));
         } catch (DomainException $e) {
             $this->toast($e->getMessage(), 'danger');

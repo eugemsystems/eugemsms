@@ -246,6 +246,29 @@ paths:
         - { name: student, in: path, required: true, schema: { type: string } }
       responses:
         "200": { description: OK }
+  /exeat-types:
+    get:
+      tags: [Boarding]
+      summary: Exeat types a guardian can request (ability exeats.read)
+      responses:
+        "200": { description: OK }
+  /students/{student}/exeats:
+    get:
+      tags: [Boarding]
+      summary: A boarder's exeats, newest first (ability exeats.read). The verification code appears only once approved.
+      parameters:
+        - { name: student, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Boarding]
+      summary: Request an exeat (ability exeats.request, Idempotency-Key required). Needs a guardian link that may authorise exeats; a collector who is not a registered guardian is covered by this guardian's one-off authorisation. Quota, notice, suspension and fee-arrears rules apply (422 EXEAT_BLOCKED / quota errors).
+      parameters:
+        - { name: student, in: path, required: true, schema: { type: string } }
+      responses:
+        "201": { description: Created, status pending }
+        "403": { description: Guardian may not authorise exeats }
+        "422": { description: Blocked, over quota, day scholar or invalid }
   /teacher/classes:
     get:
       tags: [Teacher]

@@ -237,6 +237,10 @@ depends on them. Status per item below; anything not listed as done is still ope
 - **Vendor-session notice and parent invitation.** Opening a vendor support session now notifies the administrator who
   granted access (in-app, plus email; `core.support_session_opened`). Giving a guardian parent-app access now sends them
   an SMS (and email where on file) invitation (`people.parent_app_invitation`); a failed send never blocks either.
+- **Parent exeat API and exeat blocks.** `GET /exeat-types`, `GET|POST /students/{student}/exeats` (idempotent) for
+  guardians who may authorise exeats. Also fixed a gap that affected the staff screen too: the suspension and fee-arrears
+  blocks were never actually computed (both flags were always false); `ExeatEligibility` now computes them from learner status
+  and the school's `boarding.exeat_block_on_fee_arrears` / threshold settings and both callers use it.
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
