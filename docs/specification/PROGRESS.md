@@ -1393,7 +1393,7 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
-| INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
+| INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); 🟡 public REST surface written but **its Pest tests have not been run** (see INT-04 note) |
 | SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ (no such route in `routes/api.php`; correct) |
 | SAA-02 | Vendor Control Centre | ✅ admin screens (`Livewire/Vendor/{Tenants,Rollouts,Releases,Broadcasts,Incidents}/`, public `/status`) |
 | SAA-03 | Onboarding, Support & Customer Success | ✅ admin screens (`Livewire/Vendor/{Onboarding,Support,Adoption,ChurnRisk}/`, `Livewire/Tenant/Support/`, public `/help`) |
@@ -1476,12 +1476,37 @@ client of the same school; (3) `IssueApiClientAction` validates name, type,
 non-empty abilities, rate limit 1–10,000 and IP/CIDR allowlist; (4) new
 `RotateApiClientKeyAction`, `SetWebhookSubscriptionActiveAction` (re-enable resets
 failures), `SaveSsoProvisioningConfigAction`; (5) revoking a client switches off
-its webhooks. **Not built (documented gaps):** the public REST surface itself —
-`/api/v1/openapi.json`, `/api/v1/hardware/scan`, `/api/v1/hardware/{ulid}/heartbeat`,
-`/developers`, per-client rate-limit middleware (429 + Retry-After) and
-`api_usage_log` writes — so the usage dashboard is empty until those exist
-(BR-INT-04-003/010, AC-INT-04-001/005 are not yet exercisable end to end);
-no scheduler wiring for webhook retries (`intelligence.mark_offline_hardware` IS now registered in `IntelligenceServiceProvider` and run via `serp:run-task`; the manual "flag silent devices" button remains); `ProvisionSsoStaffAccountAction`
+its webhooks. **Public REST surface pass (written, NOT yet test-verified).** Added
+`GET /api/v1/openapi.json` (`OpenApiDocumentBuilder`: generated from the router's
+`api/v1` routes, ability middleware and any `FormRequest` rules; BR-INT-04-010),
+`POST /api/v1/hardware/scan` and `POST /api/v1/hardware/{ulid}/heartbeat`
+(`HardwareController`, `HardwareScanRequest`), the `serp.api-client` middleware
+(`AuthenticateApiClient`: bearer `{client ulid}.{secret}`, bcrypt-verified; revoked, IP-allowlist
+and missing-ability refusals; per-client `rate_limit_per_minute` with 429 + `Retry-After` and the
+`RateLimitExceeded` event; one `api_usage_log` row per authenticated call and `last_used_at`),
+public `GET /developers`, and the scheduled task `intelligence.retry_webhook_deliveries`
+(`RetryFailedWebhookDeliveriesAction`, 2^attempts-minute backoff capped at 6h, via
+`DispatchWebhookAction::attempt()`). Pest files: `Int04OpenApiTest`, `Int04HardwareApiTest`,
+`Int04DevelopersPageTest`, `Int04WebhookRetryTest`. **Verification status:** the authoring sandbox
+could not install composer dependencies (GitHub-hosted dist and source downloads were denied), so
+these tests and the existing suite were only `php -l` linted, never executed. Run
+`vendor/bin/pest Modules/Intelligence/tests/Feature` before treating BR-INT-04-003/010 and
+AC-INT-04-001/005 as met. Choices where the spec is ambiguous: (1) API keys are now
+`{client ulid}.{secret}` (previously a bare random string) so the row can be found before the hash is
+checked; keys issued earlier cannot authenticate and must be rotated; (2) the scan body adds
+`target_id` (roll call or checkpoint id) and optional `direction`, which the spec's example omits but
+`RecordHardwareScanAction` needs; scans are attributed to the user who registered the device
+(`api_clients.created_by`); (3) a device may only call as itself (`device_id` must belong to the
+calling key); (4) rate limiting is a per-client one-minute window via the cache limiter, applied to
+`serp.api-client` routes only; (5) `/developers` is a read-only page generated from the OpenAPI
+document, not hand-written prose; (6) the usage dashboard needs no change but is untested against live
+rows. **Still open:** `INT-04` ability allow-list still has only `usage:read` and `{purpose}:write`
+(no payroll or other third-party REST endpoints exist, so AC-INT-04-001 is only exercised against the
+hardware routes); `attendance` (`ACA-04`) is still not a registered hardware route; webhook dispatch is
+not yet hooked to domain events (`TriggerWebhooksForEventAction` has no listeners); the vendor-side
+aggregate of usage (BR-INT-04-011) is not built; the manual "flag silent devices" button remains
+alongside `intelligence.mark_offline_hardware`.
+`ProvisionSsoStaffAccountAction`
 takes a free-text role name and is deliberately not exposed on any screen until
 an IdP sync exists to drive it and the role is restricted.
 
