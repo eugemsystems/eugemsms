@@ -33,6 +33,7 @@ use Modules\Intelligence\Domain\Actions\ComputeFeeDefaultRiskAction;
 use Modules\Intelligence\Domain\Actions\GetKpiValueAction;
 use Modules\Intelligence\Domain\Actions\MarkOfflineHardwareDevicesAction;
 use Modules\Intelligence\Domain\Actions\RebuildWarehouseSnapshotAction;
+use Modules\Intelligence\Domain\Actions\RetryFailedWebhookDeliveriesAction;
 use Modules\Intelligence\Domain\DataObjects\HardwareScanRouteDefinition;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
 use Modules\Intelligence\Domain\DataObjects\ReportEntityDefinition;
@@ -642,6 +643,20 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
             },
             description: 'Marks hardware devices that have missed their heartbeat window as offline.',
             alertIfNotRunWithinMinutes: 60,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.retry_webhook_deliveries',
+            moduleCode: 'INT-04',
+            name: 'Retry Failed Webhook Deliveries',
+            cron: '*/5 * * * *',
+            handler: static function (School $school): string {
+                $r = app(RetryFailedWebhookDeliveriesAction::class)->execute($school->id);
+
+                return count($r).' delivery attempt(s) retried';
+            },
+            description: 'Re-attempts failed outbound webhook deliveries with exponential backoff; abandons or auto-disables per the integration settings.',
+            alertIfNotRunWithinMinutes: 30,
         );
 
         ScheduledTaskHandlerRegistry::register(

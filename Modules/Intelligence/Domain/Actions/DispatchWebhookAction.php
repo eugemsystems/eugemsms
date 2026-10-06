@@ -42,13 +42,25 @@ final class DispatchWebhookAction extends Action
      */
     public function execute(int $schoolId, int $subscriptionId, string $eventName, array $payload): WebhookDelivery
     {
-        $subscription = WebhookSubscription::findOrFail($subscriptionId);
+        WebhookSubscription::findOrFail($subscriptionId);
 
         $delivery = $this->transaction(fn (): WebhookDelivery => WebhookDelivery::create([
             'school_id' => $schoolId, 'subscription_id' => $subscriptionId,
             'event_name' => $eventName, 'payload' => $payload, 'attempt_count' => 0, 'status' => 'pending',
         ]));
 
+        return $this->attempt($delivery);
+    }
+
+    /**
+     * One delivery attempt for an existing `pending`/`failed` delivery. Also the retry entry
+     * point used by `RetryFailedWebhookDeliveriesAction`.
+     */
+    public function attempt(WebhookDelivery $delivery): WebhookDelivery
+    {
+        $subscription = WebhookSubscription::findOrFail($delivery->subscription_id);
+        $schoolId = $delivery->school_id;
+        $payload = $delivery->payload;
         $body = json_encode($payload) ?: '{}';
         $signature = hash_hmac('sha256', $body, (string) $subscription->signing_secret);
 
