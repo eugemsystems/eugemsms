@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Intelligence\Domain\Support\OpenApiDocumentBuilder;
 use Modules\Intelligence\Livewire\EarlyWarning\Enrolment as EarlyWarningEnrolment;
 use Modules\Intelligence\Livewire\EarlyWarning\FeeRisk as EarlyWarningFeeRisk;
 use Modules\Intelligence\Livewire\EarlyWarning\Queue as EarlyWarningQueue;
@@ -65,3 +66,9 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/insights')->na
         Route::livewire('usage', IntegrationUsage::class)->name('usage');
     });
 });
+
+/**
+ * Public developer documentation (Book J INT-04 §5, `GET /developers`) — no
+ * authentication; rendered from the same generated OpenAPI document (BR-INT-04-010).
+ */
+Route::get('developers', fn (OpenApiDocumentBuilder $builder) => view('intelligence::public.developers', ['document' => $builder->build()]))->name('developers');
