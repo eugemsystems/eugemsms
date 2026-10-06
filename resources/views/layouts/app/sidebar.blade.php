@@ -129,6 +129,9 @@
                                     <a href="{{ route('people.guardians.portal-access', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.portal-access') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-smartphone-line"></i> {{ __('Parent app access') }}
                                     </a>
+                                    <a href="{{ route('people.guardians.duplicates', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.duplicates') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-git-merge-line"></i> {{ __('Duplicate guardians') }}
+                                    </a>
                                     <a href="{{ route('people.guardians.verification', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.verification') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shield-user-line"></i> {{ __('Guardian verification') }}
                                     </a>

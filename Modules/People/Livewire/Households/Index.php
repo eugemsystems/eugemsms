@@ -153,7 +153,7 @@ final class Index extends Component
             'guardians' => Guardian::query()->whereIn('id', $members->where('member_type', 'guardian')->pluck('member_id'))->get()->keyBy('id'),
             'matches' => mb_strlen($term) < 2 || $this->selectedId === null ? collect() : ($this->memberType === 'student'
                 ? Student::query()->where(fn ($q) => $q->where('admission_number', 'like', $like)->orWhere('first_name', 'like', $like)->orWhere('last_name', 'like', $like))->limit(8)->get()->map(fn (Student $s): array => ['id' => $s->id, 'label' => "{$s->admission_number} — {$s->fullName()}"])
-                : Guardian::query()->where(fn ($q) => $q->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('organisation_name', 'like', $like))->limit(8)->get()->map(fn (Guardian $g): array => ['id' => $g->id, 'label' => $g->displayName()])),
+                : Guardian::query()->where('status', '!=', 'merged')->where(fn ($q) => $q->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('organisation_name', 'like', $like))->limit(8)->get()->map(fn (Guardian $g): array => ['id' => $g->id, 'label' => $g->displayName()])),
         ]);
     }
 }

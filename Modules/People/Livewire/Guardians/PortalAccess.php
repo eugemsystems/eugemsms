@@ -84,7 +84,7 @@ final class PortalAccess extends Component
         $term = trim($this->search);
 
         return view('people::guardians.portal-access', [
-            'guardians' => Guardian::query()->where('school_id', $this->school->id)
+            'guardians' => Guardian::query()->where('school_id', $this->school->id)->where('status', '!=', 'merged')
                 ->when($this->filter === 'with', fn ($q) => $q->whereNotNull('user_id'), fn ($q) => $q->whereNull('user_id'))
                 ->when($term !== '', fn ($q) => $q->where(fn ($q2) => $q2->where('last_name', 'like', "%{$term}%")->orWhere('first_name', 'like', "%{$term}%")->orWhere('primary_phone', 'like', "%{$term}%")))
                 ->orderBy('last_name')->orderBy('first_name')->paginate(20),

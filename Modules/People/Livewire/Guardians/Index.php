@@ -33,7 +33,7 @@ final class Index extends Component
 
     public function render(): View
     {
-        $query = Guardian::where('school_id', $this->school->id);
+        $query = Guardian::where('school_id', $this->school->id)->where('status', '!=', 'merged');
 
         return view('people::guardians.index', [
             'guardians' => $this->paginateDataTable($query, $this->tableColumns()),

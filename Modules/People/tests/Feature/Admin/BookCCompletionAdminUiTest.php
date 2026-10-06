@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Core\Domain\Actions\Auth\RequestOtpAction;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
@@ -21,6 +22,7 @@ use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\People\Domain\Actions\ChangeStudentStatusAction;
 use Modules\People\Domain\Actions\CreateGuardianAction;
+use Modules\People\Domain\Actions\MergeGuardiansAction;
 use Modules\People\Domain\Actions\RequestGuardianContactUpdateAction;
 use Modules\People\Domain\DataObjects\ChangeStudentStatusData;
 use Modules\People\Domain\DataObjects\CreateGuardianData;
@@ -30,6 +32,7 @@ use Modules\People\Livewire\Admissions\Enquiries\Board;
 use Modules\People\Livewire\Admissions\Exams\Manage as ExamsManage;
 use Modules\People\Livewire\Admissions\Interviews\Schedule;
 use Modules\People\Livewire\Admissions\Reports\Funnel;
+use Modules\People\Livewire\Guardians\Duplicates;
 use Modules\People\Livewire\Guardians\PortalAccess;
 use Modules\People\Livewire\Guardians\UpdateQueue;
 use Modules\People\Livewire\Guardians\Verification;
@@ -47,6 +50,7 @@ use Modules\People\Models\ApplicationDocument;
 use Modules\People\Models\Enquiry;
 use Modules\People\Models\EntranceExam;
 use Modules\People\Models\EntranceExamCandidate;
+use Modules\People\Models\FeeLiability;
 use Modules\People\Models\Guardian;
 use Modules\People\Models\GuardianContactUpdate;
 use Modules\People\Models\GuardianVerification;
@@ -339,4 +343,52 @@ it('withdraws access, signs the parent out everywhere and deactivates their memb
         ->and($user->tokens()->whereNull('revoked_at')->count())->toBe(0);
 
     Livewire::actingAs(bcUser($f))->test(PortalAccess::class, ['school' => $f['school']])->assertForbidden();
+});
+
+it('merges a duplicate guardian into the survivor, moving learners, fee shares and the app account, and hides the duplicate', function (): void {
+    $f = studentFixture();
+    $shared = bcStudent($f);
+    $onlyDuplicate = bcStudent($f);
+    $survivor = Guardian::factory()->for($f['school'])->create(['first_name' => 'Rudo', 'last_name' => 'Moyo', 'primary_phone' => '0771111111']);
+    $duplicate = Guardian::factory()->for($f['school'])->create(['first_name' => 'Rudo', 'last_name' => 'Moyo', 'primary_phone' => '0771111111', 'user_id' => User::factory()->create()->id]);
+    $other = Guardian::factory()->for($f['school'])->create(['first_name' => 'Tendai', 'last_name' => 'Dube', 'primary_phone' => '0772222222']);
+    StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $shared->id, 'guardian_id' => $survivor->id, 'may_collect_learner' => false, 'has_court_restriction' => false]);
+    StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $shared->id, 'guardian_id' => $duplicate->id, 'may_collect_learner' => true, 'has_court_restriction' => true]);
+    StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $onlyDuplicate->id, 'guardian_id' => $duplicate->id]);
+    $liability = FeeLiability::factory()->create(['school_id' => $f['school']->id, 'student_id' => $onlyDuplicate->id, 'guardian_id' => $duplicate->id]);
+    $this->actingAs(bcUser($f, 'people.guardians.merge', 'people.guardians.view'));
+
+    $component = Livewire::test(Duplicates::class, ['school' => $f['school']]);
+    expect($component->viewData('groups'))->toHaveCount(1)->and($component->viewData('groups')[0]['members'])->toHaveCount(2);
+    $component->call('merge', $survivor->id, $duplicate->id);
+
+    $duplicate->refresh();
+    $survivor->refresh();
+    expect($duplicate->status)->toBe('merged')->and($duplicate->merged_into_id)->toBe($survivor->id)->and($duplicate->user_id)->toBeNull()
+        ->and($survivor->user_id)->not->toBeNull()
+        ->and($liability->fresh()->guardian_id)->toBe($survivor->id)
+        ->and(StudentGuardian::where('student_id', $onlyDuplicate->id)->value('guardian_id'))->toBe($survivor->id);
+
+    $kept = StudentGuardian::where('student_id', $shared->id)->where('guardian_id', $survivor->id)->firstOrFail();
+    expect($kept->may_collect_learner)->toBeTrue()->and($kept->has_court_restriction)->toBeTrue()
+        ->and(StudentGuardian::where('student_id', $shared->id)->where('guardian_id', $duplicate->id)->value('status'))->toBe('inactive');
+
+    expect(Livewire::test(Duplicates::class, ['school' => $f['school']])->viewData('groups'))->toHaveCount(0);
+    expect($other->fresh()->status)->toBe('active');
+});
+
+it('refuses to merge two guardians who each have their own app account, a person with an organisation, or a guardian into themselves', function (): void {
+    $f = studentFixture();
+    $a = Guardian::factory()->for($f['school'])->create(['user_id' => User::factory()->create()->id]);
+    $b = Guardian::factory()->for($f['school'])->create(['user_id' => User::factory()->create()->id]);
+    $org = Guardian::factory()->for($f['school'])->create(['guardian_type' => 'organisation', 'organisation_name' => 'Trust']);
+    $action = app(MergeGuardiansAction::class);
+
+    expect(fn () => $action->execute($a->id, $b->id, $f['user']->id))->toThrow(ValidationException::class)
+        ->and(fn () => $action->execute($a->id, $org->id, $f['user']->id))->toThrow(ValidationException::class)
+        ->and(fn () => $action->execute($a->id, $a->id, $f['user']->id))->toThrow(ValidationException::class);
+    expect($b->fresh()->status)->toBe('active');
+
+    $this->actingAs(bcUser($f, 'cbt.bank.manage'));
+    Livewire::test(Duplicates::class, ['school' => $f['school']])->assertForbidden();
 });

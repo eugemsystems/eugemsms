@@ -148,7 +148,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   (beneficiaries bill the sponsor through a real fee liability; budget envelope and beneficiary
   limit enforced), guardian verification, the contact-update approval queue, E.164 phone
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
-  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging
+  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging duplicate learners (guardian merge is built),
   duplicate learners and guardians (needs a design that respects append-only financial records),
   the
   structured appraisal rubric, the public application form and `/api/v1` endpoints.
@@ -243,6 +243,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   and the school's `boarding.exeat_block_on_fee_arrears` / threshold settings and both callers use it.
 - **Teacher marks API.** `GET /teacher/assessments[/{id}]`, `POST .../marks` (per-learner results, offline-safe overwrite) and
   `POST .../submit`, scoped by `academic.result.enter` reach.
+- **PPL-03 duplicate guardian merge.** `Guardians\Duplicates` lists guardians sharing a phone or name; `MergeGuardiansAction`
+  (`guardians.merge`) folds one into another: learner links move (rights OR-ed, a court restriction on either wins, the
+  duplicate's overlapping link goes inactive), 18 other tables are re-pointed, the app account moves across (refused when both
+  have their own), and the duplicate is kept as `merged`. Learner merge (`ACT-MergeDuplicateStudents`) is deliberately still
+  not built: the spec asks it to reassign every financial record, which the append-only ledger rule forbids, so that needs a
+  design decision first (see the note under Book C).
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from

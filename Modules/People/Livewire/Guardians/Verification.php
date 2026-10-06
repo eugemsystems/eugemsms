@@ -118,7 +118,7 @@ final class Verification extends Component
         return view('people::guardians.verification', [
             'rows' => $rows,
             'names' => Guardian::query()->whereIn('id', $rows->pluck('guardian_id'))->get()->mapWithKeys(fn (Guardian $g): array => [$g->id => $g->displayName()]),
-            'matches' => mb_strlen($term) < 2 ? collect() : Guardian::query()->where(fn ($q) => $q->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('primary_phone', 'like', $like))->limit(8)->get(),
+            'matches' => mb_strlen($term) < 2 ? collect() : Guardian::query()->where('status', '!=', 'merged')->where(fn ($q) => $q->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('primary_phone', 'like', $like))->limit(8)->get(),
             'picked' => $this->guardianId === null ? null : Guardian::query()->find($this->guardianId),
         ]);
     }

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Modules\Core\Domain\Concerns\BelongsToSchool;
 use Modules\Core\Domain\Concerns\HasUlid;
 use Modules\People\Database\Factories\GuardianFactory;
@@ -35,6 +36,9 @@ use Modules\People\Database\Factories\GuardianFactory;
  * @property string $preferred_language
  * @property string $preferred_channel
  * @property string $status
+ * @property int|null $merged_into_id
+ * @property Carbon|null $merged_at
+ * @property int|null $merged_by
  */
 class Guardian extends Model
 {
@@ -48,7 +52,7 @@ class Guardian extends Model
     protected $fillable = [
         'school_id', 'user_id', 'guardian_type', 'title', 'first_name', 'last_name',
         'organisation_name', 'organisation_type', 'primary_phone', 'email', 'country',
-        'preferred_language', 'preferred_channel', 'status', 'created_by', 'updated_by',
+        'preferred_language', 'preferred_channel', 'status', 'merged_into_id', 'merged_at', 'merged_by', 'created_by', 'updated_by',
     ];
 
     /**
