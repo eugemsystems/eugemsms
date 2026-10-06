@@ -35,6 +35,20 @@ return [
         ],
     ],
 
+    // Book B FIN-05: Pesepay payment gateway. The keys come from the environment (never committed);
+    // a school may instead store its own pair on its payment_gateways row. The method codes are
+    // Pesepay's own payment-method identifiers and must be confirmed against the merchant account.
+    'pesepay' => [
+        'integration_key' => env('PESEPAY_INTEGRATION_KEY', ''),
+        'encryption_key' => env('PESEPAY_ENCRYPTION_KEY', ''),
+        'base_url' => env('PESEPAY_BASE_URL', 'https://api.pesepay.com/api/payments-engine'),
+        'result_url' => env('PESEPAY_RESULT_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1/webhooks/payments/pesepay'),
+        'return_url' => env('PESEPAY_RETURN_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/payments/return'),
+        'method_codes' => [
+            'ecocash' => ['USD' => env('PESEPAY_CODE_ECOCASH_USD', 'PZW211'), 'ZWG' => env('PESEPAY_CODE_ECOCASH_ZWG', 'PZW201')],
+        ],
+    ],
+
     // Book J SAA-02 §3, BR-SAA-02-001. Modules\Core\Http\Middleware\EnsureVendorGuard
     // enforces this list of exact IP addresses once it's non-empty — empty
     // (the default) means this environment hasn't configured one yet.

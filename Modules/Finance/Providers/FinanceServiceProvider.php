@@ -48,6 +48,7 @@ use Modules\Finance\Domain\Support\CloseChecks\TrialBalanceBalancesCheck;
 use Modules\Finance\Domain\Support\FakePaymentGatewayDriver;
 use Modules\Finance\Domain\Support\FinanceDocumentTemplates;
 use Modules\Finance\Domain\Support\PaymentGatewayDriverRegistry;
+use Modules\Finance\Domain\Support\PesepayGatewayDriver;
 use Modules\Finance\Domain\Support\RateResolvingCurrencyConverter;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\AdHocCharge;
@@ -126,6 +127,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
         $this->app->singleton(PaymentGatewayDriverRegistry::class, function (): PaymentGatewayDriverRegistry {
             $registry = new PaymentGatewayDriverRegistry;
             $registry->register(new FakePaymentGatewayDriver);
+            $registry->register(new PesepayGatewayDriver);
 
             return $registry;
         });
