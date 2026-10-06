@@ -417,7 +417,7 @@
                     @endif
 
                     @if ($sessionsSchool)
-                        @php $learningGroupActive = request()->routeIs('academic.lms.*') || request()->routeIs('academic.cbt.*') || request()->routeIs('academic.library.*') || request()->routeIs('academic.quality.*'); @endphp
+                        @php $learningGroupActive = request()->routeIs('academic.lms.*') || request()->routeIs('academic.cbt.*') || request()->routeIs('academic.library.*') || request()->routeIs('academic.quality.*') || request()->routeIs('academic.supervision.*'); @endphp
                         <div class="app-sidebar-group">
                             <a href="javascript:void(0)" class="nav-link app-sidebar-toggle-link {{ $learningGroupActive ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#sidebar-group-learning" aria-expanded="{{ $learningGroupActive ? 'true' : 'false' }}" aria-controls="sidebar-group-learning">
                                 <i class="ri ri-computer-line"></i> {{ __('Learning & Teaching') }}
@@ -465,6 +465,29 @@
                                     </a>
                                     <a href="{{ route('academic.library.acquisitions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.acquisitions') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shopping-cart-line"></i> {{ __('Acquisitions') }}
+                                    </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Teaching quality') }}</div>
+                                    <a href="{{ route('academic.supervision.schemes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.schemes') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Schemes of work') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.lesson-plans', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.lesson-plans') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-draft-line"></i> {{ __('Lesson plans') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.coverage', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.coverage') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-traffic-light-line"></i> {{ __('Coverage tracker') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.observe', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.observe') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-eye-line"></i> {{ __('Observe a lesson') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.observations', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.observations') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-history-line"></i> {{ __('Observation history') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.meetings', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.meetings') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-team-line"></i> {{ __('Department meetings') }}
+                                    </a>
+                                    <a href="{{ route('academic.supervision.dashboard', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.supervision.dashboard') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-dashboard-line"></i> {{ __('Teacher dashboard') }}
                                     </a>
                                 </div>
                             </div>

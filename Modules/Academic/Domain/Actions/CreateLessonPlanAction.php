@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Carbon\CarbonInterface;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\CreateLessonPlanData;
 use Modules\Academic\Domain\Exceptions\LessonDateNotOnTimetableSlotException;
 use Modules\Academic\Domain\Support\CycleDayResolver;
 use Modules\Academic\Models\LessonPlan;
 use Modules\Academic\Models\PeriodStructure;
+use Modules\Academic\Models\SchemeOfWork;
 use Modules\Academic\Models\Timetable;
 use Modules\Academic\Models\TimetableSlot;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Models\CalendarHoliday;
 use Modules\Core\Models\Term;
+use Modules\People\Models\Staff;
 
 /**
  * ACT-CreateLessonPlan (Book K ACA-11 §4/BR-ACA-11-003). When linked
@@ -31,6 +34,18 @@ final class CreateLessonPlanAction extends Action
 
     public function execute(CreateLessonPlanData $data): LessonPlan
     {
+        if (trim($data->topic) === '' || mb_strlen($data->topic) > 200) {
+            throw new InvalidArgumentException('A lesson plan needs a topic of up to 200 characters.');
+        }
+
+        if (! Staff::query()->whereKey($data->teacherStaffId)->exists()) {
+            throw new InvalidArgumentException('That teacher does not belong to this school.');
+        }
+
+        if ($data->schemeOfWorkId !== null && ! SchemeOfWork::query()->whereKey($data->schemeOfWorkId)->where('teacher_staff_id', $data->teacherStaffId)->exists()) {
+            throw new InvalidArgumentException('A lesson plan can only be linked to the teacher\'s own scheme of work.');
+        }
+
         if ($data->timetableSlotId !== null) {
             $this->assertDateMatchesSlot($data->timetableSlotId, $data->lessonDate);
         }

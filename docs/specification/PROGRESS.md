@@ -1435,7 +1435,7 @@ ready; no file is rendered, and the cron wiring is still the backend's deferred
 gap). The warehouse is row-count tracking only, as its own Action documents.
 Intelligence module: 63 tests, all green; PHPStan clean.
 
-### Book K — Closing the Catalogue — 🟡 admin UI in progress
+### Book K — Closing the Catalogue — ✅ admin UI complete
 FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 `Modules/People`, alongside PPL-01–04), ACA-08–ACA-11 (lives in
 `Modules/Academic`, alongside ACA-01–07). Backends were already built.
@@ -1447,7 +1447,34 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 | ACA-08 | ✅ `Academic/Livewire/Lms/` |
 | ACA-09 | ✅ `Academic/Livewire/Cbt/` (staff side) |
 | ACA-10 | ✅ `Academic/Livewire/Library/` |
-| ACA-11 | ⬜ |
+| ACA-11 | ✅ `Academic/Livewire/Supervision/` |
+
+**ACA-11 note.** Seven screens under `academic.supervision.*` — `Supervision\SchemeOfWork`,
+`LessonPlans`, `Coverage`, `Observe`, `ObservationHistory`, `Meetings`, `TeacherDashboard` — and the
+`supervision.*` permissions (`plan`, `view`, `scheme.approve`, `observe`, `rubric.manage`,
+`meeting.manage`; `plan` and `rubric.manage` are additions to the spec's list for teacher
+self-service and rubric authoring). Reach is resolved server-side from the signed-in user's own
+staff record: a teacher sees and acts on their own schemes, plans, coverage and observations; a
+head of department (`Department.head_staff_id`) with `supervision.view` sees their department;
+`supervision.view` at school reach sees everyone; the observer is always the signed-in user.
+**Backend fixes:** scheme, lesson-plan, rubric, observation and meeting Actions now validate
+ownership and shape (teacher, term, subject, grade level belong to the school; one scheme per
+teacher/subject/grade/term; a plan can only link to the teacher's own scheme; observations score
+every rubric criterion with one of its defined levels, cannot be of oneself, and a follow-up must be
+of the same teacher and later; minutes need attendees and action items need an owner and due date);
+a teacher can no longer approve their own scheme or review their own plan; a scheme can only be
+returned with a reason; delivery dates must fall between term start and today; new
+`UpdateSchemeOfWorkAction` (revise a draft or returned scheme, keeping coverage records in step).
+**Known gaps:** lesson plans cannot be linked to a timetable slot from the UI (the Action supports
+it); the dashboard omits ACA-04 marking-compliance and ACA-05 results outcomes (spec "where
+enabled"); no feed into PPL-04 appraisal yet (BR-ACA-11-007); `/api/v1/supervision/*` endpoints;
+schemes are written for the current term only.
+
+**Book K acceptance gate.** Not audited checkbox by checkbox in this admin-UI pass. The backend
+tests written with each module cover the rules behind most items (discount resolver and budget
+refusal, CBT timer and resume, bulk-issue exceptions, ad hoc fine charging, the observer/observed
+boundary, alumni snapshot); coverage percentages were not measured and the "every business rule
+has a named test" item was not checked rule by rule. Do both before calling the gate green.
 
 **ACA-10 note.** Six screens under `academic.library.*` — `Library\Catalogue`, `Circulation`,
 `BulkIssue`, `Overdue`, `StockTake`, `Acquisitions` — and the `library.*` permissions (`view`,

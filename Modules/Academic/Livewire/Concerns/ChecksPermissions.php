@@ -14,10 +14,10 @@ use Modules\Core\Domain\Support\Auth\PermissionScopeResolver;
  */
 trait ChecksPermissions
 {
-    protected function holds(string $permission): bool
+    protected function holds(string $permission, PermissionScope $atLeast = PermissionScope::Own): bool
     {
         $user = Auth::user();
 
-        return $user !== null && app(PermissionScopeResolver::class)->has($user, $permission, PermissionScope::Own);
+        return $user !== null && app(PermissionScopeResolver::class)->has($user, $permission, $atLeast);
     }
 }

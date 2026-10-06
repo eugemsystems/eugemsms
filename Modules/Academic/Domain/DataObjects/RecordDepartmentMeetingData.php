@@ -10,7 +10,7 @@ final readonly class RecordDepartmentMeetingData
 {
     /**
      * @param  array<int, int>  $attendeeStaffIds
-     * @param  array<int, array{action: string, owner: int, due_date: string, status?: string}>|null  $actionItems
+     * @param  array<int, array<string, mixed>>|null  $actionItems  [{action, owner, due_date, status?}]
      */
     public function __construct(
         public int $schoolId,

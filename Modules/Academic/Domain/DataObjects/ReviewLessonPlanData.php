@@ -9,5 +9,6 @@ final readonly class ReviewLessonPlanData
     public function __construct(
         public int $lessonPlanId,
         public ?string $hodComments = null,
+        public ?int $reviewedByUserId = null,
     ) {}
 }

@@ -253,6 +253,15 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'acquisition.approve' => ['description' => 'Approve or reject acquisition requests; approval raises a purchase requisition.'],
         ]);
 
+        PermissionRegistry::register('SUPERVISION', [
+            'plan' => ['description' => 'Write and submit own schemes of work and lesson plans, record own coverage, and see own observations and dashboard.'],
+            'view' => ['description' => 'See coverage, observations and the teacher dashboard — school reach sees everyone, otherwise the departments the user heads.'],
+            'scheme.approve' => ['description' => 'Approve or return schemes of work and review lesson plans (not one\'s own).'],
+            'observe' => ['description' => 'Observe a lesson and record rubric scores.'],
+            'rubric.manage' => ['description' => 'Create lesson-observation rubrics.'],
+            'meeting.manage' => ['description' => 'Record department meetings and update their action items.'],
+        ]);
+
         PermissionRegistry::register('LMS', [
             'course.manage' => ['description' => 'Create course spaces and manage their content — a teacher does so only for groups they teach.'],
             'assignment.create' => ['description' => 'Create, publish and close assignments in course spaces.'],
@@ -339,6 +348,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/lms.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/cbt.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/library.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/supervision.php');
         });
     }
 

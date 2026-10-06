@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Academic\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\ReturnSchemeOfWorkData;
 use Modules\Academic\Models\SchemeOfWork;
 use Modules\Core\Domain\Actions\Action;
@@ -20,6 +21,10 @@ final class ReturnSchemeOfWorkAction extends Action
                 "Scheme of work #{$scheme->id} in [{$scheme->status}] cannot be returned.",
                 ['scheme_of_work_id' => $scheme->id, 'status' => $scheme->status],
             );
+        }
+
+        if (trim($data->reviewComments) === '') {
+            throw new InvalidArgumentException('Say what needs to change when returning a scheme of work.');
         }
 
         return $this->transaction(function () use ($scheme, $data): SchemeOfWork {

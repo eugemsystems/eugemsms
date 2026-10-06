@@ -18,6 +18,10 @@ final class UpdateActionItemStatusAction extends Action
 {
     public function execute(UpdateActionItemStatusData $data): DepartmentMeeting
     {
+        if (! in_array($data->status, ['open', 'in_progress', 'done'], true)) {
+            throw new InvalidArgumentException("Unknown action-item status [{$data->status}].");
+        }
+
         $meeting = DepartmentMeeting::findOrFail($data->meetingId);
         $items = $meeting->action_items ?? [];
 

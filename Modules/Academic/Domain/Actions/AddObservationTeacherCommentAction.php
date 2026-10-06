@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Academic\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\AddObservationTeacherCommentData;
 use Modules\Academic\Models\LessonObservation;
 use Modules\Core\Domain\Actions\Action;
@@ -30,6 +31,10 @@ final class AddObservationTeacherCommentAction extends Action
                     return 'NOT_THE_OBSERVED_TEACHER';
                 }
             };
+        }
+
+        if (trim($data->comments) === '' || mb_strlen($data->comments) > 5000) {
+            throw new InvalidArgumentException('Write a comment of up to 5000 characters.');
         }
 
         return $this->transaction(function () use ($observation, $data): LessonObservation {

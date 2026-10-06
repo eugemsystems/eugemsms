@@ -26,6 +26,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Intelligence/Livewire/** | .ai/rules/intelligence-livewire.md |
 | Modules/Intelligence/** | .ai/rules/intelligence.md |
 | resources/js/** | .ai/rules/js.md |
+| Modules/Academic/Livewire/Library/** | .ai/rules/library.md |
 | Modules/Core/Livewire/** | .ai/rules/livewire.md |
 | Modules/*/database/migrations/** | .ai/rules/migrations.md |
 | Modules/People/Models/*.php | .ai/rules/models.md |
@@ -40,6 +41,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/Security/** | .ai/rules/security.md |
 | Modules/Sport/** | .ai/rules/sport.md |
 | Modules/Stores/** | .ai/rules/stores.md |
+| Modules/Academic/Livewire/Supervision/** | .ai/rules/supervision.md |
 | Modules/Finance/Domain/Support/*.php | .ai/rules/support.md |
 | Modules/*/tests/** | .ai/rules/tests.md |
 | Modules/Transport/** | .ai/rules/transport.md |
