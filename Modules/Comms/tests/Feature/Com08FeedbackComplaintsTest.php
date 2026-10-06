@@ -72,7 +72,7 @@ it('drops any answer for a question a prior answer skipped, server-side (BR-COM-
         schoolId: $f['school']->id, title: 'Boarding Experience', purpose: 'feedback',
         audienceScope: 'whole_school', isAnonymous: false,
         questions: [
-            ['sequence' => 1, 'questionType' => 'single_choice', 'prompt' => 'Are you a boarder?', 'skipLogic' => ['if_answer' => 'no', 'go_to_sequence' => 3]],
+            ['sequence' => 1, 'questionType' => 'single_choice', 'prompt' => 'Are you a boarder?', 'options' => ['yes', 'no'], 'skipLogic' => ['if_answer' => 'no', 'go_to_sequence' => 3]],
             ['sequence' => 2, 'questionType' => 'scale', 'prompt' => 'Rate your dormitory.'],
             ['sequence' => 3, 'questionType' => 'text', 'prompt' => 'Any other comments?'],
         ],

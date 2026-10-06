@@ -55,6 +55,17 @@
                                 @foreach ($threads[$complaint->id] ?? [] as $update)
                                     <div class="ps-2 border-start mt-1">{{ $update->content }} <span class="text-body-secondary">{{ $update->posted_at->diffForHumans() }}</span></div>
                                 @endforeach
+                                @if (in_array($complaint->status, ['resolved', 'closed'], true))
+                                    @if ($complaint->satisfaction_rating !== null)
+                                        <div class="mt-1">{{ __('You rated this :rating/5.', ['rating' => $complaint->satisfaction_rating]) }}</div>
+                                    @else
+                                        <div class="mt-1">{{ __('How well was this handled?') }}
+                                            @for ($i = 1; $i <= 5; $i++)
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0" wire:click="rate({{ $complaint->id }}, {{ $i }})">{{ $i }}</button>
+                                            @endfor
+                                        </div>
+                                    @endif
+                                @endif
                             @endif
                         </div>
                     @empty

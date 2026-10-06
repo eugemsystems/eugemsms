@@ -32,6 +32,7 @@ use Modules\Comms\Livewire\Notices\Compose as NoticesCompose;
 use Modules\Comms\Livewire\Notices\Index as NoticesIndex;
 use Modules\Comms\Livewire\Portal\Admin\Widgets as PortalWidgets;
 use Modules\Comms\Livewire\Surveys\Builder as SurveysBuilder;
+use Modules\Comms\Livewire\Surveys\Respond as SurveysRespond;
 use Modules\Comms\Livewire\Surveys\Results as SurveysResults;
 
 /**
@@ -73,6 +74,7 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/comms')->name(
     });
 
     Route::livewire('surveys', SurveysBuilder::class)->name('surveys.builder');
+    Route::livewire('surveys/respond', SurveysRespond::class)->name('surveys.respond');
     Route::livewire('surveys/results', SurveysResults::class)->name('surveys.results');
 
     Route::prefix('complaints')->name('complaints.')->group(function (): void {

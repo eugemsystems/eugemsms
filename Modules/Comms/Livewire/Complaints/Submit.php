@@ -6,14 +6,17 @@ namespace Modules\Comms\Livewire\Complaints;
 
 use App\Concerns\Toasts;
 use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Comms\Domain\Actions\GetComplaintThreadForRaiserAction;
 use Modules\Comms\Domain\Actions\RaiseComplaintAction;
+use Modules\Comms\Domain\Actions\RateComplaintResolutionAction;
 use Modules\Comms\Domain\DataObjects\RaiseComplaintData;
 use Modules\Comms\Models\Complaint;
 use Modules\Comms\Models\ComplaintCategory;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
@@ -107,6 +110,25 @@ final class Submit extends Component
         $this->toast(__('Complaint received.'));
     }
 
+    public function rate(int $complaintId, int $rating): void
+    {
+        [$type, $raiserId] = $this->resolveRaiser();
+
+        if ($raiserId === null) {
+            return;
+        }
+
+        try {
+            app(RateComplaintResolutionAction::class)->execute($complaintId, $type, $raiserId, $rating);
+        } catch (InvalidArgumentException|InvalidStateTransitionException $exception) {
+            $this->toast($exception->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->toast(__('Thank you for your feedback.'));
+    }
+
     public function render(): View
     {
         [$type, $raiserId] = $this->resolveRaiser();
@@ -114,7 +136,7 @@ final class Submit extends Component
         $mine = $raiserId !== null
             ? Complaint::where('school_id', $this->school->id)->where('raised_by_type', $type)->where('raised_by_id', $raiserId)
                 ->orderByDesc('id')->limit(20)
-                ->get(['id', 'complaint_number', 'subject', 'status', 'sla_due_at', 'safeguarding_concern_id'])
+                ->get(['id', 'complaint_number', 'subject', 'status', 'sla_due_at', 'safeguarding_concern_id', 'satisfaction_rating'])
             : collect();
 
         $threads = [];

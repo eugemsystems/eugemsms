@@ -4,8 +4,10 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 use Modules\Comms\Domain\Actions\AddComplaintUpdateAction;
+use Modules\Comms\Domain\Actions\CloseSurveyAction;
 use Modules\Comms\Domain\Actions\CreateSurveyAction;
 use Modules\Comms\Domain\Actions\RaiseComplaintAction;
+use Modules\Comms\Domain\Actions\ResolveComplaintAction;
 use Modules\Comms\Domain\Actions\SubmitSurveyResponseAction;
 use Modules\Comms\Domain\DataObjects\RaiseComplaintData;
 use Modules\Comms\Domain\DataObjects\SubmitSurveyResponseData;
@@ -15,6 +17,7 @@ use Modules\Comms\Livewire\Complaints\Show;
 use Modules\Comms\Livewire\Complaints\Submit;
 use Modules\Comms\Livewire\ExitInterviews\Index as ExitInterviewsIndex;
 use Modules\Comms\Livewire\Surveys\Builder;
+use Modules\Comms\Livewire\Surveys\Respond;
 use Modules\Comms\Livewire\Surveys\Results;
 use Modules\Comms\Models\Complaint;
 use Modules\Comms\Models\ComplaintCategory;
@@ -26,10 +29,12 @@ use Modules\Comms\Models\SurveyResponse;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
+use Modules\People\Models\Guardian;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 
@@ -392,4 +397,99 @@ it('offers, completes and declines exit interviews, counting the decline in the 
     // Only a still-pending request can be completed or declined.
     expect(fn () => $component->set('completingId', $second->id)->set('primaryReason', 'fees')->call('complete'))->toThrow(ModelNotFoundException::class);
     expect(fn () => $component->call('decline', $first->id))->toThrow(ModelNotFoundException::class);
+});
+
+it('lets a guardian answer an identified survey once, and keeps staff-only surveys from them (BR-COM-08-001)', function (): void {
+    $f = com08AdminFixture();
+    $user = com08AdminUser($f);
+    $guardian = Guardian::factory()->for($f['school'])->create(['user_id' => $user->id]);
+    $survey = app(CreateSurveyAction::class)->execute(
+        schoolId: $f['school']->id, title: 'Term feedback', purpose: 'feedback', audienceScope: 'whole_school', isAnonymous: false,
+        questions: [
+            ['sequence' => 1, 'questionType' => 'single_choice', 'prompt' => 'Happy?', 'options' => ['Yes', 'No'], 'skipLogic' => ['if_answer' => 'Yes', 'go_to_sequence' => 3]],
+            ['sequence' => 2, 'questionType' => 'text', 'prompt' => 'Why not?'],
+            ['sequence' => 3, 'questionType' => 'nps', 'prompt' => 'Recommend?'],
+        ],
+    );
+    $staffOnly = app(CreateSurveyAction::class)->execute(
+        schoolId: $f['school']->id, title: 'Staff pulse', purpose: 'feedback', audienceScope: 'staff', isAnonymous: false,
+        questions: [['sequence' => 1, 'questionType' => 'text', 'prompt' => 'Mood?']],
+    );
+
+    $component = Livewire::actingAs($user)->test(Respond::class, ['school' => $f['school']])
+        ->assertSee('Term feedback')
+        ->assertDontSee('Staff pulse')
+        ->call('open', $survey->id)
+        ->set('answers.1', 'Yes')
+        ->set('answers.3', '9')
+        ->call('submit')
+        ->assertSet('surveyId', null);
+
+    expect(SurveyResponse::where('survey_id', $survey->id)->where('respondent_type', 'guardian')->where('respondent_id', $guardian->id)->count())->toBe(1);
+
+    $component->assertDontSee('Term feedback');
+
+    Livewire::actingAs($user)->test(Respond::class, ['school' => $f['school']])
+        ->set('surveyId', $staffOnly->id)
+        ->call('submit');
+
+    expect(SurveyResponse::where('survey_id', $staffOnly->id)->count())->toBe(0);
+});
+
+it('refuses a required question left blank and an answer that is not one of the options', function (): void {
+    $f = com08AdminFixture();
+    $user = com08AdminUser($f);
+    Guardian::factory()->for($f['school'])->create(['user_id' => $user->id]);
+    $survey = app(CreateSurveyAction::class)->execute(
+        schoolId: $f['school']->id, title: 'Bus survey', purpose: 'feedback', audienceScope: 'whole_school', isAnonymous: true,
+        questions: [['sequence' => 1, 'questionType' => 'single_choice', 'prompt' => 'Bus?', 'options' => ['Yes', 'No']]],
+    );
+
+    $component = Livewire::actingAs($user)->test(Respond::class, ['school' => $f['school']])->call('open', $survey->id)->call('submit');
+    expect(SurveyResponse::where('survey_id', $survey->id)->count())->toBe(0);
+
+    $component->set('answers.1', 'Maybe')->call('submit');
+    expect(SurveyResponse::where('survey_id', $survey->id)->count())->toBe(0);
+
+    $component->set('answers.1', 'No')->call('submit');
+    expect(SurveyResponse::where('survey_id', $survey->id)->count())->toBe(1);
+});
+
+it('refuses a response once the survey is closed', function (): void {
+    $f = com08AdminFixture();
+    $survey = app(CreateSurveyAction::class)->execute(
+        schoolId: $f['school']->id, title: 'Closed', purpose: 'feedback', audienceScope: 'whole_school', isAnonymous: true,
+        questions: [['sequence' => 1, 'questionType' => 'text', 'prompt' => 'Thoughts?']],
+    );
+    app(CloseSurveyAction::class)->execute($survey->id);
+
+    expect(fn () => app(SubmitSurveyResponseAction::class)->execute(new SubmitSurveyResponseData(surveyId: $survey->id, answersBySequence: [1 => 'late'])))
+        ->toThrow(InvalidStateTransitionException::class);
+});
+
+it('lets only the raiser rate a resolved complaint, once (BR-COM-08-008)', function (): void {
+    $f = com08AdminFixture();
+    $user = com08AdminUser($f);
+    $guardian = Guardian::factory()->for($f['school'])->create(['user_id' => $user->id]);
+    $category = ComplaintCategory::factory()->for($f['school'])->create(['sla_hours' => 72]);
+    $complaint = app(RaiseComplaintAction::class)->execute(new RaiseComplaintData(
+        schoolId: $f['school']->id, categoryId: $category->id, raisedByType: 'guardian', raisedById: $guardian->id,
+        subject: 'Fees query', description: 'Charged twice.',
+    ));
+
+    Livewire::actingAs($user)->test(Submit::class, ['school' => $f['school']])->call('rate', $complaint->id, 5);
+    expect($complaint->fresh()->satisfaction_rating)->toBeNull();
+
+    app(ResolveComplaintAction::class)->execute($complaint->id, 'Refunded.');
+
+    $stranger = com08AdminUser($f);
+    Guardian::factory()->for($f['school'])->create(['user_id' => $stranger->id]);
+    Livewire::actingAs($stranger)->test(Submit::class, ['school' => $f['school']])->call('rate', $complaint->id, 1);
+    expect($complaint->fresh()->satisfaction_rating)->toBeNull();
+
+    $component = Livewire::actingAs($user)->test(Submit::class, ['school' => $f['school']])->call('rate', $complaint->id, 4);
+    expect($complaint->fresh()->satisfaction_rating)->toBe(4);
+
+    $component->call('rate', $complaint->id, 1);
+    expect($complaint->fresh()->satisfaction_rating)->toBe(4);
 });

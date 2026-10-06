@@ -159,6 +159,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   the statement screen; downloads are recorded. Still open: a receipt download button.
 - **FIN-10 capitalisation.** Capital PO lines and capitalisable stock items name an asset category
   and now capitalise automatically on receipt/issue (see FIN-10 note).
+- **COM-08 respondent form and complaint rating.** `Surveys\Respond` (any school member answers an
+  open survey aimed at them once; anonymous surveys never record who; skip logic hidden in the form
+  and dropped again by the Action). `SubmitSurveyResponseAction` now refuses closed/expired surveys,
+  missing required answers, answers outside the options, out-of-range scale/NPS values and a second
+  answer from the same identified respondent. The raiser can rate a resolved complaint 1–5, once
+  (`RateComplaintResolutionAction`). Anonymous surveys cannot be de-duplicated by design.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -169,7 +175,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 **Still open (not yet started in this pass)**:
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
-prior-period and board-pack reports; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
+prior-period and board-pack reports; COM gaps (newsletter sending, survey distribution, the head's termly complaint report); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
 gateway drivers (need sandbox credentials).
 

@@ -1655,8 +1655,11 @@
                                     </a>
 
                                     <div class="app-sidebar-heading">{{ __('Feedback & Complaints') }}</div>
-                                    <a href="{{ route('comms.surveys.builder', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.surveys.*') ? 'active' : '' }}" wire:navigate>
+                                    <a href="{{ route('comms.surveys.builder', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.surveys.builder', 'comms.surveys.results') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-survey-line"></i> {{ __('Surveys') }}
+                                    </a>
+                                    <a href="{{ route('comms.surveys.respond', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.surveys.respond') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-edit-box-line"></i> {{ __('Answer a survey') }}
                                     </a>
                                     <a href="{{ route('comms.complaints.submit', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('comms.complaints.submit') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-feedback-line"></i> {{ __('Raise a complaint') }}
