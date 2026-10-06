@@ -15,6 +15,8 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\CostCentre;
+use Modules\Finance\Models\Invoice;
+use Modules\People\Models\Student;
 use Modules\Stores\Domain\Actions\CreateBudgetAction;
 use Modules\Stores\Domain\Actions\SubmitBudgetLineAction;
 use Modules\Stores\Domain\DataObjects\CreateBudgetData;
@@ -160,4 +162,24 @@ it('renders every budget screen for a fully-permissioned user', function (): voi
     Livewire::actingAs($admin)->test(CommitmentsIndex::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($admin)->test(VirementCreate::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($admin)->test(ForecastIndex::class, ['school' => $f['school']])->assertOk();
+});
+
+it('computes a fee-income scenario from the reference year and refuses without one (BR-FIN-11-013)', function (): void {
+    $f = budgetAdminFixture();
+    $admin = budgetAdminUser($f, 'budget.forecast.view', 'budget.forecast.manage');
+    Invoice::unguarded(fn () => Invoice::query()->create([
+        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id,
+        'invoice_number' => 'INV/000001', 'invoice_type' => 'term', 'student_id' => Student::factory()->for($f['school'])->create()->id,
+        'billed_party_type' => 'guardian', 'billed_party_id' => 1, 'issue_date' => now()->toDateString(), 'due_date' => now()->toDateString(),
+        'gross_minor' => 10000, 'net_minor' => 10000, 'paid_minor' => 8000, 'balance_minor' => 2000, 'currency' => 'USD', 'status' => 'issued',
+    ]));
+
+    Livewire::actingAs($admin)->test(ForecastIndex::class, ['school' => $f['school']])
+        ->call('compute')
+        ->assertHasErrors(['referenceYearId'])
+        ->set('referenceYearId', $f['year']->id)
+        ->set('enrolmentGrowthPercent', '10')
+        ->call('compute')
+        ->assertHasNoErrors()
+        ->assertSet('projectionsJson', fn (string $json): bool => json_decode($json, true)['total_collected_minor'] === 8800);
 });

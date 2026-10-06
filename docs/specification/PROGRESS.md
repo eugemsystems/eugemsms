@@ -159,10 +159,11 @@ depends on them. Status per item below; anything not listed as done is still ope
   the statement screen; downloads are recorded. Still open: a receipt download button.
 - **FIN-10 capitalisation.** Capital PO lines and capitalisable stock items name an asset category
   and now capitalise automatically on receipt/issue (see FIN-10 note).
+- **FIN-11 forecasts.** Fee-income and cash-flow projections computed from actuals.
 - **FIN-13 audit log.** Every FDMS request/response is written to `fiscal_audit_log` by a driver
   decorator; a failed log write never blocks the fiscal call.
 
-**Still open (not yet started in this pass)**: FIN-11 forecast maths;
+**Still open (not yet started in this pass)**:
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
 board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
@@ -732,12 +733,12 @@ exercises the real cross-module wiring end to end: approving a
 purchase order through `Procurement\Orders\Index` immediately drops
 the linked budget line's `available_minor` by the order total, through
 the actual `PurchaseOrderApproved` → `CreateBudgetCommitmentOnPurchaseOrderApprovedListener`
-event chain, not a simulated call (AC-FIN-11-001). **Deliberately not
-built**: the real enrolment-/collection-rate-driven forecast
-projection math — `CreateForecastAction` stores a caller-supplied
-`projections` payload as a labelled scenario, matching its own
-documented scope boundary (BR-FIN-11-013/014's real `FIN-02`
-integration is not built).
+event chain, not a simulated call (AC-FIN-11-001). Forecast maths (gap-closing
+pass): `ProjectFeeIncomeAction` projects fee income per term from a reference year's
+actual invoicing and collection (growth, fee-increase and collection-rate assumptions)
+and `ProjectCashFlowAction` combines receipts with payroll and open commitments; the
+Forecast screen's "Compute from actuals" fills the scenario. It projects from FIN-03
+actuals, not by re-pricing each learner from the FIN-02 fee structure.
 
 See `.ai/rules/stores.md` for the full reasoning, the permission
 module-code split (`INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET`, not one

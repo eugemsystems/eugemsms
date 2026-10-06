@@ -14,9 +14,13 @@ use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Livewire\Sessions\Concerns\InteractsWithSession;
+use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Stores\Domain\Actions\CreateForecastAction;
+use Modules\Stores\Domain\Actions\ProjectCashFlowAction;
+use Modules\Stores\Domain\Actions\ProjectFeeIncomeAction;
 use Modules\Stores\Domain\DataObjects\CreateForecastData;
+use Modules\Stores\Domain\DataObjects\ProjectForecastData;
 use Modules\Stores\Models\Forecast;
 
 /**
@@ -50,10 +54,64 @@ final class Index extends Component
 
     public bool $isBaseline = false;
 
+    public ?int $referenceYearId = null;
+
+    public string $currency = 'USD';
+
+    public string $enrolmentGrowthPercent = '0';
+
+    public string $feeIncreasePercent = '0';
+
+    public string $collectionRateOverride = '';
+
     public function mount(School $school): void
     {
         $this->loadSchool($school);
         $this->authorizePermission('budget.forecast.view');
+    }
+
+    public function compute(): void
+    {
+        $this->authorizePermission('budget.forecast.manage');
+
+        if (! in_array($this->forecastType, ['fee_income', 'cash_flow'], true)) {
+            $this->toast(__('Only fee-income and cash-flow scenarios can be computed from actuals.'), 'danger');
+
+            return;
+        }
+
+        $this->validate([
+            'referenceYearId' => ['required', 'integer'],
+            'currency' => ['required', 'string', 'size:3'],
+            'enrolmentGrowthPercent' => ['required', 'numeric', 'between:-100,500'],
+            'feeIncreasePercent' => ['required', 'numeric', 'between:-100,500'],
+            'collectionRateOverride' => ['nullable', 'numeric', 'between:0,100'],
+        ]);
+
+        $year = AcademicYear::query()->find($this->referenceYearId);
+
+        if ($year === null) {
+            $this->addError('referenceYearId', __('Choose a reference academic year.'));
+
+            return;
+        }
+
+        $data = new ProjectForecastData(
+            schoolId: $this->school->id,
+            referenceAcademicYearId: $year->id,
+            currency: strtoupper($this->currency),
+            enrolmentGrowthPercent: (float) $this->enrolmentGrowthPercent,
+            feeIncreasePercent: (float) $this->feeIncreasePercent,
+            collectionRatePercentOverride: $this->collectionRateOverride === '' ? null : (float) $this->collectionRateOverride,
+        );
+
+        $result = $this->forecastType === 'cash_flow'
+            ? app(ProjectCashFlowAction::class)->execute($data)
+            : app(ProjectFeeIncomeAction::class)->execute($data);
+
+        $this->assumptionsJson = (string) json_encode($result['assumptions'], JSON_PRETTY_PRINT);
+        $this->projectionsJson = (string) json_encode($result['projections'], JSON_PRETTY_PRINT);
+        $this->toast(__('Projection computed — review it, name the scenario and save.'));
     }
 
     public function create(): void
@@ -98,6 +156,7 @@ final class Index extends Component
     public function render(): View
     {
         return view('stores::budget.forecast.index', [
+            'years' => AcademicYear::query()->orderByDesc('starts_on')->get(['id', 'name']),
             'forecasts' => Forecast::where('school_id', $this->school->id)->orderByDesc('generated_at')->get(),
         ]);
     }
