@@ -410,8 +410,8 @@ attendance-session-generation call), `Cover` (daily substitutions,
 anywhere created the parent `Timetable` row before this pass (every
 test fixture used the factory directly); added create-only, mirroring
 the ACA-01 catalogue precedent from the Book D pass.
-**Deliberately not built**: the spec's own drag-and-drop grid with a
-live-updating clash panel, queued generation with a cancellable
+**Deliberately not built**: a clash panel that updates *during* the drag (a refused drop names the
+conflict instead), queued generation with a cancellable
 progress bar and a real simulated-annealing score curve (the backend
 action itself doesn't implement these — see its own docblock), and any
 PDF/export generation for timetable views. See `.ai/rules/academic.md`.
