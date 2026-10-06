@@ -17,6 +17,7 @@ use Modules\Core\Http\Controllers\Api\V1\MeController;
 use Modules\Finance\Http\Controllers\Api\V1\GatewayWebhookController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianFinanceController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianPaymentsController;
+use Modules\Intelligence\Http\Controllers\Api\V1\HardwareController;
 use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 
@@ -38,6 +39,12 @@ Route::post('webhooks/payments/{driver}', [GatewayWebhookController::class, 'rec
 
 // Machine-readable spec (Book J INT-04, BR-INT-04-010): public, generated from the live routes.
 Route::get('openapi.json', OpenApiController::class)->middleware('throttle:60,1')->name('api.openapi');
+
+// Hardware devices authenticate with their OWN api_clients key, never a user token (INT-04 §3).
+Route::prefix('hardware')->middleware(['serp.api-client'])->group(function (): void {
+    Route::post('scan', [HardwareController::class, 'scan']);
+    Route::post('{ulid}/heartbeat', [HardwareController::class, 'heartbeat']);
+});
 
 Route::prefix('auth')->middleware(['serp.resolve-tenant', 'throttle:20,1'])->group(function (): void {
     Route::post('otp/request', [AuthController::class, 'requestOtp']);

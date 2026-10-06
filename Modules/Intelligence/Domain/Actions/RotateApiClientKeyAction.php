@@ -29,7 +29,7 @@ final class RotateApiClientKeyAction extends Action
             throw new InvalidArgumentException('A revoked client cannot be rotated — issue a new one.');
         }
 
-        $plaintextKey = Str::random(48);
+        $plaintextKey = $client->ulid.'.'.Str::random(40);
 
         $this->transaction(fn () => $client->update(['api_key_hash' => Hash::make($plaintextKey)]));
 

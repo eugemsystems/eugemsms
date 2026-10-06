@@ -74,9 +74,13 @@ final class IssueApiClientAction extends Action
             throw new InvalidArgumentException('Requested abilities are not on the allow-list: '.implode(', ', $unlisted));
         }
 
-        $plaintextKey = Str::random(48);
+        // Bearer format `{client ulid}.{secret}`: the ulid lets the API-client middleware find the
+        // row to verify the bcrypt hash against (a hash alone cannot be looked up).
+        $ulid = (string) Str::ulid();
+        $plaintextKey = $ulid.'.'.Str::random(40);
 
         $client = $this->transaction(fn (): ApiClient => ApiClient::create([
+            'ulid' => $ulid,
             'school_id' => $schoolId,
             'name' => $name,
             'client_type' => $clientType,

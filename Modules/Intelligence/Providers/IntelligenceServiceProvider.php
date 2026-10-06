@@ -6,6 +6,7 @@ namespace Modules\Intelligence\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Academic\Models\AttendanceSummary;
@@ -42,6 +43,7 @@ use Modules\Intelligence\Domain\Registry\HardwareScanRouteRegistry;
 use Modules\Intelligence\Domain\Registry\KpiRegistry;
 use Modules\Intelligence\Domain\Registry\ReportFieldRegistry;
 use Modules\Intelligence\Domain\Registry\RiskIndicatorRegistry;
+use Modules\Intelligence\Http\Middleware\AuthenticateApiClient;
 use Modules\Intelligence\Models\ApiClient;
 use Modules\Intelligence\Models\ApiUsageLog;
 use Modules\Intelligence\Models\BoardPack;
@@ -88,6 +90,7 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerScheduledTasks();
+        $this->registerApiClientMiddleware();
         $this->registerHardwareScanRoutes();
         $this->registerReportFields();
         $this->registerNotificationKeys();
@@ -583,6 +586,11 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
      * origin is never lost. See `HardwareScanRouteRegistry`'s own
      * docblock for why `attendance` has no route registered in this pass.
      */
+    private function registerApiClientMiddleware(): void
+    {
+        $this->app->make(Router::class)->aliasMiddleware('serp.api-client', AuthenticateApiClient::class);
+    }
+
     private function registerHardwareScanRoutes(): void
     {
         HardwareScanRouteRegistry::register(new HardwareScanRouteDefinition(

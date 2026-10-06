@@ -45,7 +45,7 @@ class ApiClient extends Model
     use HasUlid;
 
     protected $fillable = [
-        'school_id', 'name', 'client_type', 'contact_email', 'api_key_hash', 'scoped_abilities',
+        'ulid', 'school_id', 'name', 'client_type', 'contact_email', 'api_key_hash', 'scoped_abilities',
         'rate_limit_per_minute', 'ip_allowlist', 'is_active', 'last_used_at', 'created_by',
         'revoked_at', 'revoked_by',
     ];
