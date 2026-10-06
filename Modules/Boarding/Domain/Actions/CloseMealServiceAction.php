@@ -6,6 +6,7 @@ namespace Modules\Boarding\Domain\Actions;
 
 use Modules\Boarding\Domain\DataObjects\CloseMealServiceData;
 use Modules\Boarding\Domain\Events\ServiceClosed;
+use Modules\Boarding\Models\MealRequisitionLine;
 use Modules\Boarding\Models\MealService;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
@@ -30,14 +31,20 @@ final class CloseMealServiceAction extends Action
             );
         }
 
-        $costPerServing = $service->issued_cost_minor !== null && $data->actualServed > 0
-            ? (int) round($service->issued_cost_minor / $data->actualServed)
+        // The cost of what was actually served: the planned ingredient cost scaled to the servings
+        // that went out. Only when every ingredient is priced — a partly costed meal has no cost.
+        $lines = MealRequisitionLine::query()->where('meal_service_id', $service->id)->get(['line_cost_minor']);
+        $fullyCosted = $lines->isNotEmpty() && $lines->every(fn (MealRequisitionLine $line): bool => $line->line_cost_minor !== null);
+        $issuedCost = $fullyCosted && $service->planned_servings > 0
+            ? (int) round($lines->sum('line_cost_minor') * min(1.0, $data->actualServed / $service->planned_servings))
             : null;
+        $costPerServing = $issuedCost !== null && $data->actualServed > 0 ? (int) round($issuedCost / $data->actualServed) : null;
 
-        return $this->transaction(function () use ($service, $data, $costPerServing): MealService {
+        return $this->transaction(function () use ($service, $data, $costPerServing, $issuedCost): MealService {
             $service->update([
                 'actual_served' => $data->actualServed,
                 'wastage_note' => $data->wastageNote,
+                'issued_cost_minor' => $issuedCost,
                 'cost_per_serving_minor' => $costPerServing,
                 'status' => 'closed',
             ]);

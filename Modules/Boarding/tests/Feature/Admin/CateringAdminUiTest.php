@@ -9,6 +9,7 @@ use Modules\Boarding\Domain\Actions\OpenRollCallAction;
 use Modules\Boarding\Domain\DataObjects\CompleteRollCallData;
 use Modules\Boarding\Domain\DataObjects\MarkRollCallData;
 use Modules\Boarding\Domain\DataObjects\OpenRollCallData;
+use Modules\Boarding\Livewire\Catering\Costs;
 use Modules\Boarding\Livewire\Catering\Dietary;
 use Modules\Boarding\Livewire\Catering\ServicePlan;
 use Modules\Boarding\Livewire\Catering\ServingTerminal;
@@ -86,6 +87,7 @@ it('serves every BRD-04 screen through a real routed request', function (): void
         'boarding.catering.menu-cycles',
         'boarding.catering.recipes',
         'boarding.catering.service-plan',
+        'boarding.catering.costs',
         'boarding.catering.serving-terminal',
         'boarding.catering.dietary',
     ] as $routeName) {
@@ -162,4 +164,26 @@ it('surfaces a life-threatening dietary alert, unverified until a nurse verifies
         ->call('verify', $requirement->id);
 
     expect($requirement->refresh()->verified_by_nurse)->toBeTrue();
+});
+
+it('summarises catering cost per meal and per week from closed services, counting unpriced ones apart and never as zero (BR-BRD-04)', function (): void {
+    $f = cateringAdminFixture();
+    $user = cateringAdminUser($f, 'boarding.catering.service.view');
+    $mk = fn (string $meal, int $planned, int $served, ?int $cost, int $daysAgo = 1) => MealService::factory()->create([
+        'school_id' => $f['school']->id, 'term_id' => $f['term']->id, 'meal' => $meal, 'service_date' => now()->subDays($daysAgo), 'status' => 'closed',
+        'planned_servings' => $planned, 'actual_served' => $served, 'issued_cost_minor' => $cost, 'cost_per_serving_minor' => $cost !== null ? intdiv($cost, $served) : null,
+    ]);
+    $mk('lunch', 110, 100, 50000);
+    $mk('lunch', 100, 100, null, 2);
+    $mk('supper', 90, 90, 18000);
+
+    $screen = Livewire::actingAs($user)->test(Costs::class, ['school' => $f['school']]);
+    $rows = collect($screen->viewData('byMeal'))->keyBy('meal');
+
+    expect($rows['lunch']['served'])->toBe(200)->and($rows['lunch']['cost_minor'])->toBe(50000)->and($rows['lunch']['per_serving_minor'])->toBe(500)
+        ->and($rows['lunch']['over_percent'])->toBe(5.0)->and($rows['supper']['per_serving_minor'])->toBe(200)
+        ->and($screen->viewData('unpriced'))->toBe(1)
+        ->and(count($screen->viewData('weekly')))->toBeGreaterThanOrEqual(1);
+
+    Livewire::actingAs(cateringAdminUser($f))->test(Costs::class, ['school' => $f['school']])->assertForbidden();
 });

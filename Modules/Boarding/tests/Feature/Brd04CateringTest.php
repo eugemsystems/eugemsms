@@ -21,6 +21,7 @@ use Modules\Boarding\Domain\DataObjects\PlanMealServiceData;
 use Modules\Boarding\Domain\DataObjects\RecipeIngredientInput;
 use Modules\Boarding\Domain\DataObjects\RecordDietaryRequirementData;
 use Modules\Boarding\Domain\DataObjects\SetMenuDayData;
+use Modules\Boarding\Domain\Support\StoresIssuanceProvider;
 use Modules\Boarding\Models\BedAllocation;
 use Modules\Boarding\Models\Hostel;
 use Modules\Boarding\Models\HostelBed;
@@ -32,6 +33,8 @@ use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\People\Models\Student;
+use Modules\Stores\Models\InventoryItem;
+use Modules\Stores\Models\StockLot;
 
 /**
  * @return array{school: School, year: AcademicYear, term: Term, user: User}
@@ -146,4 +149,41 @@ it('flags a life-threatening allergy on every scan, in large-alert form, with th
         ->and($alertsNow->first()->severity)->toBe('life_threatening')
         ->and($alertsNow->first()->requiresEpipen)->toBeTrue()
         ->and($alertsAgain)->toHaveCount(1);
+});
+
+it('prices an ingredient from the store (standard cost, else the latest lot) and reports stock without treating "no record" as "none"', function (): void {
+    $f = brd04Fixture();
+    $item = InventoryItem::factory()->for($f['school'])->create(['standard_cost_minor' => null]);
+    $standard = InventoryItem::factory()->for($f['school'])->create(['standard_cost_minor' => 90, 'standard_cost_currency' => null]);
+    $unstocked = InventoryItem::factory()->for($f['school'])->create(['standard_cost_minor' => null]);
+    StockLot::factory()->create(['school_id' => $f['school']->id, 'item_id' => $item->id, 'received_on' => now()->subDays(5), 'unit_cost_minor' => 100, 'currency' => $f['school']->base_currency, 'quantity_remaining' => 2, 'is_depleted' => false]);
+    StockLot::factory()->create(['school_id' => $f['school']->id, 'item_id' => $item->id, 'received_on' => now()->subDay(), 'unit_cost_minor' => 150, 'currency' => $f['school']->base_currency, 'quantity_remaining' => 3, 'is_depleted' => false]);
+    $provider = new StoresIssuanceProvider;
+
+    expect($provider->currentCostMinor($f['school']->id, $item->id))->toBe(150)
+        ->and($provider->currentCostMinor($f['school']->id, $standard->id))->toBe(90)
+        ->and($provider->currentCostMinor($f['school']->id, $unstocked->id))->toBeNull()
+        ->and($provider->currentCostMinor($f['school']->id, 999999))->toBeNull()
+        ->and($provider->checkAvailability($f['school']->id, $item->id, 5.0))->toBeTrue()
+        ->and($provider->checkAvailability($f['school']->id, $item->id, 5.5))->toBeFalse()
+        ->and($provider->checkAvailability($f['school']->id, $unstocked->id, 1.0))->toBeNull();
+});
+
+it('costs a closed service from its priced ingredients scaled to what was actually served, and leaves a partly priced meal uncosted', function (): void {
+    $f = brd04Fixture();
+    $mk = fn (array $lineCosts) => tap(MealService::factory()->create([
+        'school_id' => $f['school']->id, 'term_id' => $f['term']->id, 'status' => 'planned', 'planned_servings' => 100, 'meal' => 'lunch', 'service_date' => now()->addDays(random_int(1, 400)),
+    ]), function (MealService $service) use ($lineCosts, $f): void {
+        foreach ($lineCosts as $i => $cost) {
+            MealRequisitionLine::query()->create(['school_id' => $f['school']->id, 'meal_service_id' => $service->id, 'inventory_item_id' => 600 + $i, 'required_quantity' => 1, 'unit' => 'kg', 'line_cost_minor' => $cost]);
+        }
+    });
+
+    $priced = app(CloseMealServiceAction::class)->execute(new CloseMealServiceData($mk([60000, 40000])->id, 80));
+    $partly = app(CloseMealServiceAction::class)->execute(new CloseMealServiceData($mk([60000, null])->id, 80));
+    $over = app(CloseMealServiceAction::class)->execute(new CloseMealServiceData($mk([10000])->id, 120));
+
+    expect($priced->issued_cost_minor)->toBe(80000)->and($priced->cost_per_serving_minor)->toBe(1000)
+        ->and($partly->issued_cost_minor)->toBeNull()->and($partly->cost_per_serving_minor)->toBeNull()
+        ->and($over->issued_cost_minor)->toBe(10000);
 });

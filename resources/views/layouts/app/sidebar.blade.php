@@ -642,6 +642,9 @@
                                     <a href="{{ route('boarding.catering.recipes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.recipes') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-book-2-line"></i> {{ __('Recipes') }}
                                     </a>
+                                    <a href="{{ route('boarding.catering.costs', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.costs') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-money-dollar-circle-line"></i> {{ __('Catering costs') }}
+                                    </a>
                                     <a href="{{ route('boarding.catering.service-plan', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('boarding.catering.service-plan') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-calculator-line"></i> {{ __('Daily service plan') }}
                                     </a>

@@ -222,6 +222,10 @@ depends on them. Status per item below; anything not listed as done is still ope
 - **FIN-12 management reports.** `Financial\Management`: departmental (income, expense, net per cost centre,
   with un-centred lines on their own row so it adds to the income statement) and fee collection (billed,
   collected, outstanding and rate by grade level, voided invoices excluded).
+- **BRD-04 catering costs.** Real stores-backed costing and availability; `Catering\Costs` per meal, per week, over-production.
+- **Pesepay live check.** With `api.pesepay.com` allowed, the host answers, the `authorization: <integration key>` header is
+  the right one, but the supplied integration key is rejected (404 "Integration key record was not found"), so no
+  sandbox payment has been completed yet.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -230,7 +234,6 @@ depends on them. Status per item below; anything not listed as done is still ope
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
-BRD-04 cost analytics;
 ACA-04 period-mode marking; ACA-03 drag-and-drop; FIN-12 board pack (the prior-period view is the
 Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
 
@@ -562,15 +565,12 @@ confirms a life-threatening dietary alert is recorded unverified, then
 verified only through the explicit nurse-verification step
 (BR-BRD-04-010) — recording one never marks it verified by itself.
 Cost columns read `unavailable`, never `0`, in this planning-only mode
-(`NullStoreIssuanceProvider`). **Deliberately not built**: Cost
-analytics/Wastage report (no real costing data exists while `FIN-09`
-is unbuilt — building a trend screen over `null` values would be
-decorative), `PublicMenu` (a learner/guardian portal screen, not an
-admin console concern, matching ACA-06's own precedent for deferring
-portal-facing screens), and a dedicated meal-attendance capture UI
-(`catering.meal_attendance_capture` defaults off; the default path —
-`CloseMealServiceAction`'s own `actual_served` field — is what
-`ServicePlan` already uses).
+(`NullStoreIssuanceProvider`). Gap-closing pass: catering is now costed — `StoresIssuanceProvider` replaces the null provider (standard
+cost, else the latest priced lot; availability from lots, `null` when there is no stock record), requisition
+lines carry their cost, and closing a service computes its cost from fully priced ingredients scaled to the
+servings served. `Catering\Costs` shows cost per meal, per week and over-production; unpriced services are
+counted apart, never shown as zero. **Still not built**: `PublicMenu` (a portal screen) and a dedicated
+meal-attendance capture UI (`catering.meal_attendance_capture` defaults off).
 
 **BRD-05 note.** Built (`Livewire/Linen/`, `Laundry/` — 5 screens):
 `Linen\{Items,Issue,Clearance}`, `Laundry\{Cycles,Missing}`. `Linen\Issue`

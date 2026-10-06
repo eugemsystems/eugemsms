@@ -71,12 +71,16 @@ final class PlanMealServiceAction extends Action
             MealRequisitionLine::where('meal_service_id', $service->id)->delete();
 
             foreach ($lines as $itemId => $line) {
+                $unitCost = $this->storeIssuance->currentCostMinor($data->schoolId, $itemId);
+
                 $requisitionLine = MealRequisitionLine::create([
                     'school_id' => $data->schoolId,
                     'meal_service_id' => $service->id,
                     'inventory_item_id' => $itemId,
                     'required_quantity' => round($line['quantity'], 4),
                     'unit' => $line['unit'],
+                    'unit_cost_minor' => $unitCost,
+                    'line_cost_minor' => $unitCost !== null ? (int) round($line['quantity'] * $unitCost) : null,
                 ]);
 
                 $available = $this->storeIssuance->checkAvailability($data->schoolId, $itemId, $line['quantity']);

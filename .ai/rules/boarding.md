@@ -53,7 +53,7 @@ issue" — planning-only mode means there is no real stock to issue/
 return beyond the required-quantity lines this screen already shows),
 `ServingTerminal`, `Dietary`. **Deliberately not built**: Cost
 analytics/Wastage report (no real costing data exists while `FIN-09`
-is unbuilt — `NullStoreIssuanceProvider` returns unavailable, not
+is unbuilt — `NullStoreIssuanceProvider` (no longer bound; `StoresIssuanceProvider` is) returned unavailable, not
 zero, and a trend screen over permanently-unavailable figures would be
 decorative, not useful), `PublicMenu` (a learner/guardian portal
 screen — `ACA-06`'s own precedent is to defer portal-facing screens,

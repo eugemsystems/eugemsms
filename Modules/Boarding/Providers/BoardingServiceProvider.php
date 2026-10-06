@@ -16,8 +16,8 @@ use Modules\Boarding\Domain\Actions\CheckLinenClearanceAction;
 use Modules\Boarding\Domain\Listeners\EndAllocationOnResidencyChangeListener;
 use Modules\Boarding\Domain\Support\EloquentLiveOccupancyProvider;
 use Modules\Boarding\Domain\Support\LiveOccupancyProvider;
-use Modules\Boarding\Domain\Support\NullStoreIssuanceProvider;
 use Modules\Boarding\Domain\Support\StoreIssuanceProvider;
+use Modules\Boarding\Domain\Support\StoresIssuanceProvider;
 use Modules\Boarding\Models\AllocationConstraint;
 use Modules\Boarding\Models\BedAllocation;
 use Modules\Boarding\Models\CollectionAttempt;
@@ -182,7 +182,7 @@ class BoardingServiceProvider extends ModuleServiceProvider
         parent::register();
 
         $this->app->bind(LiveOccupancyProvider::class, EloquentLiveOccupancyProvider::class);
-        $this->app->bind(StoreIssuanceProvider::class, NullStoreIssuanceProvider::class);
+        $this->app->bind(StoreIssuanceProvider::class, StoresIssuanceProvider::class);
     }
 
     public function boot(): void
