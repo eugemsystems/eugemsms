@@ -47,6 +47,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/*/tests/** | .ai/rules/tests.md |
 | Modules/Transport/** | .ai/rules/transport.md |
 | Modules/Utilities/** | .ai/rules/utilities.md |
+| Modules/*/Http/Controllers/Api/V1/*.php | .ai/rules/v1.md |
 | resources/views/** | .ai/rules/views.md |
 | Modules/Wallet/** | .ai/rules/wallet.md |
 | Modules/Welfare/** | .ai/rules/welfare.md |

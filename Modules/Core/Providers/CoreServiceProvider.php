@@ -92,6 +92,7 @@ use Modules\Core\Http\Middleware\EnsureSubscriptionActive;
 use Modules\Core\Http\Middleware\EnsureTwoFactorIsEnrolled;
 use Modules\Core\Http\Middleware\EnsureVendorGuard;
 use Modules\Core\Http\Middleware\RecordActivity;
+use Modules\Core\Http\Middleware\RequireIdempotencyKey;
 use Modules\Core\Http\Middleware\ResolveTenant;
 use Modules\Core\Http\Middleware\SetSchoolContext;
 use Modules\Core\Http\Middleware\SetSessionContext;
@@ -190,6 +191,13 @@ class CoreServiceProvider extends ModuleServiceProvider
         $this->registerScheduledTasks();
 
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
+        // BR-CORE-05-011: revoking a token (logout, refresh rotation, device removal) takes effect on
+        // the very next request. Sanctum only checks expiry on its own, so without this a revoked
+        // token kept authenticating until it expired.
+        Sanctum::authenticateAccessTokensUsing(
+            fn (mixed $accessToken, bool $isValid): bool => $isValid && ! ($accessToken instanceof PersonalAccessToken && $accessToken->isRevoked()),
+        );
         DefaultTemplateFilters::register();
 
         // Without this, every `Route::livewire($uri, SomeClass::class)`
@@ -785,6 +793,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         $router->aliasMiddleware('serp.token-ability', EnforceTokenAbility::class);
         $router->aliasMiddleware('serp.record-activity', RecordActivity::class);
         $router->aliasMiddleware('serp.vendor-guard', EnsureVendorGuard::class);
+        $router->aliasMiddleware('serp.idempotent', RequireIdempotencyKey::class);
 
         // `serp.module-enabled` takes the module code as a route-declared
         // parameter (Book A Part 1.10, step 6) and so is never a bare

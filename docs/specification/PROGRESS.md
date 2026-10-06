@@ -174,6 +174,19 @@ depends on them. Status per item below; anything not listed as done is still ope
 - **OPS-02 milestones and contractor.** Capital projects get milestones (payment percentages capped
   at 100%, completed only while in progress) and a named main contractor.
 - **BRD-06 consultations.** Recorded and listed on the Tier 3 clinical record.
+- **`/api/v1` foundation and guardian slice (Volume 1 §9).** `routes/api.php` (prefix `api/v1`, Sanctum,
+  `serp.api` stack): `auth/otp/request`, `auth/otp/verify`, `auth/login` (a 2FA account is sent to the
+  OTP flow), `auth/refresh` (single-use rotation), `auth/logout`; `me`, `me/schools`, `me/session`;
+  `guardians/me/children`; `finance/balances`, `finance/invoices[/{id}]`; `students/{id}/report-cards`;
+  `communications/notices`. Success/data/meta envelope, coded errors for validation, auth, throttling and
+  not-found, money only as `{amount_minor, currency, formatted}`, 25/100 paging, per-route token abilities,
+  and `serp.idempotent` (Idempotency-Key required, replay, conflict) ready for payment endpoints.
+  Parent endpoints only ever see their own linked, currently effective learners; balances are absent
+  without `may_view_full_balance`; a withheld report card carries no marks and no reason.
+  **Security fix found on the way:** a revoked Sanctum token (logout, refresh rotation, device removal)
+  kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Not built yet**: teacher and
+  student endpoint families, attendance, boarding/exeat, timetable, documents, payment initiation, the
+  `X-Academic-Year-Id`/`X-Term-Id` headers, `Accept-Language`, an OpenAPI document, and API keys/webhooks.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -185,7 +198,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
-SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
+SAA impersonation entry point; the rest of the `/api/v1` surface (see the API note below); real payment
 gateway drivers (need sandbox credentials).
 
 ---

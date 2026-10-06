@@ -1,0 +1,169 @@
+<?php
+
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
+use Modules\Academic\Models\TermResult;
+use Modules\Comms\Models\Notice;
+use Modules\Core\Domain\Support\SchoolContext;
+use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\School;
+use Modules\Core\Models\SchoolClass;
+use Modules\Core\Models\Term;
+use Modules\Finance\Models\Invoice;
+use Modules\People\Models\Guardian;
+use Modules\People\Models\Student;
+use Modules\People\Models\StudentGuardian;
+
+/**
+ * The guardian-facing `/api/v1` slice: children, balances, invoices, published report cards
+ * and notices. A parent sees only their own linked children, money comes back as `Money`, and
+ * a field gated by a link permission is absent — not hidden — when the link lacks it.
+ *
+ * @return array{school: School, year: AcademicYear, term: Term, user: User, child: Student, link: StudentGuardian}
+ */
+function guardianApiFixture(bool $mayViewBalance = true): array
+{
+    $school = School::factory()->create(['base_currency' => 'USD']);
+    SchoolContext::set($school);
+    $year = AcademicYear::factory()->for($school)->current()->create();
+    $term = Term::factory()->for($school)->for($year, 'academicYear')->current()->create();
+    $user = User::factory()->create(['tenant_id' => $school->tenant_id]);
+    $user->schools()->attach($school, ['status' => 'active', 'is_primary' => true]);
+    $guardian = Guardian::factory()->for($school)->create(['user_id' => $user->id]);
+    $child = Student::factory()->for($school)->create();
+    $link = StudentGuardian::factory()->create([
+        'school_id' => $school->id, 'student_id' => $child->id, 'guardian_id' => $guardian->id,
+        'may_view_full_balance' => $mayViewBalance,
+    ]);
+
+    return compact('school', 'year', 'term', 'user', 'child', 'link');
+}
+
+/**
+ * @param  array<string, mixed>  $f
+ * @param  array<string, mixed>  $attributes
+ */
+function guardianApiInvoice(array $f, Student $student, array $attributes = []): Invoice
+{
+    return Invoice::unguarded(fn () => Invoice::query()->create($attributes + [
+        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id,
+        'invoice_number' => 'INV/'.fake()->unique()->numerify('######'), 'invoice_type' => 'term', 'student_id' => $student->id,
+        'billed_party_type' => 'guardian', 'billed_party_id' => 1, 'issue_date' => now()->toDateString(), 'due_date' => now()->addDays(14)->toDateString(),
+        'gross_minor' => 45000, 'net_minor' => 45000, 'paid_minor' => 10000, 'balance_minor' => 35000, 'currency' => 'USD', 'status' => 'issued',
+    ]));
+}
+
+it('lists only the learners the guardian is currently linked to', function (): void {
+    $f = guardianApiFixture();
+    $stranger = Student::factory()->for($f['school'])->create();
+    $ended = Student::factory()->for($f['school'])->create();
+    StudentGuardian::factory()->create([
+        'school_id' => $f['school']->id, 'student_id' => $ended->id, 'guardian_id' => $f['link']->guardian_id,
+        'status' => 'inactive',
+    ]);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $data = $this->getJson('/api/v1/guardians/me/children')->assertOk()->json('data');
+
+    expect($data)->toHaveCount(1)
+        ->and($data[0]['id'])->toBe($f['child']->ulid)
+        ->and(collect($data)->pluck('id'))->not->toContain($stranger->ulid, $ended->ulid);
+});
+
+it('returns balances as Money objects, summed from non-voided invoices only', function (): void {
+    $f = guardianApiFixture();
+    guardianApiInvoice($f, $f['child']);
+    guardianApiInvoice($f, $f['child'], ['net_minor' => 5000, 'gross_minor' => 5000, 'paid_minor' => 0, 'balance_minor' => 5000]);
+    guardianApiInvoice($f, $f['child'], ['net_minor' => 99999, 'gross_minor' => 99999, 'paid_minor' => 0, 'balance_minor' => 99999, 'status' => 'voided']);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $row = $this->getJson('/api/v1/finance/balances')->assertOk()->json('data.0');
+
+    expect($row['student_id'])->toBe($f['child']->ulid)
+        ->and($row['balances'][0]['billed'])->toBe(['amount_minor' => 50000, 'currency' => 'USD', 'formatted' => $row['balances'][0]['billed']['formatted']])
+        ->and($row['balances'][0]['outstanding']['amount_minor'])->toBe(40000)
+        ->and($row['balances'][0]['outstanding']['formatted'])->toBeString();
+});
+
+it('leaves balance fields out entirely for a link without may_view_full_balance', function (): void {
+    $f = guardianApiFixture(mayViewBalance: false);
+    $invoice = guardianApiInvoice($f, $f['child']);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $balances = $this->getJson('/api/v1/finance/balances')->assertOk()->json('data.0');
+    expect($balances)->not->toHaveKey('balances');
+
+    $row = $this->getJson('/api/v1/finance/invoices?student='.$f['child']->ulid)->assertOk()->json('data.0');
+    expect($row['id'])->toBe($invoice->ulid)->and($row)->toHaveKey('net')->and($row)->not->toHaveKey('balance')->and($row)->not->toHaveKey('paid');
+
+    $detail = $this->getJson('/api/v1/finance/invoices/'.$invoice->ulid)->assertOk()->json('data');
+    expect($detail)->not->toHaveKey('balance');
+});
+
+it('paginates invoices and caps the page size at 100', function (): void {
+    $f = guardianApiFixture();
+    foreach (range(1, 3) as $i) {
+        guardianApiInvoice($f, $f['child']);
+    }
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $response = $this->getJson('/api/v1/finance/invoices?student='.$f['child']->ulid.'&per_page=2')->assertOk();
+    expect($response->json('data'))->toHaveCount(2)->and($response->json('meta.pagination.total'))->toBe(3);
+
+    expect($this->getJson('/api/v1/finance/invoices?student='.$f['child']->ulid.'&per_page=500')->json('meta.pagination.per_page'))->toBe(100);
+});
+
+it('answers 404 for another family\'s learner or invoice and 422 when no learner is named', function (): void {
+    $f = guardianApiFixture();
+    $other = Student::factory()->for($f['school'])->create();
+    $foreign = guardianApiInvoice($f, $other);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $this->getJson('/api/v1/finance/invoices?student='.$other->ulid)->assertStatus(404)->assertJsonPath('error.code', 'NOT_FOUND');
+    $this->getJson('/api/v1/finance/invoices/'.$foreign->ulid)->assertStatus(404);
+    $this->getJson('/api/v1/finance/invoices')->assertStatus(422);
+    $this->getJson('/api/v1/students/'.$other->ulid.'/report-cards')->assertStatus(404);
+});
+
+it('shows published report cards with marks and a withheld one with no marks and no reason', function (): void {
+    $f = guardianApiFixture();
+    $class = SchoolClass::factory()->for($f['school'])->create();
+    $term2 = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create(['number' => 2]);
+
+    foreach ([[$f['term'], 'published', '72.50', null], [$term2, 'withheld', '65.00', 'Fees outstanding USD 350']] as [$term, $status, $average, $reason]) {
+        TermResult::unguarded(fn () => TermResult::query()->create([
+            'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $term->id, 'student_id' => $f['child']->id,
+            'class_id' => $class->id, 'status' => $status, 'average_percent' => $average, 'withheld_reason' => $reason, 'published_at' => $status === 'published' ? now() : null,
+            'head_comment' => 'Well done', 'subjects_taken' => 8, 'report_version' => 1,
+        ]));
+    }
+    TermResult::unguarded(fn () => TermResult::query()->create([
+        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create(['number' => 3])->id,
+        'student_id' => $f['child']->id, 'class_id' => $class->id, 'status' => 'computed', 'average_percent' => '50.00', 'subjects_taken' => 8, 'report_version' => 1,
+    ]));
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $cards = collect($this->getJson('/api/v1/students/'.$f['child']->ulid.'/report-cards')->assertOk()->json('data'))->keyBy('status');
+
+    expect($cards)->toHaveCount(2)
+        ->and((float) $cards['published']['average_percent'])->toBe(72.5)
+        ->and($cards['published']['head_comment'])->toBe('Well done')
+        ->and($cards['withheld'])->not->toHaveKey('average_percent')
+        ->and(json_encode($cards['withheld']))->not->toContain('Fees outstanding');
+});
+
+it('shows a guardian only the live notices aimed at them', function (): void {
+    $f = guardianApiFixture();
+    $mk = fn (array $attributes) => Notice::factory()->create($attributes + ['school_id' => $f['school']->id, 'posted_by' => $f['user']->id]);
+    $mk(['title' => 'School-wide']);
+    $mk(['title' => 'Our level', 'audience_scope' => 'level', 'audience_scope_id' => $f['child']->grade_level_id]);
+    $mk(['title' => 'Other level', 'audience_scope' => 'level', 'audience_scope_id' => $f['child']->grade_level_id + 999]);
+    $mk(['title' => 'Staff only', 'audience_scope' => 'staff']);
+    $mk(['title' => 'Expired', 'expires_at' => now()->subDay()]);
+    $mk(['title' => 'Scheduled', 'status' => 'scheduled', 'publish_at' => now()->addDay()]);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $titles = collect($this->getJson('/api/v1/communications/notices')->assertOk()->json('data'))->pluck('title');
+
+    expect($titles->all())->toEqualCanonicalizing(['School-wide', 'Our level']);
+});
