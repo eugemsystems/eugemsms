@@ -12,6 +12,8 @@ use Modules\Core\Models\ImpersonationSession;
 
 final class EndImpersonationAction extends Action
 {
+    protected bool $allowedDuringReadOnlyImpersonation = true;
+
     public function execute(EndImpersonationData $data): ImpersonationSession
     {
         $session = ImpersonationSession::findOrFail($data->impersonationSessionId);

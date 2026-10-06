@@ -25,6 +25,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon $expires_at
  * @property Carbon|null $ended_at
  * @property array<int, array<string, mixed>>|null $actions_performed
+ * @property int|null $access_grant_id
+ * @property bool $is_read_only
  */
 class ImpersonationSession extends Model
 {
@@ -33,6 +35,7 @@ class ImpersonationSession extends Model
     protected $fillable = [
         'impersonator_id', 'impersonated_id', 'school_id', 'reason', 'ticket_reference',
         'consent_reference', 'started_at', 'expires_at', 'ended_at', 'actions_performed',
+        'access_grant_id', 'is_read_only',
     ];
 
     protected function casts(): array
@@ -42,6 +45,7 @@ class ImpersonationSession extends Model
             'expires_at' => 'datetime',
             'ended_at' => 'datetime',
             'actions_performed' => 'array',
+            'is_read_only' => 'boolean',
         ];
     }
 

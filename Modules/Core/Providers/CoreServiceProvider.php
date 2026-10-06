@@ -535,6 +535,7 @@ class CoreServiceProvider extends ModuleServiceProvider
             'school.archive' => ['description' => 'Archive a school.', 'dangerous' => true],
             'structure.manage' => ['description' => 'Manage a school\'s sections, grade levels, classes, and houses.'],
             'module.manage' => ['description' => 'Enable or disable modules for a school.'],
+            'support_access.manage' => ['description' => 'Grant or withdraw vendor support access to this organisation.', 'dangerous' => true],
             'session.view' => ['description' => 'View academic years and terms.'],
             'session.manage' => ['description' => 'Create academic years, terms, and run rollovers.'],
             'period.close' => ['description' => 'Close an academic or financial period.', 'dangerous' => true],

@@ -55,6 +55,8 @@ use Modules\Core\Models\UserSessionPreference;
  */
 final class SwitchActiveSchoolAction extends Action
 {
+    protected bool $allowedDuringReadOnlyImpersonation = true;
+
     public function __construct(
         private readonly AuditLogger $auditLogger,
     ) {}

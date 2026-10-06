@@ -13,6 +13,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Modules/*/Console/Commands/*.php | .ai/rules/commands.md |
 | Modules/Comms/** | .ai/rules/comms.md |
 | Modules/Compliance/** | .ai/rules/compliance.md |
+| Modules/Core/Domain/Actions/** | .ai/rules/core-domain-actions.md |
 | Modules/Core/**, Modules/Core/**/*.php | .ai/rules/core.md |
 | Modules/*/Domain/Actions/*.php | .ai/rules/domain-actions.md |
 | Modules/*/Domain/Support/*.php | .ai/rules/domain-support.md |

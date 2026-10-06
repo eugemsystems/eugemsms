@@ -187,6 +187,25 @@ depends on them. Status per item below; anything not listed as done is still ope
   kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Not built yet**: teacher and
   student endpoint families, attendance, boarding/exeat, timetable, documents, payment initiation, the
   `X-Academic-Year-Id`/`X-Term-Id` headers, `Accept-Language`, an OpenAPI document, and API keys/webhooks.
+- **SAA vendor impersonation (BR-SAA-02-002).** Consent-gated by a structured grant, not a typed
+  reference: the customer's own administrator (`core.support_access.manage`, screen
+  `Core\Users\SupportAccess`) grants access for one named ticket for 1–72 hours and can withdraw it
+  at any time, which ends open sessions at once. Vendor staff open a session from `Saas\Vendor\Tenants\Show`
+  (`StartVendorImpersonationAction`): vendor operators only, never a vendor target, only within the
+  grant's tenant, only for the ticket the grant names. The session is read-only — the base `Action`
+  refuses every write while one is open, so no module can forget — ends at the sooner of the platform
+  maximum and the grant, is stamped with the grant, and appears on the customer's screen (who, when,
+  how long). The start is recorded in the vendor console audit. Same-browser session swap with the
+  existing banner to return, as CORE-05 already does; a separate-subdomain session would need
+  per-tenant hosts. Customer-side notification when a session opens is not built.
+- **FIN-05 Pesepay gateway, parent payments API.** `PesepayGatewayDriver` (hosted checkout, EcoCash push,
+  polling, result callback authenticated by decryption with the merchant key), public
+  `POST /api/v1/webhooks/payments/{driver}`, and `finance/payment-methods`, `POST finance/payments`
+  (Idempotency-Key required), `GET finance/payments/{id}`. Keys are read from `PESEPAY_INTEGRATION_KEY` /
+  `PESEPAY_ENCRYPTION_KEY` (never committed) or a school's own gateway row. **Not verified against the live
+  sandbox**: this environment's network policy blocks `api.pesepay.com`; the request shapes and the EcoCash
+  method codes (`PZW211` USD, `PZW201` ZWG, overridable) follow Pesepay's documented API from memory and are
+  covered by faked-HTTP tests only. First step on a machine that can reach it: one sandbox payment.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -198,8 +217,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
-SAA impersonation entry point; the rest of the `/api/v1` surface (see the API note below); real payment
-gateway drivers (need sandbox credentials).
+the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
 
 ---
 
@@ -1373,9 +1391,7 @@ version format, tenants and uniqueness, and a rolled-back release can no longer 
 "confirmed stable" or rolled back twice; broadcasts validate severity, length, window and
 tenants, and an empty audience is an error rather than "all"; incidents validate severity,
 components and status and refuse updates once resolved. **Known gaps:** (1) the
-**impersonation entry point** (BR-SAA-02-002) is not built — `Core\Users\Impersonate`
-only lists users in the *operator's own* tenant, so a cross-tenant, consent-gated vendor
-entry needs a design decision about the session swap; (2) `GET /api/v1/vendor/tenants/{id}/health`
+**impersonation entry point** (BR-SAA-02-002) is now built — see the gap-closing pass; (2) `GET /api/v1/vendor/tenants/{id}/health`
 is not built; (3) nightly health snapshots are not scheduled (on-demand recompute only);
 (4) a tenant's own incident visibility to its administrators is the `Announcements`
 page, not yet a global banner.

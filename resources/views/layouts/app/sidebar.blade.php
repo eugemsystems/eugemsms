@@ -1802,6 +1802,11 @@
                                 <a href="{{ route('impersonate.index') }}" class="nav-link {{ request()->routeIs('impersonate.*') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-spy-line"></i> {{ __('Impersonation') }}
                                 </a>
+                                @if ($sessionsSchool)
+                                    <a href="{{ route('support-access.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('support-access.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-customer-service-2-line"></i> {{ __('Support access') }}
+                                    </a>
+                                @endif
                                 <a href="{{ route('login-audit.index') }}" class="nav-link {{ request()->routeIs('login-audit.*') ? 'active' : '' }}" wire:navigate>
                                     <i class="ri ri-history-line"></i> {{ __('Login audit') }}
                                 </a>

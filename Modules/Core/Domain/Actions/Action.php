@@ -6,6 +6,7 @@ namespace Modules\Core\Domain\Actions;
 
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Domain\Exceptions\ImpersonationReadOnlyException;
 use Modules\Core\Domain\Support\Auth\ImpersonationGuard;
 use Modules\Core\Domain\Support\ImpersonationContext;
 
@@ -54,11 +55,39 @@ abstract class Action
      */
     protected function transaction(Closure $callback): mixed
     {
+        $this->assertWritableDuringImpersonation();
+
         if (! $this->transactional) {
             return $callback();
         }
 
         return DB::transaction($callback);
+    }
+
+    /**
+     * Set to true only on an Action that must keep working inside a read-only support session —
+     * ending that session, or switching the school/session being looked at. Anything that records
+     * or changes business data must stay false.
+     */
+    protected bool $allowedDuringReadOnlyImpersonation = false;
+
+    /**
+     * Book J SAA-02 BR-SAA-02-002: a vendor support session is read-only. Every business write
+     * goes through an Action, so refusing here is the one choke point that holds for every module
+     * without each remembering to ask — a support engineer can see what the customer sees and
+     * change nothing, and cannot mark a notice "read" or approve a request as the customer.
+     */
+    private function assertWritableDuringImpersonation(): void
+    {
+        $session = ImpersonationContext::current();
+
+        if ($session === null || ! $session->is_read_only || ! $session->isActive() || $this->allowedDuringReadOnlyImpersonation) {
+            return;
+        }
+
+        $session->recordBlockedAction('Write attempted by '.static::class);
+
+        throw new ImpersonationReadOnlyException('This is a read-only support session — nothing can be changed while it is open.', ['action' => class_basename(static::class)]);
     }
 
     /**

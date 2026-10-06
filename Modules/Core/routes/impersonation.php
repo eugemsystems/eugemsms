@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Livewire\Users\Impersonate;
 use Modules\Core\Livewire\Users\LoginAudit;
+use Modules\Core\Livewire\Users\SupportAccess;
 
 /**
  * Book A CORE-05 §6 — the impersonation console and login audit screens.
@@ -16,4 +17,8 @@ use Modules\Core\Livewire\Users\LoginAudit;
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('impersonate', Impersonate::class)->name('impersonate.index');
     Route::livewire('login-audit', LoginAudit::class)->name('login-audit.index');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('schools/{school}')->group(function (): void {
+    Route::livewire('support-access', SupportAccess::class)->name('support-access.index');
 });

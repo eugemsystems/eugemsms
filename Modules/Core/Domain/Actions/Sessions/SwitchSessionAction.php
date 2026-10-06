@@ -31,6 +31,8 @@ use Modules\Core\Models\UserSessionPreference;
  */
 final class SwitchSessionAction extends Action
 {
+    protected bool $allowedDuringReadOnlyImpersonation = true;
+
     public function execute(SwitchSessionData $data): SessionContextResult
     {
         $user = User::query()->findOrFail($data->userId);

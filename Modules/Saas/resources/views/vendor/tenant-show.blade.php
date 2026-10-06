@@ -52,6 +52,29 @@
         </div></div>
     </div>
     <div class="card mt-4">
+        <div class="card-header">{{ __('Support session') }}</div>
+        <div class="card-body">
+            <p class="small text-body-secondary mb-2">{{ __('Read-only. Needs the customer\'s own, unexpired access grant for the ticket you name; every session is recorded against that grant and visible to them.') }}</p>
+            @if ($grants->isEmpty())
+                <div class="alert alert-warning py-2 small">{{ __('This organisation has not granted support access, so no session can be opened.') }}</div>
+            @else
+                <div class="small mb-2">{{ __('Active grants') }}: @foreach ($grants as $grant) <span class="badge text-bg-info">{{ $grant->ticket_reference }} · {{ __('until :t', ['t' => $grant->expires_at->format('d M H:i')]) }}</span> @endforeach</div>
+            @endif
+            <div class="row g-2 align-items-start">
+                <div class="col-md-4">
+                    <input type="text" class="form-control form-control-sm mb-1" wire:model.live.debounce.300ms="userSearch" placeholder="{{ __('Search their users') }}">
+                    <select class="form-select form-select-sm" wire:model="targetUserId" size="4">
+                        @foreach ($candidates as $candidate) <option value="{{ $candidate->id }}">{{ $candidate->name }} — {{ $candidate->email }}</option> @endforeach
+                    </select>
+                    @error('targetUserId') <div class="text-danger small">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-3"><input type="text" class="form-control form-control-sm" wire:model="ticketReference" placeholder="{{ __('Ticket reference') }}">@error('ticketReference') <div class="text-danger small">{{ $message }}</div> @enderror</div>
+                <div class="col-md-3"><input type="text" class="form-control form-control-sm" wire:model="reason" placeholder="{{ __('Reason') }}">@error('reason') <div class="text-danger small">{{ $message }}</div> @enderror</div>
+                <div class="col-md-2"><button type="button" class="btn btn-sm btn-warning w-100" wire:click="impersonate" wire:confirm="{{ __('Open a read-only support session as this user?') }}">{{ __('Open session') }}</button></div>
+            </div>
+        </div>
+    </div>
+    <div class="card mt-4">
         <div class="card-header">{{ __('Health history') }}</div>
         <div class="table-responsive"><table class="table table-sm mb-0">
             <thead><tr><th>{{ __('Date') }}</th><th class="text-end">{{ __('Score') }}</th><th class="text-end">{{ __('Last login') }}</th><th class="text-end">{{ __('Adoption') }}</th><th class="text-end">{{ __('Tickets') }}</th><th class="text-end">{{ __('Integrity') }}</th></tr></thead>
