@@ -234,6 +234,9 @@ depends on them. Status per item below; anything not listed as done is still ope
   paid and every documented terminal status maps to failed/cancelled; ZWG is sent as `ZiG`. Live sandbox, USD: redirect
   initiate (redirectUrl + referenceNumber), EcoCash make-payment success/failure and check-payment all confirmed. Not
   exercised live: a real result callback (needs a public HTTPS URL) and card entry on the hosted page (browser-only).
+- **Vendor-session notice and parent invitation.** Opening a vendor support session now notifies the administrator who
+  granted access (in-app, plus email; `core.support_session_opened`). Giving a guardian parent-app access now sends them
+  an SMS (and email where on file) invitation (`people.parent_app_invitation`); a failed send never blocks either.
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from

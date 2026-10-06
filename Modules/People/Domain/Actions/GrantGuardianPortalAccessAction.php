@@ -8,14 +8,17 @@ use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Actions\Auth\CreateUserAction;
+use Modules\Core\Domain\Actions\Notifications\DispatchNotificationAction;
 use Modules\Core\Domain\Actions\Schools\AssignUserToSchoolAction;
 use Modules\Core\Domain\DataObjects\Auth\CreateUserData;
+use Modules\Core\Domain\DataObjects\Notifications\DispatchNotificationData;
 use Modules\Core\Domain\DataObjects\Schools\AssignUserData;
 use Modules\Core\Domain\Support\Auth\PhoneNormalizer;
 use Modules\Core\Domain\Support\Auth\UserType;
 use Modules\Core\Models\School;
 use Modules\People\Models\Guardian;
 use Modules\People\Models\StudentGuardian;
+use Throwable;
 
 /**
  * ACT-GrantGuardianPortalAccess (Book C PPL-03 §6). Lets a guardian sign in to the parent app: a
@@ -31,6 +34,7 @@ final class GrantGuardianPortalAccessAction extends Action
     public function __construct(
         private readonly CreateUserAction $createUser,
         private readonly AssignUserToSchoolAction $assignToSchool,
+        private readonly DispatchNotificationAction $dispatchNotification,
     ) {}
 
     public function execute(int $guardianId, int $grantedByUserId): Guardian
@@ -61,7 +65,7 @@ final class GrantGuardianPortalAccessAction extends Action
 
         $school = School::query()->findOrFail($guardian->school_id);
 
-        return $this->transaction(function () use ($guardian, $phone, $school, $grantedByUserId): Guardian {
+        $granted = $this->transaction(function () use ($guardian, $phone, $school, $grantedByUserId): Guardian {
             $user = User::query()->where('tenant_id', $school->tenant_id)->where('phone', $phone)->first();
 
             if ($user !== null && ($user->user_type === UserType::Vendor || Guardian::query()->withoutGlobalScopes()->where('user_id', $user->id)->exists())) {
@@ -83,5 +87,38 @@ final class GrantGuardianPortalAccessAction extends Action
 
             return $guardian;
         });
+
+        $this->invite($granted, $school, $phone);
+
+        return $granted;
+    }
+
+    /**
+     * Tells the guardian, by SMS and email where they have one, that they can now use the app. A
+     * failed send never undoes the access that was just granted.
+     */
+    private function invite(Guardian $guardian, School $school, string $phone): void
+    {
+        $addresses = ['sms' => $phone];
+
+        if ($guardian->email !== null && $guardian->email !== '') {
+            $addresses['email'] = $guardian->email;
+        }
+
+        try {
+            $this->dispatchNotification->execute(new DispatchNotificationData(
+                schoolId: $school->id,
+                notificationKey: 'people.parent_app_invitation',
+                recipientType: 'guardian',
+                addresses: $addresses,
+                context: ['guardian' => ['name' => trim($guardian->first_name.' '.$guardian->last_name), 'phone' => $phone], 'school' => ['name' => $school->name]],
+                recipientId: $guardian->id,
+                relatedType: 'guardian_portal_access',
+                relatedId: $guardian->id,
+                dedupeWindowMinutes: 1440,
+            ));
+        } catch (Throwable) {
+            // The invitation is a courtesy; access stands without it.
+        }
     }
 }

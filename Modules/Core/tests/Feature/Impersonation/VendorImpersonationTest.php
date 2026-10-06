@@ -26,6 +26,7 @@ use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Livewire\Users\SupportAccess;
 use Modules\Core\Models\ActivityLogEntry;
 use Modules\Core\Models\ImpersonationSession;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SupportAccessGrant;
@@ -66,6 +67,21 @@ it('opens a read-only session under the customer\'s grant and stamps it with tha
         ->and($session->ticket_reference)->toBe('TKT-1001')
         ->and($session->impersonator_id)->toBe($f['operator']->id)
         ->and($session->impersonated_id)->toBe($f['target']->id);
+});
+
+it('tells the administrator who granted access, in the app and by email, the moment a session opens', function (): void {
+    $f = vendorImpersonationFixture();
+    $school = School::factory()->create(['tenant_id' => $f['tenant']->id]);
+    $f['target']->schools()->attach($school, ['status' => 'active', 'is_primary' => true]);
+
+    $session = startVendorSession($f);
+
+    $sent = Notification::where('notification_key', 'core.support_session_opened')->get();
+    $inApp = $sent->firstWhere('channel', 'in_app');
+    expect($inApp)->not->toBeNull()
+        ->and($inApp->status)->toBe('delivered')
+        ->and($inApp->recipient_id)->toBe($f['grant']->granted_by)
+        ->and($inApp->related_id)->toBe($session->id);
 });
 
 it('ends the session when the grant runs out if that is sooner than the platform maximum', function (): void {

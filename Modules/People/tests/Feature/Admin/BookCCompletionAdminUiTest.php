@@ -16,6 +16,7 @@ use Modules\Core\Domain\Registry\LearnerClearanceRegistry;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\Auth\UserType;
 use Modules\Core\Models\Document;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\People\Domain\Actions\ChangeStudentStatusAction;
@@ -291,6 +292,7 @@ it('gives a guardian parent-app access by their phone, links the account, and le
     $user = User::findOrFail($guardian->fresh()->user_id);
     expect($user->phone)->toBe('+263771234567')->and($user->user_type)->toBe(UserType::Parent)
         ->and($user->isAssignedToSchool($f['school']->id))->toBeTrue()->and($user->password)->toBeNull();
+    expect(Notification::where('notification_key', 'people.parent_app_invitation')->where('recipient_id', $guardian->id)->where('channel', 'sms')->count())->toBe(1);
 
     Livewire::test(PortalAccess::class, ['school' => $f['school']])->call('grant', $guardian->id);
     expect(User::where('phone', '+263771234567')->count())->toBe(1);

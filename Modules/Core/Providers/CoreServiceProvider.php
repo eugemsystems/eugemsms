@@ -36,10 +36,12 @@ use Modules\Core\Domain\Contracts\Sessions\SnapshotPayloadProvider;
 use Modules\Core\Domain\Contracts\Sessions\TermBalanceProvider;
 use Modules\Core\Domain\Contracts\Settings\TenantTierProvider;
 use Modules\Core\Domain\DataObjects\Files\FileCategoryDefinition;
+use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\DataObjects\Scheduling\ScheduledTaskDefinitionData;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
 use Modules\Core\Domain\Registry\HealthCheckRegistry;
 use Modules\Core\Domain\Registry\IntegrityCheckRegistry;
+use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\RolloverHandlerRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskRegistry;
@@ -189,6 +191,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         $this->registerFileCategories();
         $this->registerHealthChecks();
         $this->registerScheduledTasks();
+        $this->registerNotificationKeys();
 
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
@@ -386,6 +389,20 @@ class CoreServiceProvider extends ModuleServiceProvider
      * (fiscalisation queue depth, gateway reachability, trial balance,
      * SMS/WhatsApp credit) depend on modules that don't exist yet.
      */
+    /**
+     * Book J SAA-02: the customer is told whenever vendor staff open a support session on their tenant.
+     */
+    private function registerNotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'core.support_session_opened',
+            variables: ['support.operator', 'support.user', 'support.ticket', 'support.expires_at'],
+            defaultChannels: ['email'],
+            defaultAudience: 'user',
+            isTransactional: true,
+        ));
+    }
+
     private function registerHealthChecks(): void
     {
         HealthCheckRegistry::register(new QueueDepthHealthCheck);

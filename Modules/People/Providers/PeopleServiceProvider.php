@@ -11,7 +11,9 @@ use Livewire\Livewire;
 use Modules\Academic\Models\Subject;
 use Modules\Comms\Models\CalendarEvent;
 use Modules\Core\Domain\DataObjects\Files\FileCategoryDefinition;
+use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\Registry\FileCategoryRegistry;
+use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
@@ -105,6 +107,21 @@ class PeopleServiceProvider extends ModuleServiceProvider
         $this->registerPermissions();
         $this->registerLivewireRoutes();
         $this->registerFileCategories();
+        $this->registerNotificationKeys();
+    }
+
+    /**
+     * Book C PPL-03: the invitation a guardian gets when they are given parent-app access.
+     */
+    private function registerNotificationKeys(): void
+    {
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'people.parent_app_invitation',
+            variables: ['guardian.name', 'school.name', 'guardian.phone'],
+            defaultChannels: ['sms', 'email'],
+            defaultAudience: 'guardian',
+            isTransactional: true,
+        ));
     }
 
     /**

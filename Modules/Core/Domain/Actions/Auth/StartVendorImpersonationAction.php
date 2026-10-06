@@ -7,12 +7,15 @@ namespace Modules\Core\Domain\Actions\Auth;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Domain\Actions\Notifications\DispatchNotificationAction;
 use Modules\Core\Domain\DataObjects\Auth\StartImpersonationData;
 use Modules\Core\Domain\DataObjects\Auth\StartVendorImpersonationData;
+use Modules\Core\Domain\DataObjects\Notifications\DispatchNotificationData;
 use Modules\Core\Domain\Exceptions\ImpersonationNotPermittedException;
 use Modules\Core\Domain\Support\Auth\UserType;
 use Modules\Core\Models\ImpersonationSession;
 use Modules\Core\Models\SupportAccessGrant;
+use Throwable;
 
 /**
  * ACT-StartVendorImpersonation (Book J SAA-02 BR-SAA-02-002). The vendor console's entry point
@@ -33,6 +36,7 @@ final class StartVendorImpersonationAction extends Action
 {
     public function __construct(
         private readonly StartImpersonationAction $startImpersonation,
+        private readonly DispatchNotificationAction $dispatchNotification,
     ) {}
 
     public function execute(StartVendorImpersonationData $data): ImpersonationSession
@@ -72,7 +76,7 @@ final class StartVendorImpersonationAction extends Action
             throw ValidationException::withMessages($errors);
         }
 
-        return $this->transaction(function () use ($data, $operator, $target, $grant): ImpersonationSession {
+        $session = $this->transaction(function () use ($data, $operator, $target, $grant): ImpersonationSession {
             $session = $this->startImpersonation->execute(new StartImpersonationData(
                 impersonatorId: $operator->id,
                 impersonatedId: $target->id,
@@ -90,5 +94,53 @@ final class StartVendorImpersonationAction extends Action
 
             return $session;
         });
+
+        $this->tellCustomer($session, $operator, $target, $grant);
+
+        return $session;
+    }
+
+    /**
+     * The administrator who granted access is told, by email, the moment it is used. A failure to
+     * send never blocks the session (and the session is in the customer's access log regardless).
+     */
+    private function tellCustomer(ImpersonationSession $session, User $operator, User $target, SupportAccessGrant $grant): void
+    {
+        $admin = User::query()->whereKey($grant->granted_by)->first();
+
+        if ($admin === null) {
+            return;
+        }
+
+        $school = $target->primarySchool() ?? $admin->primarySchool();
+
+        if ($school === null) {
+            return;
+        }
+
+        $schoolId = $school->id;
+
+        try {
+            $this->dispatchNotification->execute(new DispatchNotificationData(
+                schoolId: $schoolId,
+                notificationKey: 'core.support_session_opened',
+                recipientType: 'user',
+                addresses: ['email' => $admin->email],
+                context: ['support' => [
+                    'operator' => $operator->name,
+                    'user' => $target->name,
+                    'ticket' => $grant->ticket_reference,
+                    'expires_at' => $session->expires_at->format('d M Y H:i'),
+                ]],
+                recipientId: $admin->id,
+                channel: 'email',
+                relatedType: 'support_session',
+                relatedId: $session->id,
+                urgent: true,
+                dedupeWindowMinutes: 1,
+            ));
+        } catch (Throwable) {
+            // Notification failure never blocks the support session.
+        }
     }
 }
