@@ -9,8 +9,8 @@ ARG UID=1000
 ARG GID=1000
 COPY --from=mlocati/php-extension-installer:latest /usr/bin/install-php-extensions /usr/local/bin/
 # pdo_mysql: MySQL 8.4 (target DB). pdo_sqlite: phpunit.xml uses sqlite :memory:.
-# intl/mbstring/bcmath: Laravel, money maths. gd+exif+zip: images/uploads/archives. pcntl: queue:work signals. opcache: prod.
-RUN install-php-extensions pdo_mysql pdo_sqlite mbstring bcmath intl gd exif zip pcntl opcache \
+# redis: phpredis (pecl) so QUEUE/CACHE/SESSION=redis needs no Composer package. intl/mbstring/bcmath: Laravel, money maths. gd+exif+zip: images/uploads/archives. pcntl: queue:work signals. opcache: prod.
+RUN install-php-extensions pdo_mysql pdo_sqlite mbstring bcmath intl gd exif zip pcntl opcache redis \
     && apk add --no-cache supervisor tini curl git unzip mysql-client \
     && addgroup -g ${GID} app && adduser -D -u ${UID} -G app app \
     && mkdir -p /var/www/html /var/log/supervisor /var/run/supervisor && chown -R app:app /var/www/html /var/log/supervisor /var/run/supervisor

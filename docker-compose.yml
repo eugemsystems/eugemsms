@@ -18,6 +18,23 @@ x-app: &app
     DB_DATABASE: ${DB_DATABASE:-eugemsms}
     DB_USERNAME: ${DB_USERNAME:-eugemsms}
     DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    # Drivers: switchable from .env only (defaults = database/local). See docs/DOCKER.md "Switching drivers".
+    QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+    CACHE_STORE: ${CACHE_STORE:-database}
+    SESSION_DRIVER: ${SESSION_DRIVER:-database}
+    FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+    BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-log}
+    REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+    REDIS_HOST: ${REDIS_HOST:-redis}
+    REDIS_PORT: ${REDIS_PORT:-6379}
+    REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    AWS_BUCKET: ${AWS_BUCKET:-}
+    AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+    AWS_URL: ${AWS_URL:-}
+    AWS_USE_PATH_STYLE_ENDPOINT: ${AWS_USE_PATH_STYLE_ENDPOINT:-false}
   restart: unless-stopped
   volumes:
     - storage:/var/www/html/storage
@@ -59,7 +76,7 @@ services:
       retries: 5
 
   # Queue worker(s) (QUEUE_CONNECTION=database) + `schedule:work` loop, under supervisord.
-  # The app uses neither Horizon nor Reverb, so neither is run.
+  # No Horizon/Reverb service: neither package is installed and nothing broadcasts.
   worker:
     <<: *app
     command: ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
@@ -95,6 +112,56 @@ services:
       retries: 10
       start_period: 30s
 
+  # ---- Optional (enable with COMPOSE_PROFILES=redis,s3 or --profile) ----
+  redis:
+    profiles: ["redis"]
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # S3-compatible store for dev/self-host. Set AWS_ENDPOINT=http://minio:9000, AWS_USE_PATH_STYLE_ENDPOINT=true.
+  minio:
+    profiles: ["s3"]
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-}
+    ports:
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || curl -fs http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio-setup:
+    profiles: ["s3"]
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_BUCKET: ${AWS_BUCKET:-}
+    entrypoint: ["/bin/sh", "-c", "mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" && mc mb --ignore-existing \"local/$$AWS_BUCKET\""]
+
 volumes:
   dbdata:
   storage:
+  redisdata:
+  miniodata:

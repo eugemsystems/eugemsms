@@ -1,7 +1,7 @@
 # Docker
 
 Stack: `app` (php-fpm), `web` (nginx), `db` (MySQL 8.4), `worker` (supervisord: `queue:work` x `QUEUE_PROCS` + `schedule:work`).
-The app uses database cache/session/queue, so there is no Redis, Horizon, Reverb, Scout or S3 container. Add them only if the code starts using them.
+Defaults are database cache/session/queue and local disk. Redis and MinIO (S3) are optional compose profiles; there is no Horizon or Reverb service because those packages are not installed and the app does not broadcast.
 Dev adds `vite`, `mailpit`, and (profile `test`) `db_test` + `mysql-tests`.
 
 ## First run (dev)
@@ -46,3 +46,25 @@ Also back up the `storage` volume (uploads): `docker run --rm -v eugemsms_storag
 
 ## Queue and scheduler
 `worker` runs `queue:work` (database queue) and `schedule:work`, which executes the tasks from `routes/console.php` (ScheduledTaskRegistry, `serp:run-task`). Run exactly one `worker` replica, otherwise the scheduler fires twice (`withoutOverlapping` mitigates, not eliminates). Scale queue throughput with `QUEUE_PROCS`. Restart after deploys (`docker compose restart worker`). Logs: `docker compose logs -f worker`.
+
+
+## Switching drivers
+All drivers are read from `.env` (config files use `env()` only). Defaults: database queue/cache/session, `local` disk, `BROADCAST_CONNECTION=log`.
+- Redis: `COMPOSE_PROFILES=redis`, set `REDIS_PASSWORD`, then `SESSION_DRIVER/CACHE_STORE/QUEUE_CONNECTION=redis`. Uses the phpredis extension built into the image, no Composer package. Then `docker compose up -d` (restart `worker`).
+- S3: `COMPOSE_PROFILES=s3` (or `redis,s3`), uncomment the S3 block in `.env.docker.example`, `FILESYSTEM_DISK=s3`. MinIO and a one-shot `minio-setup` bucket job start. Requires `league/flysystem-aws-s3-v3`, which is not installed (needs owner approval). For real AWS leave `AWS_ENDPOINT` empty and skip the profile.
+- Horizon and websockets: not available (`laravel/horizon`, `laravel/reverb` not installed; no broadcasting config, channels or events exist).
+- Code that ignores `FILESYSTEM_DISK` (hardcoded disks, left unchanged): `UploadFileAction` (`'local'`), `GenerateDocumentAction`/`RegenerateDocumentAction`, document/statement/invoice downloads in Core `Documents\Index`, Finance `Statements\Generate` and `Invoices\Show`, People `GuardianDocumentsController` (all `Storage::disk('local')`), `Schools\Branding` (`'public'`), `CreateBackupAction` (`'backups'`). Files record their disk, but new uploads and generated documents go to `local` regardless.
+- Other driver notes: `Install\TestServiceConnectionAction` uses the default disk and `Redis::connection()`; nothing hardcodes `Cache::store`, `Queue::connection` or a database connection beyond the installer probe.
+
+## cPanel deployment
+No Docker on shared hosting; same codebase, database drivers.
+- PHP 8.4 with extensions: pdo_mysql, mbstring, bcmath, intl, gd, exif, zip, openssl, curl, fileinfo, tokenizer, xml, ctype. (pcntl and redis are not needed.)
+- Point the domain docroot at `public/` (not the repo root). If the host cannot, keep the app above `public_html` and symlink or copy `public/` into it, editing the paths in `public/index.php`.
+- `.env`: `APP_ENV=production`, `APP_DEBUG=false`, MySQL credentials, `SESSION_DRIVER=database`, `CACHE_STORE=database`, `QUEUE_CONNECTION=database`, `FILESYSTEM_DISK=local` (or `s3` once the S3 package is installed).
+- Install: `composer install --no-dev -o`, upload built `public/build` (run `npm run build` elsewhere), `php artisan migrate --force`, `php artisan config:cache route:cache view:cache`.
+- `storage:link` needs symlink support; if disabled, ask the host or copy `storage/app/public` into `public/storage` (branding uploads use the `public` disk). Keep `storage/` and `bootstrap/cache` writable.
+- Cron (cPanel, every minute):
+```
+* * * * * cd /home/USER/app && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/USER/app && php artisan queue:work --stop-when-empty --max-time=55 >> /dev/null 2>&1
+```
