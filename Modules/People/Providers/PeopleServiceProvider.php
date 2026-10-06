@@ -152,6 +152,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
             'students.transfer' => ['description' => 'Transfer a learner out of the school after the clearance check; the head may override a failed clearance with a reason.', 'dangerous' => true],
             'students.id_card_issue' => ['description' => 'Produce learner ID cards.'],
             'guardians.household_manage' => ['description' => 'Create households and move learners and guardians between them.'],
+            'guardians.portal_access' => ['description' => 'Give or withdraw a guardian\'s access to the parent app.', 'dangerous' => true],
             'guardians.verify' => ['description' => 'Record and verify a guardian\'s ID document and collection photo.', 'dangerous' => true],
             'guardians.update' => ['description' => 'Approve or reject a guardian\'s requested change of phone, email or address.'],
             'sponsorships.manage' => ['description' => 'Create sponsorships, add beneficiaries and end support.', 'dangerous' => true],

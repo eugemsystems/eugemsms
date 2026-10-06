@@ -2,12 +2,19 @@
 
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
+use Modules\Core\Domain\Actions\Auth\RequestOtpAction;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
+use Modules\Core\Domain\Actions\Auth\VerifyOtpAction;
+use Modules\Core\Domain\DataObjects\Auth\DeviceData;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
+use Modules\Core\Domain\DataObjects\Auth\RequestOtpData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\DataObjects\Auth\VerifyOtpData;
 use Modules\Core\Domain\Registry\LearnerClearanceRegistry;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
+use Modules\Core\Domain\Support\Auth\UserType;
 use Modules\Core\Models\Document;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
@@ -22,6 +29,7 @@ use Modules\People\Livewire\Admissions\Enquiries\Board;
 use Modules\People\Livewire\Admissions\Exams\Manage as ExamsManage;
 use Modules\People\Livewire\Admissions\Interviews\Schedule;
 use Modules\People\Livewire\Admissions\Reports\Funnel;
+use Modules\People\Livewire\Guardians\PortalAccess;
 use Modules\People\Livewire\Guardians\UpdateQueue;
 use Modules\People\Livewire\Guardians\Verification;
 use Modules\People\Livewire\Households\Index as HouseholdsIndex;
@@ -38,6 +46,7 @@ use Modules\People\Models\ApplicationDocument;
 use Modules\People\Models\Enquiry;
 use Modules\People\Models\EntranceExam;
 use Modules\People\Models\EntranceExamCandidate;
+use Modules\People\Models\Guardian;
 use Modules\People\Models\GuardianContactUpdate;
 use Modules\People\Models\GuardianVerification;
 use Modules\People\Models\Household;
@@ -47,6 +56,7 @@ use Modules\People\Models\Staff;
 use Modules\People\Models\StaffQualification;
 use Modules\People\Models\Student;
 use Modules\People\Models\StudentDocument;
+use Modules\People\Models\StudentGuardian;
 use Modules\People\Models\StudentSibling;
 
 /**
@@ -267,4 +277,64 @@ it('shows prior schooling, the timeline and an ID card', function (): void {
     Livewire::test(Timeline::class, ['school' => $f['school'], 'student' => $student])->assertSee('Enrolled')->set('category', 'administrative')->assertSee('Status changed to active');
     Livewire::test(IdCards::class, ['school' => $f['school'], 'student' => $student])->call('generate')->assertHasNoErrors();
     expect(Document::where('document_type', 'student_id_card')->count())->toBe(1);
+});
+
+it('gives a guardian parent-app access by their phone, links the account, and lets them sign in by code', function (): void {
+    $f = studentFixture();
+    $student = bcStudent($f);
+    $guardian = Guardian::factory()->for($f['school'])->create(['primary_phone' => '0771234567', 'email' => null]);
+    StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $student->id, 'guardian_id' => $guardian->id]);
+    $this->actingAs(bcUser($f, 'people.guardians.portal_access'));
+
+    Livewire::test(PortalAccess::class, ['school' => $f['school']])->call('grant', $guardian->id);
+
+    $user = User::findOrFail($guardian->fresh()->user_id);
+    expect($user->phone)->toBe('+263771234567')->and($user->user_type)->toBe(UserType::Parent)
+        ->and($user->isAssignedToSchool($f['school']->id))->toBeTrue()->and($user->password)->toBeNull();
+
+    Livewire::test(PortalAccess::class, ['school' => $f['school']])->call('grant', $guardian->id);
+    expect(User::where('phone', '+263771234567')->count())->toBe(1);
+
+    app(RequestOtpAction::class)->execute(new RequestOtpData('0771234567', $f['school']->tenant_id));
+    $code = Cache::get('otp:code:+263771234567')['code'];
+    $signedIn = app(VerifyOtpAction::class)->execute(new VerifyOtpData('0771234567', $code, new DeviceData('Parent phone'), $f['school']->tenant_id));
+    expect($signedIn->user->id)->toBe($user->id)->and($signedIn->tokens)->not->toBeNull();
+});
+
+it('refuses portal access without a phone, without a learner at the school, or for a number that belongs to another guardian', function (): void {
+    $f = studentFixture();
+    $student = bcStudent($f);
+    $this->actingAs(bcUser($f, 'people.guardians.portal_access'));
+    $noPhone = Guardian::factory()->for($f['school'])->create(['primary_phone' => null]);
+    $noLearner = Guardian::factory()->for($f['school'])->create(['primary_phone' => '0772000001']);
+    $first = Guardian::factory()->for($f['school'])->create(['primary_phone' => '0772000002']);
+    $second = Guardian::factory()->for($f['school'])->create(['primary_phone' => '0772000002']);
+
+    foreach ([$noPhone, $first, $second] as $guardian) {
+        StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $student->id, 'guardian_id' => $guardian->id]);
+    }
+
+    $screen = Livewire::test(PortalAccess::class, ['school' => $f['school']]);
+    $screen->call('grant', $noPhone->id)->call('grant', $noLearner->id)->call('grant', $first->id)->call('grant', $second->id);
+
+    expect($noPhone->fresh()->user_id)->toBeNull()->and($noLearner->fresh()->user_id)->toBeNull()->and($first->fresh()->user_id)->not->toBeNull()->and($second->fresh()->user_id)->toBeNull();
+});
+
+it('withdraws access, signs the parent out everywhere and deactivates their membership of the school', function (): void {
+    $f = studentFixture();
+    $student = bcStudent($f);
+    $guardian = Guardian::factory()->for($f['school'])->create(['primary_phone' => '0773000001']);
+    StudentGuardian::factory()->create(['school_id' => $f['school']->id, 'student_id' => $student->id, 'guardian_id' => $guardian->id]);
+    $admin = bcUser($f, 'people.guardians.portal_access');
+    $this->actingAs($admin);
+
+    Livewire::test(PortalAccess::class, ['school' => $f['school']])->call('grant', $guardian->id);
+    $user = User::findOrFail($guardian->fresh()->user_id);
+    $token = $user->createToken('Phone');
+    Livewire::test(PortalAccess::class, ['school' => $f['school']])->call('revoke', $guardian->id);
+
+    expect($guardian->fresh()->user_id)->toBeNull()->and($user->isAssignedToSchool($f['school']->id))->toBeFalse()
+        ->and($user->tokens()->whereNull('revoked_at')->count())->toBe(0);
+
+    Livewire::actingAs(bcUser($f))->test(PortalAccess::class, ['school' => $f['school']])->assertForbidden();
 });

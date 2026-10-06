@@ -126,6 +126,9 @@
                                     <a href="{{ route('people.sponsorships.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.sponsorships.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-hand-heart-line"></i> {{ __('Sponsorships') }}
                                     </a>
+                                    <a href="{{ route('people.guardians.portal-access', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.portal-access') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-smartphone-line"></i> {{ __('Parent app access') }}
+                                    </a>
                                     <a href="{{ route('people.guardians.verification', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.verification') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shield-user-line"></i> {{ __('Guardian verification') }}
                                     </a>

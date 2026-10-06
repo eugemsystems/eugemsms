@@ -150,7 +150,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
   ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging
   duplicate learners and guardians (needs a design that respects append-only financial records),
-  guardian portal access, the
+  the
   structured appraisal rubric, the public application form and `/api/v1` endpoints.
 
 - **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
@@ -213,6 +213,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   house in one step (`BulkAllocateClassAction`, `AllocateStudentsToHouseAction`); wrong grade level, already
   there, not currently enrolled, and a full class are skipped and listed with the reason. House moves are
   written to the learner timeline. Other Book C bulk operations (status changes, exports) remain open.
+- **Parent app access (Book C PPL-03).** `Guardians\PortalAccess` (`people.guardians.portal_access`) gives a guardian
+  an account for their phone number (or links the existing account for it), attached to the school with no
+  password — they sign in with a one-time code, which is what the mobile API's OTP flow expects. Refused with
+  the reason when there is no phone, no learner currently at the school, or the number belongs to another
+  guardian or to vendor staff. Withdrawing unlinks the guardian, deactivates their membership of the school
+  and signs every device out. No invitation message is sent yet.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).

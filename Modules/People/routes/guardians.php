@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\People\Livewire\Guardians\Create as GuardiansCreate;
 use Modules\People\Livewire\Guardians\Index as GuardiansIndex;
+use Modules\People\Livewire\Guardians\PortalAccess;
 use Modules\People\Livewire\Guardians\Show as GuardiansShow;
 use Modules\People\Livewire\Guardians\UpdateQueue;
 use Modules\People\Livewire\Guardians\Verification;
@@ -21,6 +22,7 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/people')->name
     Route::livewire('guardians/create', GuardiansCreate::class)->name('guardians.create');
     Route::livewire('guardians/update-queue', UpdateQueue::class)->name('guardians.update-queue');
     Route::livewire('guardians/verification', Verification::class)->name('guardians.verification');
+    Route::livewire('guardians/portal-access', PortalAccess::class)->name('guardians.portal-access');
     Route::livewire('households', HouseholdsIndex::class)->name('households.index');
     Route::livewire('sponsorships', SponsorshipsIndex::class)->name('sponsorships.index');
     Route::livewire('sponsorships/{sponsorship}', SponsorshipsShow::class)->name('sponsorships.show');
