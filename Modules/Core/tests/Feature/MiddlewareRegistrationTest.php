@@ -40,6 +40,7 @@ it('registers the serp.web and serp.api middleware groups in the documented orde
     ]);
 
     expect($groups['serp.api'])->toBe([
+        'serp.api-locale',
         'serp.resolve-tenant',
         'serp.subscription-active',
         'auth:sanctum',

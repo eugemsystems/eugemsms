@@ -96,6 +96,7 @@ use Modules\Core\Http\Middleware\EnsureVendorGuard;
 use Modules\Core\Http\Middleware\RecordActivity;
 use Modules\Core\Http\Middleware\RequireIdempotencyKey;
 use Modules\Core\Http\Middleware\ResolveTenant;
+use Modules\Core\Http\Middleware\SetApiLocale;
 use Modules\Core\Http\Middleware\SetSchoolContext;
 use Modules\Core\Http\Middleware\SetSessionContext;
 use Modules\Core\Models\AcademicYear;
@@ -812,6 +813,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         $router->aliasMiddleware('serp.record-activity', RecordActivity::class);
         $router->aliasMiddleware('serp.vendor-guard', EnsureVendorGuard::class);
         $router->aliasMiddleware('serp.idempotent', RequireIdempotencyKey::class);
+        $router->aliasMiddleware('serp.api-locale', SetApiLocale::class);
 
         // `serp.module-enabled` takes the module code as a route-declared
         // parameter (Book A Part 1.10, step 6) and so is never a bare
@@ -827,6 +829,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         ]);
 
         $router->middlewareGroup('serp.api', [
+            'serp.api-locale',
             'serp.resolve-tenant',
             'serp.subscription-active',
             'auth:sanctum',
