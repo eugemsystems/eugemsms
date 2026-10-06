@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Modules\Core\Models\Document;
 use Modules\Academic\Models\TermResult;
 use Modules\Comms\Models\Notice;
 use Modules\Core\Domain\Support\SchoolContext;
@@ -264,4 +266,45 @@ it('narrows report cards to the term named by X-Term-Id and keeps the history wi
     expect($this->getJson($url)->assertOk()->json('data'))->toHaveCount(2)
         ->and($this->getJson($url, ['X-Term-Id' => (string) $term2->id])->assertOk()->json('data'))->toHaveCount(1);
     $this->getJson($url, ['X-Term-Id' => '999999'])->assertStatus(400);
+});
+
+it('lists and downloads a linked learner\'s documents, hiding withheld cards, other learners\' documents and other schools\'', function (): void {
+    Storage::fake('local');
+    $f = guardianApiFixture();
+    $class = SchoolClass::factory()->for($f['school'])->create();
+    $stranger = Student::factory()->for($f['school'])->create();
+    $mkResult = fn (Student $student, string $status) => TermResult::unguarded(fn () => TermResult::query()->create([
+        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'student_id' => $student->id,
+        'class_id' => $class->id, 'status' => $status, 'published_at' => $status === 'published' ? now() : null, 'subjects_taken' => 8, 'report_version' => 1,
+    ]));
+    $doc = function (string $type, $documentable, ?int $schoolId = null) use ($f) {
+        $path = 'documents/'.fake()->uuid().'.html';
+        Storage::disk('local')->put($path, '<p>'.$type.'</p>');
+
+        return Document::factory()->create([
+            'school_id' => $schoolId ?? $f['school']->id, 'document_type' => $type, 'file_path' => $path,
+            'documentable_type' => $documentable->getMorphClass(), 'documentable_id' => $documentable->id,
+        ]);
+    };
+    $transcript = $doc('transcript', $f['child']);
+    $published = $doc('report_card', $mkResult($f['child'], 'published'));
+    $withheld = $doc('report_card', $mkResult(Student::factory()->for($f['school'])->create(), 'withheld'));
+    $withheldOwn = $doc('report_card', $mkResult($f['child'], 'withheld'));
+    $strangers = $doc('transcript', $stranger);
+    $foreignSchool = School::factory()->create();
+    $foreign = $doc('transcript', Student::factory()->for($foreignSchool)->create(), $foreignSchool->id);
+    Sanctum::actingAs($f['user'], ['*']);
+    $base = '/api/v1/students/'.$f['child']->ulid.'/documents';
+
+    $ids = collect($this->getJson($base)->assertOk()->json('data'))->pluck('id');
+    expect($ids->all())->toEqualCanonicalizing([$transcript->ulid, $published->ulid]);
+
+    $this->get($base.'/'.$transcript->ulid.'/download')->assertOk();
+    expect($transcript->fresh()->download_count)->toBe(1);
+
+    foreach ([$withheldOwn, $withheld, $strangers, $foreign] as $hidden) {
+        $this->get($base.'/'.$hidden->ulid.'/download')->assertStatus(404);
+    }
+    $this->getJson('/api/v1/students/'.$stranger->ulid.'/documents')->assertStatus(404);
+    $this->get('/api/v1/students/'.$stranger->ulid.'/documents/'.$strangers->ulid.'/download')->assertStatus(404);
 });

@@ -20,6 +20,7 @@ use Modules\Finance\Http\Controllers\Api\V1\GuardianPaymentsController;
 use Modules\Intelligence\Http\Controllers\Api\V1\HardwareController;
 use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
+use Modules\People\Http\Controllers\Api\V1\GuardianDocumentsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,9 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
 
     Route::get('guardians/me/children', [GuardianChildrenController::class, 'index'])->middleware('serp.token-ability:children.read');
     Route::get('students/{student}/report-cards', [ReportCardsController::class, 'index'])->middleware('serp.token-ability:results.read');
+
+    Route::get('students/{student}/documents', [GuardianDocumentsController::class, 'index'])->middleware('serp.token-ability:documents.read');
+    Route::get('students/{student}/documents/{document}/download', [GuardianDocumentsController::class, 'download'])->middleware('serp.token-ability:documents.read');
 
     Route::get('finance/balances', [GuardianFinanceController::class, 'balances'])->middleware('serp.token-ability:fees.read');
     Route::get('finance/invoices', [GuardianFinanceController::class, 'invoices'])->middleware('serp.token-ability:fees.read');
