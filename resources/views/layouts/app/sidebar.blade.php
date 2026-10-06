@@ -1113,6 +1113,35 @@
                                         <i class="ri ri-hand-coin-line"></i> {{ __('Waivers & write-offs') }}
                                     </a>
 
+                                    <div class="app-sidebar-heading">{{ __('Discounts & scholarships') }}</div>
+                                    <a href="{{ route('finance.discounts.schemes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.discounts.schemes') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-price-tag-3-line"></i> {{ __('Discount schemes') }}
+                                    </a>
+                                    <a href="{{ route('finance.discounts.budgets', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.discounts.budgets') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-pie-chart-2-line"></i> {{ __('Budget envelopes') }}
+                                    </a>
+                                    <a href="{{ route('finance.scholarships.applications', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.scholarships.applications') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-list-3-line"></i> {{ __('Applications') }}
+                                    </a>
+                                    <a href="{{ route('finance.scholarships.committee', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.scholarships.committee') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-team-line"></i> {{ __('Committee review') }}
+                                    </a>
+                                    <a href="{{ route('finance.awards.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.awards.index') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-award-line"></i> {{ __('Awards') }}
+                                    </a>
+                                    <a href="{{ route('finance.awards.grant', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.awards.grant') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-add-circle-line"></i> {{ __('Grant award') }}
+                                    </a>
+                                    <a href="{{ route('finance.awards.condition-review', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.awards.condition-review') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-checkbox-multiple-line"></i> {{ __('Condition review') }}
+                                    </a>
+                                    <a href="{{ route('finance.awards.sponsors', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.awards.sponsors') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-building-line"></i> {{ __('Sponsor awards') }}
+                                    </a>
+                                    <a href="{{ route('finance.reports.discounts', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.reports.discounts') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-grouped-line"></i> {{ __('Cost of generosity') }}
+                                    </a>
+
                                     <div class="app-sidebar-heading">{{ __('Till & receipting') }}</div>
                                     <a href="{{ route('finance.till.open', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('finance.till.open') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-cash-line"></i> {{ __('Open till') }}

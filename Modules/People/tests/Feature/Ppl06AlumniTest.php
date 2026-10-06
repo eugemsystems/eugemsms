@@ -161,8 +161,8 @@ it('reflects actual donations received on a pledge, not the pledged amount (AC-P
 it('exhausts FIN-07\'s own budget-envelope refusal once an endowment\'s available balance runs out, and restores capacity once topped up (AC-PPL-06-004)', function (): void {
     $f = ppl06Fixture();
     $scheme = app(CreateDiscountSchemeAction::class)->execute(new CreateDiscountSchemeData(
-        schoolId: $f['school']->id, code: 'MOYO', name: 'The Moyo Family Bursary', schemeType: 'manual',
-        category: 'means_tested', calculationMethod: 'percentage', contraAccountId: Account::factory()->for($f['school'])->create()->id,
+        schoolId: $f['school']->id, code: 'MOYO', name: 'The Moyo Family Bursary', schemeType: 'individually_granted',
+        category: 'hardship', calculationMethod: 'percentage', contraAccountId: Account::factory()->for($f['school'])->create()->id,
         requiresApproval: false,
     ));
 

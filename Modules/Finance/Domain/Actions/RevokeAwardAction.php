@@ -6,6 +6,7 @@ namespace Modules\Finance\Domain\Actions;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\ReasonRequiredException;
 use Modules\Finance\Domain\Events\AwardRevoked;
@@ -26,6 +27,10 @@ final class RevokeAwardAction extends Action
         }
 
         $award = DiscountAward::query()->findOrFail($awardId);
+
+        if (! in_array($award->status, ['active', 'suspended', 'pending_approval'], true)) {
+            throw new InvalidArgumentException("A {$award->status} award cannot be revoked.");
+        }
 
         return $this->transaction(function () use ($award, $reason, $effectiveTo): DiscountAward {
             $award->update([

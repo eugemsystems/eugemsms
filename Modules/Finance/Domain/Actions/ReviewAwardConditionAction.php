@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Finance\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Models\TermResult;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Models\Term;
 use Modules\Finance\Domain\Events\AwardConditionFailed;
 use Modules\Finance\Domain\Events\AwardSuspended;
 use Modules\Finance\Models\DiscountAward;
@@ -24,6 +26,12 @@ final class ReviewAwardConditionAction extends Action
     public function execute(int $awardId, int $termId): DiscountAward
     {
         $award = DiscountAward::query()->with('scheme')->findOrFail($awardId);
+
+        if (! in_array($award->status, ['active', 'suspended'], true)) {
+            throw new InvalidArgumentException("A {$award->status} award has no condition to review.");
+        }
+
+        Term::query()->where('school_id', $award->school_id)->where('academic_year_id', $award->academic_year_id)->findOrFail($termId);
         $scheme = $award->scheme;
 
         $conditionMet = true;

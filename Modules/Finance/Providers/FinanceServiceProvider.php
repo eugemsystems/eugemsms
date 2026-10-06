@@ -208,6 +208,7 @@ class FinanceServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/debtors.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/till.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/gateways.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/discounts.php');
         });
     }
 
@@ -223,6 +224,16 @@ class FinanceServiceProvider extends ModuleServiceProvider
     private function registerPermissions(): void
     {
         PermissionRegistry::register('FINANCE', [
+            'discount_scheme.view' => ['description' => 'View discount, bursary and scholarship schemes.'],
+            'discount_scheme.manage' => ['description' => 'Define schemes, tier bands and budget envelopes.'],
+            'scholarship.apply' => ['description' => 'Submit a scholarship application on a learner’s behalf.'],
+            'scholarship.review' => ['description' => 'Review applications, including means data and supporting documents.'],
+            'scholarship.decide' => ['description' => 'Record the committee’s decision on an application.', 'dangerous' => true],
+            'award.view' => ['description' => 'View awards by scheme, learner and status.'],
+            'award.grant' => ['description' => 'Grant a discount, bursary or scholarship award.', 'dangerous' => true],
+            'award.revoke' => ['description' => 'Revoke an award from a given date.', 'dangerous' => true],
+            'award.review' => ['description' => 'Run renewal-point condition reviews on awards.'],
+            'report.discounts' => ['description' => 'View the cost-of-generosity report.'],
             'account.view' => ['description' => 'View the chart of accounts and account ledgers.'],
             'account.manage' => ['description' => 'Create, edit, and deactivate accounts.'],
             'cost_centre.view' => ['description' => 'View cost centres.'],

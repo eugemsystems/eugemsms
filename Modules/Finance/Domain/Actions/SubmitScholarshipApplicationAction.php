@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Finance\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Models\AcademicYear;
 use Modules\Finance\Domain\DataObjects\SubmitScholarshipApplicationData;
 use Modules\Finance\Domain\Events\ApplicationSubmitted;
 use Modules\Finance\Domain\Exceptions\SchemeNotApplicationBasedException;
 use Modules\Finance\Models\DiscountScheme;
 use Modules\Finance\Models\ScholarshipApplication;
+use Modules\People\Models\Student;
 
 /**
  * ACT-SubmitScholarshipApplication (Book K FIN-07 §2/§4/BR-FIN-07-005/006).
@@ -26,6 +29,32 @@ final class SubmitScholarshipApplicationAction extends Action
             throw new SchemeNotApplicationBasedException(
                 "Scheme [{$scheme->code}] is not application-based — it does not accept scholarship applications."
             );
+        }
+
+        if (! $scheme->is_active) {
+            throw new InvalidArgumentException('That scheme is not currently open.');
+        }
+
+        // Scheme, student and year must all be this school's own.
+        if ($scheme->school_id !== $data->schoolId) {
+            throw new InvalidArgumentException('That scheme belongs to another school.');
+        }
+
+        Student::query()->where('school_id', $data->schoolId)->findOrFail($data->studentId);
+        AcademicYear::query()->where('school_id', $data->schoolId)->findOrFail($data->academicYearId);
+
+        foreach (['meansAssessmentScore' => $data->meansAssessmentScore, 'academicAverageAtApplication' => $data->academicAverageAtApplication] as $label => $value) {
+            if ($value !== null && (! is_numeric($value) || (float) $value < 0 || (float) $value > 100)) {
+                throw new InvalidArgumentException("{$label} must be between 0 and 100.");
+            }
+        }
+
+        $alreadyOpen = ScholarshipApplication::query()
+            ->where('school_id', $data->schoolId)->where('scheme_id', $data->schemeId)->where('student_id', $data->studentId)
+            ->where('academic_year_id', $data->academicYearId)->whereNotIn('status', ['rejected'])->exists();
+
+        if ($alreadyOpen) {
+            throw new InvalidArgumentException('This learner already has an application for that scheme and year.');
         }
 
         return $this->transaction(function () use ($data): ScholarshipApplication {

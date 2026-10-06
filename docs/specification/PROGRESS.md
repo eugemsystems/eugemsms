@@ -1435,10 +1435,41 @@ ready; no file is rendered, and the cron wiring is still the backend's deferred
 gap). The warehouse is row-count tracking only, as its own Action documents.
 Intelligence module: 63 tests, all green; PHPStan clean.
 
-### Book K — Closing the Catalogue — ⬜ not started
+### Book K — Closing the Catalogue — 🟡 admin UI in progress
 FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 `Modules/People`, alongside PPL-01–04), ACA-08–ACA-11 (lives in
-`Modules/Academic`, alongside ACA-01–07). None have UI yet.
+`Modules/Academic`, alongside ACA-01–07). Backends were already built.
+
+| Module | Admin UI |
+|---|---|
+| FIN-07 | ✅ `Finance/Livewire/{Discounts,Scholarships}/`, `Reports/Discounts` |
+| PPL-06 | ⬜ |
+| ACA-08 | ⬜ |
+| ACA-09 | ⬜ |
+| ACA-10 | ⬜ |
+| ACA-11 | ⬜ |
+
+**FIN-07 note.** Nine screens: `Discounts\Schemes`, `Budgets`, `AwardList` (the spec's
+`Awards\Index`), `GrantAward`, `ConditionReview`, `SponsorAwards`, `Scholarships\Applications`,
+`Committee`, and `Reports\Discounts` (cost of generosity), routes `finance.discounts.*`,
+`finance.scholarships.*`, `finance.awards.*`, `finance.reports.discounts`. The ten FIN-07
+permissions were never registered — now are (`finance.discount_scheme.*`,
+`finance.scholarship.*`, `finance.award.*`, `finance.report.discounts`; decide/grant/revoke are
+dangerous). **Backend gaps closed:** the grant-time envelope check the spec requires
+(BR-FIN-07-009/AC-FIN-07-003) did not exist — only a billing-time block — so
+`GrantAwardAction` now refuses an over-envelope fixed award naming the shortfall
+(`PreviewAwardEnvelopeAction` shows it live); input validation on scheme, envelope,
+application, decision and grant (scheme/student/year/guardian ownership, percent and amount
+bounds, sponsor-iff-sponsor-funded, duplicate awards and applications, contra account must be
+the school's own postable account, an automatic scheme must be sibling/staff); decided
+applications are final and need a rationale (rejection needs a reason); revoke/condition
+review refuse inapplicable statuses; new `SetDiscountSchemeActiveAction` and
+`ReinstateAwardAction` (a suspended award's other outcome, with a reason). **Known gaps:**
+percentage awards can only be bounded at billing time (their cost is unknown at grant); the
+guardian-facing `/api/v1/scholarships/*` and `/students/{ulid}/awards` endpoints; supporting
+documents are shown as a count (opened from the file vault); no means-assessment scoring
+rubric (the score is entered); condition reviews are on-demand (the
+`finance.condition_review_trigger` auto-run on results publication is not wired).
 
 ---
 
