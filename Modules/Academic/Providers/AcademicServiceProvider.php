@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Academic\Console\Tasks\AutoSubmitExpiredCbtAttemptsTask;
 use Modules\Academic\Console\Tasks\SendLibraryOverdueRemindersTask;
+use Modules\Academic\Domain\Actions\CheckLibraryClearanceAction;
 use Modules\Academic\Domain\Events\SubjectEnrolmentAdded;
 use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
 use Modules\Academic\Domain\Listeners\AutoCreateProjectOnLateEnrolmentListener;
@@ -99,6 +100,7 @@ use Modules\Academic\Models\TimetableGenerationRun;
 use Modules\Academic\Models\TimetableSlot;
 use Modules\Academic\Models\Venue;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
+use Modules\Core\Domain\Registry\LearnerClearanceRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
@@ -225,6 +227,11 @@ class AcademicServiceProvider extends ModuleServiceProvider
         $this->registerScheduledTasks();
         $this->registerNotificationKeys();
         ReportCardTemplate::registerVariables();
+        LearnerClearanceRegistry::register('library', function (int $schoolId, int $studentId): array {
+            $result = app(CheckLibraryClearanceAction::class)->execute($schoolId, 'student', $studentId);
+
+            return $result->isClear ? [] : [count($result->outstandingLoanIds).' library item(s) not returned'];
+        });
         $this->registerEventListeners();
         $this->registerPermissions();
         $this->registerLivewireRoutes();

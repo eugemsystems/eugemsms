@@ -12,6 +12,7 @@ use Modules\Academic\Domain\Events\SubjectEnrolmentDropped;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
 use Modules\Core\Domain\DataObjects\Scheduling\ScheduledTaskDefinitionData;
 use Modules\Core\Domain\Registry\CloseChecklistRegistry;
+use Modules\Core\Domain\Registry\LearnerClearanceRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
@@ -137,6 +138,15 @@ class FinanceServiceProvider extends ModuleServiceProvider
         $this->registerPermissions();
         $this->registerLivewireRoutes();
         $this->registerScheduledTasks();
+        LearnerClearanceRegistry::register('fees', function (int $schoolId, int $studentId): array {
+            $owed = (int) Invoice::query()->where('student_id', $studentId)->where('balance_minor', '>', 0)->sum('balance_minor');
+
+            if ($owed === 0 || PaymentPlan::query()->where('student_id', $studentId)->where('status', 'active')->exists()) {
+                return [];
+            }
+
+            return ['Fees outstanding with no active payment arrangement ('.number_format($owed / 100, 2).')'];
+        });
         $this->registerNotificationKeys();
     }
 

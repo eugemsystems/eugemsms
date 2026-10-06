@@ -9,6 +9,7 @@
             </p>
         </div>
         <a href="{{ route('people.staff.contracts', [$school, $staff]) }}" class="btn btn-outline-secondary" wire:navigate>{{ __('Contracts') }}</a>
+        <a href="{{ route('people.staff.qualifications', [$school, $staff]) }}" class="btn btn-outline-secondary" wire:navigate>{{ __('Qualifications') }}</a>
         <a href="{{ route('people.staff.disciplinary', [$school, $staff]) }}" class="btn btn-outline-secondary" wire:navigate>{{ __('Disciplinary') }}</a>
         <a href="{{ route('people.staff.exit', [$school, $staff]) }}" class="btn btn-outline-warning" wire:navigate>{{ __('Exit') }}</a>
     </div>

@@ -6,8 +6,9 @@
                 {{ $application->application_number }} ·
                 <span class="badge text-bg-secondary">{{ str_replace('_', ' ', ucfirst($application->status)) }}</span>
                 · {{ $application->intake?->name }} — {{ $application->requestedGradeLevel?->name }}
-            </p>
+                        </p>
         </div>
+        <a href="{{ route('people.admissions.applications.documents', [$school, $application]) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>{{ __('Documents') }}</a>
     </div>
 
     <div class="row g-4">

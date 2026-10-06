@@ -17,6 +17,7 @@ use Modules\People\Livewire\Staff\Create as StaffCreate;
 use Modules\People\Livewire\Staff\Disciplinary;
 use Modules\People\Livewire\Staff\ExitProcessing;
 use Modules\People\Livewire\Staff\Index as StaffIndex;
+use Modules\People\Livewire\Staff\Qualifications;
 use Modules\People\Livewire\Staff\Show as StaffShow;
 
 /**
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/people')->name
     Route::livewire('staff/{staff}/contracts', Contracts::class)->name('staff.contracts');
     Route::livewire('staff/{staff}/disciplinary', Disciplinary::class)->name('staff.disciplinary');
     Route::livewire('staff/{staff}/exit', ExitProcessing::class)->name('staff.exit');
+    Route::livewire('staff/{staff}/qualifications', Qualifications::class)->name('staff.qualifications');
 
     Route::livewire('establishment', EstablishmentIndex::class)->name('establishment.index');
     Route::livewire('allocation', TeacherMatrix::class)->name('allocation.matrix');

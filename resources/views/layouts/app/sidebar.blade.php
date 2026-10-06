@@ -120,6 +120,18 @@
                                     <a href="{{ route('people.guardians.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-parent-line"></i> {{ __('Guardians') }}
                                     </a>
+                                    <a href="{{ route('people.households.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.households.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-home-heart-line"></i> {{ __('Households') }}
+                                    </a>
+                                    <a href="{{ route('people.sponsorships.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.sponsorships.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-hand-heart-line"></i> {{ __('Sponsorships') }}
+                                    </a>
+                                    <a href="{{ route('people.guardians.verification', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.verification') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shield-user-line"></i> {{ __('Guardian verification') }}
+                                    </a>
+                                    <a href="{{ route('people.guardians.update-queue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.guardians.update-queue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-mail-check-line"></i> {{ __('Contact updates') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -140,6 +152,18 @@
                                     </a>
                                     <a href="{{ route('people.admissions.applications.create', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.applications.create') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-add-line"></i> {{ __('New application') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.enquiries', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.enquiries') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-question-answer-line"></i> {{ __('Enquiries') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.exams', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.exams') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-edit-line"></i> {{ __('Entrance exams') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.interviews', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.interviews') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-user-voice-line"></i> {{ __('Interviews') }}
+                                    </a>
+                                    <a href="{{ route('people.admissions.funnel', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('people.admissions.funnel') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-filter-2-line"></i> {{ __('Funnel') }}
                                     </a>
                                 </div>
                             </div>

@@ -120,6 +120,49 @@ Plus a bursar-facing field-by-field guide at `docs/finance-admin-guide.md`
 (extended with every module as it ships) and the Finance sidebar grouped by
 module (commit `1c4f5b2`).
 
+## Gap-closing pass (after Book K)
+
+A full re-check of this file against the code found that the **only** specification tables
+missing from the schema were Book C's sixteen; everywhere else the schema existed and the gaps
+were missing Actions, screens or wiring. This pass closes them, in order of how much a school
+depends on them. Status per item below; anything not listed as done is still open.
+
+**Done**
+- **Scheduled jobs (all books).** Roughly 45 per-school jobs and three platform jobs had a working
+  Action but no cron entry. They now run through `serp:run-task {key}` (`Core`
+  `ScheduledTaskHandlerRegistry` + `RunScheduledTaskCommand`; failures are isolated per school;
+  `ResolveSystemActorAction` gives a job a `users.id`). `ModuleScheduledTasksTest` runs every
+  registered job against an empty school. See `.ai/rules/providers.md`.
+- **ACA-05 report cards.** Assessment weights must total 100% before results compute
+  (AC-ACA-05-001); approve; class/head comments; generate with the fee gate (withheld cards are
+  stored, AC-004); publish and release without regenerating (AC-005); regenerate a new version
+  when a published mark is amended (AC-003); transcripts; analytics. Screens: `Results\Review`,
+  `ReportCards\{Run,Withheld,Publish}`, `Results\{Transcripts,Analytics}`. Also fixed:
+  recomputing results no longer resets a reviewed/published status; document templates now
+  HTML-escape values; the report-gate override needs a reason. Still open: CORE-07 approval
+  workflow for amending a published mark; per-class moderation sign-off beyond approval.
+- **Book C tables and features** (all sixteen tables built): staff qualifications; learner
+  documents (with expiry alerts), prior schooling, sibling links (now counted by the sibling
+  discount), timeline, ID cards, transfer-out with a clearance check (`LearnerClearanceRegistry`:
+  library, boarding property and fees register their own checks); households, sponsorships
+  (beneficiaries bill the sponsor through a real fee liability; budget envelope and beneficiary
+  limit enforced), guardian verification, the contact-update approval queue, E.164 phone
+  normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
+  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging
+  duplicate learners and guardians (needs a design that respects append-only financial records),
+  bulk operations and bulk class allocation, house allocation, guardian portal access, the
+  structured appraisal rubric, the public application form and `/api/v1` endpoints.
+
+**Still open (not yet started in this pass)**: Finance invoice/receipt/statement documents are not
+rendered; FIN-10 capitalisation listeners; FIN-13 fiscal audit log writes; FIN-11 forecast maths;
+BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
+ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
+board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
+SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
+gateway drivers (need sandbox credentials).
+
+---
+
 ### Book C — People & Organisation — 🟡 in progress
 
 Backend build order was `PPL-01 → PPL-03 → PPL-02 → PPL-04` (Book C §0.2 —

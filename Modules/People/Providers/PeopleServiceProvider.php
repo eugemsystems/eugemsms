@@ -27,39 +27,59 @@ use Modules\Finance\Models\Account;
 use Modules\Finance\Models\DiscountScheme;
 use Modules\People\Console\Tasks\ExpireLapsedOffersTask;
 use Modules\People\Domain\Actions\CheckStaffDocumentExpiryAction;
+use Modules\People\Domain\Actions\CheckStudentDocumentExpiryAction;
+use Modules\People\Domain\Events\LearnerEnrolled;
 use Modules\People\Domain\Events\LearnerStatusChanged;
 use Modules\People\Domain\Listeners\CreateAlumniRecordOnGraduationListener;
+use Modules\People\Domain\Listeners\RecordLearnerTimelineListener;
 use Modules\People\Models\AlumniCareerUpdate;
 use Modules\People\Models\AlumniEvent;
 use Modules\People\Models\AlumniHouseGroup;
 use Modules\People\Models\Alumnus;
 use Modules\People\Models\Application;
+use Modules\People\Models\ApplicationDocument;
 use Modules\People\Models\BursaryEndowment;
 use Modules\People\Models\CapitalCampaign;
 use Modules\People\Models\Department;
 use Modules\People\Models\Donation;
 use Modules\People\Models\DutyAssignment;
 use Modules\People\Models\DutyRoster;
+use Modules\People\Models\Enquiry;
+use Modules\People\Models\EnquiryActivity;
+use Modules\People\Models\EntranceExam;
+use Modules\People\Models\EntranceExamCandidate;
 use Modules\People\Models\EstablishmentPost;
 use Modules\People\Models\FeeLiability;
 use Modules\People\Models\Guardian;
+use Modules\People\Models\GuardianContactUpdate;
+use Modules\People\Models\GuardianVerification;
+use Modules\People\Models\Household;
+use Modules\People\Models\HouseholdMember;
 use Modules\People\Models\Intake;
+use Modules\People\Models\Interview;
 use Modules\People\Models\LeaveBalance;
 use Modules\People\Models\LeaveRequest;
 use Modules\People\Models\LeaveType;
 use Modules\People\Models\Pledge;
+use Modules\People\Models\Sponsorship;
+use Modules\People\Models\SponsorshipBeneficiary;
 use Modules\People\Models\Staff;
 use Modules\People\Models\StaffAppraisal;
 use Modules\People\Models\StaffContract;
 use Modules\People\Models\StaffDisciplinaryCase;
 use Modules\People\Models\StaffDocument;
 use Modules\People\Models\StaffExitChecklist;
+use Modules\People\Models\StaffQualification;
 use Modules\People\Models\StaffWorkload;
 use Modules\People\Models\Student;
 use Modules\People\Models\StudentAttributeChange;
+use Modules\People\Models\StudentDocument;
 use Modules\People\Models\StudentEnrolment;
 use Modules\People\Models\StudentGuardian;
 use Modules\People\Models\StudentPriorResult;
+use Modules\People\Models\StudentPriorSchool;
+use Modules\People\Models\StudentSibling;
+use Modules\People\Models\StudentTimelineEvent;
 use Modules\People\Models\TeacherAllocation;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
@@ -94,6 +114,12 @@ class PeopleServiceProvider extends ModuleServiceProvider
      */
     private function registerFileCategories(): void
     {
+        foreach (['student_document' => 'Student Document', 'guardian_verification' => 'Guardian Verification', 'application_document' => 'Application Document', 'staff_qualification' => 'Staff Qualification'] as $key => $label) {
+            FileCategoryRegistry::register(new FileCategoryDefinition(
+                $key, $label, 'PEOPLE',
+                ['application/pdf', 'image/jpeg', 'image/png'], 10 * 1024 * 1024, isSensitive: true,
+            ));
+        }
         FileCategoryRegistry::register(new FileCategoryDefinition(
             'staff_document', 'Staff Document', 'PEOPLE',
             ['application/pdf', 'image/jpeg', 'image/png'], 10 * 1024 * 1024, isSensitive: true,
@@ -122,6 +148,18 @@ class PeopleServiceProvider extends ModuleServiceProvider
         ]);
 
         PermissionRegistry::register('PEOPLE', [
+            'students.document_manage' => ['description' => 'Attach, verify and review a learner\'s documents, prior schooling and sibling links.'],
+            'students.transfer' => ['description' => 'Transfer a learner out of the school after the clearance check; the head may override a failed clearance with a reason.', 'dangerous' => true],
+            'students.id_card_issue' => ['description' => 'Produce learner ID cards.'],
+            'guardians.household_manage' => ['description' => 'Create households and move learners and guardians between them.'],
+            'guardians.verify' => ['description' => 'Record and verify a guardian\'s ID document and collection photo.', 'dangerous' => true],
+            'guardians.update' => ['description' => 'Approve or reject a guardian\'s requested change of phone, email or address.'],
+            'sponsorships.manage' => ['description' => 'Create sponsorships, add beneficiaries and end support.', 'dangerous' => true],
+            'admissions.enquiry_manage' => ['description' => 'Work the enquiry pipeline: log contact, move stages, mark lost.'],
+            'admissions.exam_manage' => ['description' => 'Schedule entrance exams, seat candidates, capture marks and publish results.'],
+            'admissions.interview_manage' => ['description' => 'Schedule applicant interviews and record panel outcomes.'],
+            'admissions.report_view' => ['description' => 'See the admissions funnel.'],
+            'staff.qualification_manage' => ['description' => 'Record and verify staff qualifications.'],
             'students.view' => ['description' => 'View the learner directory and profiles.'],
             'students.create' => ['description' => 'Enrol a new learner.'],
             'students.update' => ['description' => 'Edit a learner\'s non-billing profile fields.'],
@@ -176,6 +214,8 @@ class PeopleServiceProvider extends ModuleServiceProvider
     private function registerEventListeners(): void
     {
         Event::listen(LearnerStatusChanged::class, CreateAlumniRecordOnGraduationListener::class);
+        Event::listen(LearnerStatusChanged::class, [RecordLearnerTimelineListener::class, 'onStatusChanged']);
+        Event::listen(LearnerEnrolled::class, [RecordLearnerTimelineListener::class, 'onEnrolled']);
     }
 
     /**
@@ -185,6 +225,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
     {
         $definitions = [
             ['students.admission_number_pattern', 'string', '{SCHOOL}/{YEAR}/{SEQ:4}', 'Admission number format.'],
+            ['students.document_expiry_warning_days', 'json', '[90,30,7]', 'Days before a learner document expires on which an alert is raised.'],
             ['students.min_age_years_ecd_a', 'int', '3', 'Minimum age for ECD A.'],
             ['students.max_age_variance_years', 'int', '3', 'Years a learner may vary from a grade level\'s typical age before a warning fires.'],
             ['identity.national_registration_required', 'bool', '0', 'Whether a national registration number is mandatory on enrolment.'],
@@ -250,6 +291,38 @@ class PeopleServiceProvider extends ModuleServiceProvider
      */
     private function registerTenantModels(): void
     {
+        TenantModelRegistry::register(GuardianContactUpdate::class, fn (School $school): GuardianContactUpdate => GuardianContactUpdate::factory()->for($school)->create());
+        TenantModelRegistry::register(StaffQualification::class, fn (School $school): StaffQualification => StaffQualification::factory()->for($school)->create());
+
+        TenantModelRegistry::register(StudentDocument::class, fn (School $school): StudentDocument => StudentDocument::factory()->for($school)->create());
+
+        TenantModelRegistry::register(StudentPriorSchool::class, fn (School $school): StudentPriorSchool => StudentPriorSchool::factory()->for($school)->create());
+
+        TenantModelRegistry::register(StudentSibling::class, fn (School $school): StudentSibling => StudentSibling::factory()->for($school)->create());
+
+        TenantModelRegistry::register(StudentTimelineEvent::class, fn (School $school): StudentTimelineEvent => StudentTimelineEvent::factory()->for($school)->create());
+
+        TenantModelRegistry::register(Household::class, fn (School $school): Household => Household::factory()->for($school)->create());
+
+        TenantModelRegistry::register(HouseholdMember::class, fn (School $school): HouseholdMember => HouseholdMember::factory()->for($school)->create());
+
+        TenantModelRegistry::register(Sponsorship::class, fn (School $school): Sponsorship => Sponsorship::factory()->for($school)->create());
+
+        TenantModelRegistry::register(SponsorshipBeneficiary::class, fn (School $school): SponsorshipBeneficiary => SponsorshipBeneficiary::factory()->for($school)->create());
+
+        TenantModelRegistry::register(GuardianVerification::class, fn (School $school): GuardianVerification => GuardianVerification::factory()->for($school)->create());
+
+        TenantModelRegistry::register(Enquiry::class, fn (School $school): Enquiry => Enquiry::factory()->for($school)->create());
+
+        TenantModelRegistry::register(EnquiryActivity::class, fn (School $school): EnquiryActivity => EnquiryActivity::factory()->for($school)->create());
+
+        TenantModelRegistry::register(ApplicationDocument::class, fn (School $school): ApplicationDocument => ApplicationDocument::factory()->for($school)->create());
+
+        TenantModelRegistry::register(EntranceExam::class, fn (School $school): EntranceExam => EntranceExam::factory()->for($school)->create());
+
+        TenantModelRegistry::register(EntranceExamCandidate::class, fn (School $school): EntranceExamCandidate => EntranceExamCandidate::factory()->for($school)->create());
+
+        TenantModelRegistry::register(Interview::class, fn (School $school): Interview => Interview::factory()->for($school)->create());
         TenantModelRegistry::register(Student::class, function (School $school): Student {
             $section = SchoolSection::factory()->for($school)->create();
             $gradeLevel = GradeLevel::factory()->for($school)->for($section, 'section')->create();
@@ -573,6 +646,20 @@ class PeopleServiceProvider extends ModuleServiceProvider
      */
     private function registerScheduledTasks(): void
     {
+        ScheduledTaskHandlerRegistry::register(
+            key: 'people.check_student_document_expiry',
+            moduleCode: 'PPL-01',
+            name: 'Check Learner Document Expiry',
+            cron: '50 6 * * *',
+            handler: static function (School $school): string {
+                $r = app(CheckStudentDocumentExpiryAction::class)->execute($school->id);
+
+                return count($r).' document(s) expiring';
+            },
+            description: 'Alerts on learner permits and documents nearing expiry.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
         ScheduledTaskHandlerRegistry::register(
             key: 'people.expire_lapsed_offers',
             moduleCode: 'PPL-02',

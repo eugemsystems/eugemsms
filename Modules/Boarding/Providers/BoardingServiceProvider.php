@@ -12,6 +12,7 @@ use Modules\Boarding\Console\Tasks\AdvanceEscalationLaddersTask;
 use Modules\Boarding\Console\Tasks\CheckOverdueExeatsTask;
 use Modules\Boarding\Console\Tasks\CheckRollCallsMissedTask;
 use Modules\Boarding\Console\Tasks\CheckVisitorsNotSignedOutTask;
+use Modules\Boarding\Domain\Actions\CheckLinenClearanceAction;
 use Modules\Boarding\Domain\Listeners\EndAllocationOnResidencyChangeListener;
 use Modules\Boarding\Domain\Support\EloquentLiveOccupancyProvider;
 use Modules\Boarding\Domain\Support\LiveOccupancyProvider;
@@ -56,6 +57,7 @@ use Modules\Boarding\Models\VisitingDayBooking;
 use Modules\Boarding\Models\Visitor;
 use Modules\Boarding\Models\VisitorLogEntry;
 use Modules\Core\Domain\DataObjects\Notifications\NotificationKeyDefinition;
+use Modules\Core\Domain\Registry\LearnerClearanceRegistry;
 use Modules\Core\Domain\Registry\NotificationKeyRegistry;
 use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
@@ -190,6 +192,11 @@ class BoardingServiceProvider extends ModuleServiceProvider
         $this->registerTenantModels();
         $this->registerSettingDefinitions();
         $this->registerScheduledTasks();
+        LearnerClearanceRegistry::register('linen', function (int $schoolId, int $studentId): array {
+            $result = app(CheckLinenClearanceAction::class)->execute($schoolId, $studentId);
+
+            return $result->isClear ? [] : [count($result->outstandingItemIds).' boarding item(s) not returned'];
+        });
         $this->registerNotificationKeys();
         $this->registerEventListeners();
         $this->registerPermissions();

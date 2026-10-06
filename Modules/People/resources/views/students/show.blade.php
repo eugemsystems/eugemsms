@@ -9,6 +9,18 @@
             </p>
         </div>
         <a href="{{ route('academic.enrolment.subjects', [$school, $student]) }}" class="btn btn-outline-secondary" wire:navigate>{{ __('Subjects') }}</a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">{{ __('Record') }}</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ route('people.students.documents', [$school, $student]) }}" wire:navigate>{{ __('Documents') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('people.students.prior-history', [$school, $student]) }}" wire:navigate>{{ __('Prior schooling') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('people.students.siblings', [$school, $student]) }}" wire:navigate>{{ __('Siblings') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('people.students.timeline', [$school, $student]) }}" wire:navigate>{{ __('Timeline') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('people.students.id-card', [$school, $student]) }}" wire:navigate>{{ __('ID card') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{{ route('people.students.transfer-out', [$school, $student]) }}" wire:navigate>{{ __('Transfer out') }}</a></li>
+            </ul>
+        </div>
         <a href="{{ route('people.students.change-status', [$school, $student]) }}" class="btn btn-outline-warning" wire:navigate>{{ __('Change status') }}</a>
         <a href="{{ route('people.students.change-attribute', [$school, $student]) }}" class="btn btn-outline-primary" wire:navigate>{{ __('Change billing attribute') }}</a>
         <a href="{{ route('people.students.edit', [$school, $student]) }}" class="btn btn-primary" wire:navigate>{{ __('Edit') }}</a>
