@@ -159,14 +159,17 @@ depends on them. Status per item below; anything not listed as done is still ope
   the statement screen; downloads are recorded. Still open: a receipt download button.
 - **FIN-10 capitalisation.** Capital PO lines and capitalisable stock items name an asset category
   and now capitalise automatically on receipt/issue (see FIN-10 note).
+- **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
+  the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
+  movements by journal type between computed opening and closing positions).
 - **FIN-11 forecasts.** Fee-income and cash-flow projections computed from actuals.
 - **FIN-13 audit log.** Every FDMS request/response is written to `fiscal_audit_log` by a driver
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
-ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
-board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
+ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
+prior-period and board-pack reports; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
 gateway drivers (need sandbox credentials).
 
@@ -1043,8 +1046,9 @@ recognise a balance as income), `Reports\Reconciliation` ⭐ (runs
 
 **FIN-12 note ⭐.** Built (`Livewire/{Financial,Close,Schedules,
 Export}/`, 5 screens — only screens with a real Action behind them;
-the spec's own BalanceSheet/CashFlow/Departmental/Collection/
-PriorPeriod/Board have none, verified by grep, and are not built):
+the spec's own Departmental/Collection/PriorPeriod/Board have none,
+verified by grep, and are not built; BalanceSheet and CashFlow were added
+in the gap-closing pass, see below):
 `Financial\TrialBalance`, `Financial\IncomeStatement` (folds the
 spec's own separate "Point-in-time" screen in), `Close\Checklist`
 (folds the spec's own separate "Close pack" screen in; a blocking

@@ -23,16 +23,21 @@ use Modules\Finance\Domain\Actions\PostJournalAction;
 use Modules\Finance\Domain\DataObjects\JournalLineData;
 use Modules\Finance\Domain\DataObjects\PostJournalData;
 use Modules\Finance\Models\Account;
+use Modules\Finance\Models\BankAccount;
 use Modules\Finance\Models\Journal;
 use Modules\Finance\Models\JournalLine;
 use Modules\Reporting\Domain\Actions\AcknowledgeCloseCheckAction;
 use Modules\Reporting\Domain\Actions\GenerateAccountingExportAction;
+use Modules\Reporting\Domain\Actions\GenerateBalanceSheetAction;
+use Modules\Reporting\Domain\Actions\GenerateCashFlowAction;
 use Modules\Reporting\Domain\Actions\GenerateClosePackAction;
 use Modules\Reporting\Domain\Actions\GenerateIncomeStatementAction;
 use Modules\Reporting\Domain\Actions\GenerateTrialBalanceAction;
 use Modules\Reporting\Domain\Actions\RunAndRecordCloseChecklistAction;
 use Modules\Reporting\Domain\DataObjects\AcknowledgeCloseCheckData;
 use Modules\Reporting\Domain\DataObjects\GenerateAccountingExportData;
+use Modules\Reporting\Domain\DataObjects\GenerateBalanceSheetData;
+use Modules\Reporting\Domain\DataObjects\GenerateCashFlowData;
 use Modules\Reporting\Domain\DataObjects\GenerateClosePackData;
 use Modules\Reporting\Domain\DataObjects\GenerateIncomeStatementData;
 use Modules\Reporting\Domain\DataObjects\GenerateTrialBalanceData;
@@ -271,4 +276,56 @@ it('runs the real, previously-empty close checklist registry end to end (BR-FIN-
 
     expect($result->items)->not->toBeEmpty()
         ->and($result->passesBlocking())->toBeTrue();
+});
+
+it('builds a balanced balance sheet with current earnings from the journal, as at a date (BR-FIN-12-001/003)', function (): void {
+    $f = fin12Fixture();
+    $loan = Account::factory()->for($f['school'])->liability()->create();
+
+    foreach ([[$loan, 50000], [$f['income'], 10000]] as [$credit, $amount]) {
+        app(PostJournalAction::class)->execute(new PostJournalData(
+            schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+            journalType: 'MANUAL', narration: 'Setup',
+            lines: [
+                new JournalLineData(accountId: $f['cash']->id, direction: 'DR', amount: Money::of($amount, Currency::USD)),
+                new JournalLineData(accountId: $credit->id, direction: 'CR', amount: Money::of($amount, Currency::USD)),
+            ],
+            effectiveAt: now(), postedByUserId: $f['user']->id,
+        ));
+    }
+
+    $sheet = app(GenerateBalanceSheetAction::class)->execute(new GenerateBalanceSheetData($f['school']->id, now(), 'USD'));
+
+    expect($sheet['total_assets_minor'])->toBe(60000)
+        ->and($sheet['sections']['LIABILITY']['total_minor'])->toBe(50000)
+        ->and($sheet['current_earnings_minor'])->toBe(10000)
+        ->and($sheet['is_balanced'])->toBeTrue();
+
+    $before = app(GenerateBalanceSheetAction::class)->execute(new GenerateBalanceSheetData($f['school']->id, now()->subYear(), 'USD'));
+    expect($before['total_assets_minor'])->toBe(0);
+});
+
+it('reports bank movements by journal type between a computed opening and closing position (BR-FIN-12-001)', function (): void {
+    $f = fin12Fixture();
+    BankAccount::factory()->create(['school_id' => $f['school']->id, 'gl_account_id' => $f['cash']->id]);
+
+    foreach ([['RECEIPT', 'DR', 70000, now()->subMonths(3)], ['RECEIPT', 'DR', 20000, now()], ['PAYMENT', 'CR', 5000, now()]] as [$type, $direction, $amount, $date]) {
+        $other = $direction === 'DR' ? $f['income'] : $f['expense'];
+        app(PostJournalAction::class)->execute(new PostJournalData(
+            schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+            journalType: $type, narration: 'Cash',
+            lines: [
+                new JournalLineData(accountId: $f['cash']->id, direction: $direction, amount: Money::of($amount, Currency::USD)),
+                new JournalLineData(accountId: $other->id, direction: $direction === 'DR' ? 'CR' : 'DR', amount: Money::of($amount, Currency::USD)),
+            ],
+            effectiveAt: $date, postedByUserId: $f['user']->id,
+        ));
+    }
+
+    $flow = app(GenerateCashFlowAction::class)->execute(new GenerateCashFlowData($f['school']->id, now()->startOfMonth(), now()->endOfMonth(), 'USD'));
+
+    expect($flow['opening_minor'])->toBe(70000)
+        ->and($flow['inflows'])->toBe([['journal_type' => 'RECEIPT', 'amount_minor' => 20000]])
+        ->and($flow['outflows'])->toBe([['journal_type' => 'PAYMENT', 'amount_minor' => 5000]])
+        ->and($flow['closing_minor'])->toBe(85000);
 });
