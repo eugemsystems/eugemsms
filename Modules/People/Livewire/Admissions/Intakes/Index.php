@@ -17,6 +17,7 @@ use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\School;
 use Modules\People\Domain\Actions\CreateIntakeAction;
+use Modules\People\Domain\Actions\SetIntakePublicFormAction;
 use Modules\People\Domain\DataObjects\CreateIntakeData;
 use Modules\People\Models\Intake;
 
@@ -99,6 +100,16 @@ final class Index extends Component
 
         $this->reset(['name', 'gradeLevelId', 'targetPlaces', 'applicationFeeAmount', 'acceptanceDepositAmount']);
         $this->toast(__('Intake created.'));
+    }
+
+    public function togglePublicForm(int $intakeId): void
+    {
+        $intake = Intake::where('school_id', $this->school->id)->findOrFail($intakeId);
+
+        $isLive = $intake->public_form_enabled && $intake->public_form_slug !== null;
+
+        app(SetIntakePublicFormAction::class)->execute($intake->id, ! $isLive);
+        $this->toast($isLive ? __('Public form switched off.') : __('Public form switched on.'));
     }
 
     public function render(): View

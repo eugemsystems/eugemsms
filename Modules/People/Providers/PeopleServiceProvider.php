@@ -201,6 +201,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
         Livewire::addLocation(classNamespace: 'Modules\People\Livewire');
 
         Route::middleware('web')->group(function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/public.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/students.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/guardians.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/admissions.php');

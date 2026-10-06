@@ -18,6 +18,7 @@ use Modules\Core\Models\Term;
 use Modules\Finance\Models\Account;
 use Modules\People\Domain\Actions\CreateIntakeAction;
 use Modules\People\Domain\Actions\OfferApplicationAction;
+use Modules\People\Domain\Actions\SetIntakePublicFormAction;
 use Modules\People\Domain\Actions\SubmitApplicationAction;
 use Modules\People\Domain\DataObjects\CreateIntakeData;
 use Modules\People\Domain\DataObjects\OfferApplicationData;
@@ -27,6 +28,7 @@ use Modules\People\Livewire\Admissions\Applications\Create as ApplicationsCreate
 use Modules\People\Livewire\Admissions\Applications\Show as ApplicationsShow;
 use Modules\People\Livewire\Admissions\Intakes\Index as IntakesIndex;
 use Modules\People\Models\Application;
+use Modules\People\Models\Enquiry;
 use Modules\People\Models\Intake;
 use Modules\People\Models\Student;
 use Modules\People\Models\StudentGuardian;
@@ -266,4 +268,25 @@ it('declines an application from the Show screen and releases an offered place',
 
     expect($application->fresh()->status)->toBe('declined')
         ->and($intake->fresh()->places_offered)->toBe(0);
+});
+
+it('publishes an intake public form and takes website enquiries from it, dropping bot posts', function (): void {
+    $intake = Intake::factory()->create();
+    SchoolContext::set(School::findOrFail($intake->school_id));
+    app(SetIntakePublicFormAction::class)->execute($intake->id, true);
+    $slug = $intake->fresh()->public_form_slug;
+
+    $this->get(route('people.public.enquiry.show', $slug))->assertOk()->assertSee($intake->name);
+
+    $payload = ['enquirer_name' => 'Mrs Moyo', 'enquirer_phone' => '0771234567', 'started_at' => now()->subMinute()->timestamp];
+    $this->post(route('people.public.enquiry.store', $slug), $payload)->assertRedirect();
+    expect(Enquiry::withoutGlobalScopes()->where('school_id', $intake->school_id)->where('source', 'website')->count())->toBe(1);
+
+    $this->post(route('people.public.enquiry.store', $slug), $payload + ['website' => 'spam.example'])->assertRedirect();
+    $this->post(route('people.public.enquiry.store', $slug), ['started_at' => now()->timestamp] + $payload)->assertRedirect();
+    expect(Enquiry::withoutGlobalScopes()->count())->toBe(1);
+
+    SchoolContext::set(School::findOrFail($intake->school_id));
+    app(SetIntakePublicFormAction::class)->execute($intake->id, false);
+    $this->get(route('people.public.enquiry.show', $slug))->assertNotFound();
 });

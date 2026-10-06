@@ -232,6 +232,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
 - **FIN-11 forecasts.** Fee-income and cash-flow projections computed from actuals.
+- **PPL-02 public enquiry form.** `/apply/{slug}` (unauthenticated, throttled 10/min, honeypot and minimum fill time) creates
+  a `website` enquiry for an open intake through `CreateEnquiryAction`; the school comes from the intake's globally unique
+  `public_form_slug`, never from the request. Staff switch it on/off per intake (`SetIntakePublicFormAction`) on the Intakes
+  screen. Deliberately enquiry-only: a full application (documents, fee, verified guardian) is never created anonymously.
 - **FIN-13 audit log.** Every FDMS request/response is written to `fiscal_audit_log` by a driver
   decorator; a failed log write never blocks the fiscal call.
 

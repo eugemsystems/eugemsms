@@ -39,6 +39,7 @@ use Modules\People\Database\Factories\IntakeFactory;
  * @property bool $requires_interview
  * @property string $status
  * @property bool $public_form_enabled
+ * @property string|null $public_form_slug
  */
 class Intake extends Model
 {

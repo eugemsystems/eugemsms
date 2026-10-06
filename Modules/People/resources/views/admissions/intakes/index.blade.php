@@ -8,7 +8,7 @@
                 <div class="card-header">{{ __('Open intakes') }}</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Grade') }}</th><th>{{ __('Window') }}</th><th>{{ __('Places') }}</th><th>{{ __('Status') }}</th></tr></thead>
+                        <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Grade') }}</th><th>{{ __('Window') }}</th><th>{{ __('Places') }}</th><th>{{ __('Status') }}</th><th>{{ __('Public form') }}</th></tr></thead>
                         <tbody>
                             @forelse ($intakes as $intake)
                                 <tr>
@@ -17,9 +17,15 @@
                                     <td>{{ $intake->opens_on->format('d M Y') }} – {{ $intake->closes_on->format('d M Y') }}</td>
                                     <td>{{ $intake->places_accepted }} / {{ $intake->target_places }} <span class="text-body-secondary">({{ $intake->places_offered }} {{ __('offered') }})</span></td>
                                     <td><span class="badge text-bg-{{ $intake->status === 'open' ? 'success' : 'secondary' }}">{{ ucfirst($intake->status) }}</span></td>
+                                    <td>
+                                        @if ($intake->public_form_enabled && $intake->public_form_slug)
+                                            <code class="small user-select-all">{{ route('people.public.enquiry.show', $intake->public_form_slug) }}</code>
+                                        @endif
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="togglePublicForm({{ $intake->id }})">{{ $intake->public_form_enabled && $intake->public_form_slug ? __('Switch off') : __('Switch on') }}</button>
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-body-secondary py-4">{{ __('No intakes yet.') }}</td></tr>
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">{{ __('No intakes yet.') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>
