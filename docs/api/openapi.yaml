@@ -1,0 +1,340 @@
+openapi: 3.0.3
+info:
+  title: sERP API
+  version: 1.0.0
+  description: |
+    REST API for the parent, teacher and student apps (Volume 1, Part 9). JSON, `snake_case`, ISO-8601 UTC timestamps.
+
+    * **Auth** — `Authorization: Bearer {access_token}`. Parents sign in with a phone OTP, staff with a password
+      (accounts that require a second factor use the OTP flow). Access tokens are short-lived; rotate with the
+      single-use refresh token. A revoked token stops working on the very next request.
+    * **School and session** — resolved from the token. `X-School-Id` (multi-school users) and
+      `X-Academic-Year-Id` / `X-Term-Id` may name another school, year or term; anything that is not theirs is refused.
+    * **Money** — always `{ "amount_minor": 45000, "currency": "USD", "formatted": "$450.00" }`. Never compute money client-side.
+    * **Idempotency** — `Idempotency-Key` (up to 120 chars) is required on payment mutations. A repeat of the same request
+      returns the original response (`Idempotent-Replay: true`); the same key with a different body is `409 IDEMPOTENCY_CONFLICT`.
+    * **Paging** — `page`, `per_page` (default 25, max 100); `meta.pagination` in the response.
+    * **Errors** — `{ success: false, error: { code, message, details }, meta }`. Codes include `VALIDATION_FAILED` (422),
+      `UNAUTHENTICATED` (401), `INSUFFICIENT_SCOPE` (403), `NOT_FOUND` (404), `RATE_LIMITED` (429),
+      `IDEMPOTENCY_KEY_REQUIRED` (400), `IDEMPOTENCY_CONFLICT` (409), `INVALID_SESSION_CONTEXT` (400),
+      `TWO_FACTOR_REQUIRED` (403), `GATEWAY_UNAVAILABLE` (502).
+    * **Offline** — queue writes with their idempotency key and replay them; read endpoints are safe to cache.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+tags:
+  - name: Auth
+  - name: Me
+  - name: Guardian
+  - name: Finance
+  - name: Academics
+  - name: Communications
+  - name: Lookups
+  - name: Webhooks
+paths:
+  /auth/otp/request:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Send a one-time code to a phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, example: "0771234567" }
+      responses:
+        "200": { description: Code sent (a resend inside the cooldown is refused) }
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Exchange a one-time code for tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code, device]
+              properties:
+                phone: { type: string }
+                code: { type: string }
+                device: { $ref: "#/components/schemas/Device" }
+      responses:
+        "200": { description: Tokens, content: { application/json: { schema: { $ref: "#/components/schemas/TokensResponse" } } } }
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Password sign-in for staff (403 TWO_FACTOR_REQUIRED if the account needs a second factor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password, device]
+              properties:
+                identifier: { type: string, description: Email, phone or username }
+                password: { type: string }
+                device: { $ref: "#/components/schemas/Device" }
+      responses:
+        "200": { description: Tokens, content: { application/json: { schema: { $ref: "#/components/schemas/TokensResponse" } } } }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate the token pair. A refresh token works once; reusing it revokes the device's tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200": { description: New tokens, content: { application/json: { schema: { $ref: "#/components/schemas/TokensResponse" } } } }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the current access token
+      responses:
+        "200": { description: Signed out }
+  /me:
+    get:
+      tags: [Me]
+      summary: The signed-in person, active school, token abilities and session (year and term)
+      responses:
+        "200": { description: OK }
+  /me/schools:
+    get:
+      tags: [Me]
+      summary: Schools the person is assigned to
+      responses:
+        "200": { description: OK }
+  /me/session:
+    get:
+      tags: [Me]
+      summary: The academic year and term every response is read in
+      responses:
+        "200": { description: OK }
+  /me/devices:
+    post:
+      tags: [Me]
+      summary: Register or refresh this device's push token (same device_id updates in place)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, platform]
+              properties:
+                device_id: { type: string }
+                platform: { type: string, enum: [android, ios, web] }
+                push_token: { type: string, nullable: true }
+                app_version: { type: string }
+                os_version: { type: string }
+      responses:
+        "201": { description: Registered }
+  /me/devices/{device}:
+    delete:
+      tags: [Me]
+      summary: Remove one of your devices (clears its push token and revokes its tokens)
+      parameters:
+        - { name: device, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Revoked }
+        "404": { description: Not your device }
+  /guardians/me/children:
+    get:
+      tags: [Guardian]
+      summary: Learners the guardian is currently linked to (ability children.read)
+      responses:
+        "200": { description: OK }
+  /finance/balances:
+    get:
+      tags: [Finance]
+      summary: Billed and outstanding per currency for each linked learner (ability fees.read). `balances` is absent when the link lacks may_view_full_balance.
+      responses:
+        "200": { description: OK }
+  /finance/invoices:
+    get:
+      tags: [Finance]
+      summary: A learner's invoices (voided excluded); `paid` and `balance` are absent without may_view_full_balance
+      parameters:
+        - { name: student, in: query, required: true, schema: { type: string }, description: Learner id from /guardians/me/children }
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: per_page, in: query, schema: { type: integer, maximum: 100 } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not your learner }
+  /finance/invoices/{invoice}:
+    get:
+      tags: [Finance]
+      summary: One invoice with its lines
+      parameters:
+        - { name: invoice, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found or not your learner's }
+  /finance/payment-methods:
+    get:
+      tags: [Finance]
+      summary: Gateways, methods and currencies a parent can pay with right now
+      responses:
+        "200": { description: OK }
+  /finance/payments:
+    post:
+      tags: [Finance]
+      summary: Start a payment (ability fees.pay). Omit method/phone for hosted checkout (open `checkout_url`); send both for a mobile-money push (show `instructions`, then poll).
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 120 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [student, amount_minor, currency]
+              properties:
+                student: { type: string }
+                amount_minor: { type: integer, minimum: 100 }
+                currency: { type: string, example: USD }
+                method: { type: string, example: ecocash }
+                phone: { type: string, example: "0771234567" }
+      responses:
+        "201": { description: Payment started, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentResponse" } } } }
+        "502": { description: GATEWAY_UNAVAILABLE — nothing was created; retry with the same key }
+  /finance/payments/{payment}:
+    get:
+      tags: [Finance]
+      summary: Follow a payment. Pending payments are checked with the gateway; poll every few seconds until status is succeeded, failed or cancelled.
+      parameters:
+        - { name: payment, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentResponse" } } } }
+  /students/{student}/report-cards:
+    get:
+      tags: [Academics]
+      summary: Published report cards; a card withheld for fees shows status withheld with no marks and no reason (ability results.read)
+      parameters:
+        - { name: student, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /students/{student}/attendance:
+    get:
+      tags: [Academics]
+      summary: Term attendance summaries and the last 30 sessions (ability attendance.read)
+      parameters:
+        - { name: student, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /students/{student}/timetable:
+    get:
+      tags: [Academics]
+      summary: The published timetable for the learner's class (ability timetable.read)
+      parameters:
+        - { name: student, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /communications/notices:
+    get:
+      tags: [Communications]
+      summary: Live notices aimed at the guardian (whole school, or a section or level of a linked learner)
+      responses:
+        "200": { description: OK }
+  /communications/inbox:
+    get:
+      tags: [Communications]
+      summary: In-app messages with an unread count in meta.unread_count
+      responses:
+        "200": { description: OK }
+  /communications/inbox/{notification}/read:
+    post:
+      tags: [Communications]
+      summary: Mark one of your messages read
+      parameters:
+        - { name: notification, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /lookups/terms:
+    get:
+      tags: [Lookups]
+      summary: Recent academic years and their terms (cacheable for 5 minutes)
+      responses:
+        "200": { description: OK }
+  /lookups/grade-levels:
+    get:
+      tags: [Lookups]
+      summary: Grade levels (cacheable for 5 minutes)
+      responses:
+        "200": { description: OK }
+  /webhooks/payments/{driver}:
+    post:
+      tags: [Webhooks]
+      security: []
+      summary: Payment gateway result callback (server to server). Authenticated by the gateway driver — Pesepay bodies must decrypt with the merchant key. A forged or unmatched body is recorded as failed and settles nothing; always 200 for a known driver.
+      parameters:
+        - { name: driver, in: path, required: true, schema: { type: string, example: pesepay } }
+      responses:
+        "200": { description: Received }
+        "404": { description: Unknown gateway }
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  schemas:
+    Money:
+      type: object
+      properties:
+        amount_minor: { type: integer, example: 45000 }
+        currency: { type: string, example: USD }
+        formatted: { type: string, example: "$450.00" }
+    Device:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: Parent Phone }
+        id: { type: string }
+        platform: { type: string }
+        model: { type: string }
+        app_version: { type: string }
+    TokensResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            access_token: { type: string }
+            refresh_token: { type: string }
+            token_type: { type: string, example: Bearer }
+            access_expires_at: { type: string, format: date-time }
+            refresh_expires_at: { type: string, format: date-time }
+            abilities: { type: array, items: { type: string } }
+    PaymentResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            id: { type: string }
+            reference: { type: string }
+            status: { type: string, enum: [created, pending, succeeded, failed, cancelled, expired] }
+            amount: { $ref: "#/components/schemas/Money" }
+            method: { type: string, nullable: true }
+            checkout_url: { type: string, nullable: true }
+            instructions: { type: string, nullable: true }
+            failure_message: { type: string, nullable: true }
+            receipt_issued: { type: boolean }
+            expires_at: { type: string, format: date-time }
