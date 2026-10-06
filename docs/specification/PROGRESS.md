@@ -69,7 +69,7 @@ Action/model's own docblock, not silently missing — see each module's own
 
 ---
 
-## Admin UI — in progress, Books A–I complete (J and K remain)
+## Admin UI — in progress: Books A, B, I, K complete; C–H3 and J partial (deliberately deferred items remain)
 
 This pass retrofits Livewire screens onto the already-complete backend,
 **in the same book order as the original build** (A → B → C → D → E → F →
@@ -187,7 +187,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Also built**: teacher register endpoints
   (`teacher/classes`, `teacher/classes/{id}/attendance` GET/POST — offline-safe per-record idempotency keys,
   conflicts reported not overwritten) and a learner reading their own report cards, attendance and
-  timetable (never a fee balance). **Not built yet**: teacher marks entry, homework and LMS, attendance, boarding/exeat, timetable, documents, payment initiation, the
+  timetable (never a fee balance). **Also built since**: teacher marks entry, guardian exeat, student attendance/timetable (see `routes/api.php`). **Not built yet** (no route in `routes/api.php`): homework and LMS, documents, the
   `X-Academic-Year-Id`/`X-Term-Id` headers, `Accept-Language`, an OpenAPI document, and API keys/webhooks.
 - **SAA vendor impersonation (BR-SAA-02-002).** Consent-gated by a structured grant, not a typed
   reference: the customer's own administrator (`core.support_access.manage`, screen
@@ -199,15 +199,13 @@ depends on them. Status per item below; anything not listed as done is still ope
   maximum and the grant, is stamped with the grant, and appears on the customer's screen (who, when,
   how long). The start is recorded in the vendor console audit. Same-browser session swap with the
   existing banner to return, as CORE-05 already does; a separate-subdomain session would need
-  per-tenant hosts. Customer-side notification when a session opens is not built.
+  per-tenant hosts. The customer's granting administrator is notified when a session opens (9963966, `core.support_session_opened`).
 - **FIN-05 Pesepay gateway, parent payments API.** `PesepayGatewayDriver` (hosted checkout, EcoCash push,
   polling, result callback authenticated by the integration-key header and confirmed with check-payment), public
   `POST /api/v1/webhooks/payments/{driver}`, and `finance/payment-methods`, `POST finance/payments`
   (Idempotency-Key required), `GET finance/payments/{id}`. Keys are read from `PESEPAY_INTEGRATION_KEY` /
-  `PESEPAY_ENCRYPTION_KEY` (never committed) or a school's own gateway row. **Not verified against the live
-  sandbox**: this environment's network policy blocks `api.pesepay.com`; the request shapes and the EcoCash
-  method codes (`PZW211` USD, `PZW201` ZWG, overridable) follow Pesepay's documented API from memory and are
-  covered by faked-HTTP tests only. First step on a machine that can reach it: one sandbox payment.
+  `PESEPAY_ENCRYPTION_KEY` (never committed) or a school's own gateway row. **Sandbox verified** (57ca9bd, cd2f79c; see the Pesepay sandbox check below), **live production still unverified**: the
+  ZWG code (`PZW201`, overridable) and a real result callback are not exercised against Pesepay.
 - **ACA-04 attendance reports.** Class report, learner heatmap, absence follow-up and register CSV.
 - **Bulk class and house allocation.** `Allocation\Bulk` places up to 300 learners in a class and/or a
   house in one step (`BulkAllocateClassAction`, `AllocateStudentsToHouseAction`); wrong grade level, already
@@ -1396,7 +1394,7 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
 | INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); public REST surface ⬜ |
-| SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ |
+| SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ (no such route in `routes/api.php`; correct) |
 | SAA-02 | Vendor Control Centre | ✅ admin screens (`Livewire/Vendor/{Tenants,Rollouts,Releases,Broadcasts,Incidents}/`, public `/status`) |
 | SAA-03 | Onboarding, Support & Customer Success | ✅ admin screens (`Livewire/Vendor/{Onboarding,Support,Adoption,ChurnRisk}/`, `Livewire/Tenant/Support/`, public `/help`) |
 
@@ -1483,8 +1481,7 @@ its webhooks. **Not built (documented gaps):** the public REST surface itself �
 `/developers`, per-client rate-limit middleware (429 + Retry-After) and
 `api_usage_log` writes — so the usage dashboard is empty until those exist
 (BR-INT-04-003/010, AC-INT-04-001/005 are not yet exercisable end to end);
-no scheduler wiring for webhook retries or `MarkOfflineHardwareDevicesAction`
-(manual "flag silent devices" button instead); `ProvisionSsoStaffAccountAction`
+no scheduler wiring for webhook retries (`intelligence.mark_offline_hardware` IS now registered in `IntelligenceServiceProvider` and run via `serp:run-task`; the manual "flag silent devices" button remains); `ProvisionSsoStaffAccountAction`
 takes a free-text role name and is deliberately not exposed on any screen until
 an IdP sync exists to drive it and the role is restricted.
 
