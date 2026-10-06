@@ -6,6 +6,7 @@ use Modules\Academic\Models\TermResult;
 use Modules\Comms\Models\Notice;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolClass;
 use Modules\Core\Models\Term;
@@ -166,4 +167,65 @@ it('shows a guardian only the live notices aimed at them', function (): void {
     $titles = collect($this->getJson('/api/v1/communications/notices')->assertOk()->json('data'))->pluck('title');
 
     expect($titles->all())->toEqualCanonicalizing(['School-wide', 'Our level']);
+});
+
+it('reads a named term through X-Academic-Year-Id / X-Term-Id and refuses one that is not the school\'s', function (): void {
+    $f = guardianApiFixture();
+    $other = School::factory()->create(['tenant_id' => $f['school']->tenant_id]);
+    $foreignYear = AcademicYear::factory()->for($other)->create();
+    $pastTerm = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create(['number' => 2]);
+    Sanctum::actingAs($f['user'], ['*']);
+
+    expect($this->getJson('/api/v1/me/session', ['X-Term-Id' => (string) $pastTerm->id])->assertOk()->json('data.session.term.id'))->toBe($pastTerm->id);
+
+    $this->getJson('/api/v1/me/session', ['X-Academic-Year-Id' => (string) $foreignYear->id])->assertStatus(400)->assertJsonPath('error.code', 'INVALID_SESSION_CONTEXT');
+    $this->getJson('/api/v1/me/session', ['X-Term-Id' => '999999'])->assertStatus(400)->assertJsonPath('error.code', 'INVALID_SESSION_CONTEXT');
+});
+
+it('serves lookups with a cache header, a timetable and attendance for a linked learner only', function (): void {
+    $f = guardianApiFixture();
+    $stranger = Student::factory()->for($f['school'])->create();
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $terms = $this->getJson('/api/v1/lookups/terms')->assertOk();
+    expect($terms->json('data.0.terms'))->not->toBeEmpty()->and($terms->headers->get('Cache-Control'))->toContain('max-age=300');
+    $this->getJson('/api/v1/lookups/grade-levels')->assertOk();
+
+    $att = $this->getJson('/api/v1/students/'.$f['child']->ulid.'/attendance')->assertOk();
+    expect($att->json('data'))->toHaveKeys(['term_id', 'summaries', 'recent']);
+    expect($this->getJson('/api/v1/students/'.$f['child']->ulid.'/timetable')->assertOk()->json('data.slots'))->toBe([]);
+
+    $this->getJson('/api/v1/students/'.$stranger->ulid.'/attendance')->assertStatus(404);
+    $this->getJson('/api/v1/students/'.$stranger->ulid.'/timetable')->assertStatus(404);
+});
+
+it('registers a push device in place, lists the inbox with an unread count and lets only the owner act', function (): void {
+    $f = guardianApiFixture();
+    $guardianId = Guardian::query()->where('user_id', $f['user']->id)->value('id');
+    $mk = fn (string $subject, ?DateTimeInterface $readAt = null) => Notification::unguarded(fn () => Notification::query()->create([
+        'school_id' => $f['school']->id, 'notification_key' => 'academic.report_card_published', 'recipient_type' => 'guardian', 'recipient_id' => $guardianId,
+        'recipient_address' => 'in-app', 'channel' => 'in_app', 'subject' => $subject, 'body' => 'Body', 'status' => 'delivered', 'read_at' => $readAt, 'created_at' => now(),
+    ]));
+    $unread = $mk('Report ready');
+    $mk('Old', now());
+    Sanctum::actingAs($f['user'], ['*']);
+
+    $device = ['device_id' => 'dev-9', 'platform' => 'android', 'push_token' => 'tok-1'];
+    $id = $this->postJson('/api/v1/me/devices', $device)->assertStatus(201)->json('data.id');
+    expect($this->postJson('/api/v1/me/devices', ['push_token' => 'tok-2'] + $device)->json('data.id'))->toBe($id);
+    $this->postJson('/api/v1/me/devices', ['device_id' => 'x', 'platform' => 'blackberry'])->assertStatus(422);
+
+    $inbox = $this->getJson('/api/v1/communications/inbox')->assertOk();
+    expect($inbox->json('meta.unread_count'))->toBe(1)->and($inbox->json('data'))->toHaveCount(2);
+
+    $stranger = User::factory()->create(['tenant_id' => $f['school']->tenant_id]);
+    $stranger->schools()->attach($f['school'], ['status' => 'active', 'is_primary' => true]);
+    Sanctum::actingAs($stranger, ['*']);
+    $this->postJson('/api/v1/communications/inbox/'.$unread->ulid.'/read')->assertStatus(404);
+    $this->deleteJson('/api/v1/me/devices/'.$id)->assertStatus(404);
+
+    Sanctum::actingAs($f['user'], ['*']);
+    $this->postJson('/api/v1/communications/inbox/'.$unread->ulid.'/read')->assertOk();
+    expect($this->getJson('/api/v1/communications/inbox')->json('meta.unread_count'))->toBe(0);
+    $this->deleteJson('/api/v1/me/devices/'.$id)->assertOk();
 });

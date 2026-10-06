@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Academic\Http\Controllers\Api\V1\ReportCardsController;
+use Modules\Academic\Http\Controllers\Api\V1\StudentAcademicsController;
+use Modules\Comms\Http\Controllers\Api\V1\DevicesController;
+use Modules\Comms\Http\Controllers\Api\V1\InboxController;
 use Modules\Comms\Http\Controllers\Api\V1\NoticesController;
 use Modules\Core\Http\Controllers\Api\V1\AuthController;
+use Modules\Core\Http\Controllers\Api\V1\LookupsController;
 use Modules\Core\Http\Controllers\Api\V1\MeController;
 use Modules\Finance\Http\Controllers\Api\V1\GatewayWebhookController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianFinanceController;
@@ -52,5 +56,16 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
     Route::post('finance/payments', [GuardianPaymentsController::class, 'store'])->middleware(['serp.token-ability:fees.pay', 'serp.idempotent']);
     Route::get('finance/payments/{payment}', [GuardianPaymentsController::class, 'show'])->middleware('serp.token-ability:fees.pay');
 
+    Route::post('me/devices', [DevicesController::class, 'store']);
+    Route::delete('me/devices/{device}', [DevicesController::class, 'destroy']);
+
+    Route::get('lookups/terms', [LookupsController::class, 'terms']);
+    Route::get('lookups/grade-levels', [LookupsController::class, 'gradeLevels']);
+
+    Route::get('students/{student}/attendance', [StudentAcademicsController::class, 'attendance'])->middleware('serp.token-ability:attendance.read');
+    Route::get('students/{student}/timetable', [StudentAcademicsController::class, 'timetable'])->middleware('serp.token-ability:timetable.read');
+
+    Route::get('communications/inbox', [InboxController::class, 'index'])->middleware('serp.token-ability:notices.read');
+    Route::post('communications/inbox/{notification}/read', [InboxController::class, 'read'])->middleware('serp.token-ability:notices.read');
     Route::get('communications/notices', [NoticesController::class, 'index'])->middleware('serp.token-ability:notices.read');
 });
