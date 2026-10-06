@@ -59,7 +59,7 @@ final class CreateBackupAction extends Action
             'type' => $data->type,
             'scope' => $scope,
             'scope_id' => $data->schoolId,
-            'disk' => 'backups',
+            'disk' => config('filesystems.backups_disk'),
             'path' => '',
             'is_encrypted' => true,
             'status' => 'running',
@@ -74,12 +74,12 @@ final class CreateBackupAction extends Action
             $checksum = hash('sha256', $encrypted);
             $path = "{$data->type}/{$backup->ulid}.enc";
 
-            Storage::disk('backups')->put($path, $encrypted);
+            Storage::disk(config('filesystems.backups_disk'))->put($path, $encrypted);
 
             // BR-CORE-13-002: verified immediately after upload — re-read
             // what was actually written rather than trusting put()'s
             // return value.
-            $stored = Storage::disk('backups')->get($path);
+            $stored = Storage::disk(config('filesystems.backups_disk'))->get($path);
 
             if ($stored === null || hash('sha256', $stored) !== $checksum) {
                 throw new RuntimeException('Backup checksum mismatch immediately after upload.');

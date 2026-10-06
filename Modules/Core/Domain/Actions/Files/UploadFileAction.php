@@ -66,7 +66,7 @@ final class UploadFileAction extends Action
 
         return $this->transaction(function () use ($data, $definition, $mimeType, $sizeBytes, $hash): File {
             $existing = File::where('school_id', $data->schoolId)->where('hash', $hash)->first();
-            $disk = 'local';
+            $disk = (string) config('filesystems.documents_disk');
             $extension = pathinfo($data->originalName, PATHINFO_EXTENSION) ?: 'bin';
             $ulid = (string) Str::ulid();
 

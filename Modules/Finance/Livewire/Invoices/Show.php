@@ -50,7 +50,7 @@ final class Show extends Component
         $document = app(RenderInvoiceDocumentAction::class)->execute($this->invoice, (int) auth()->id());
         app(RecordDocumentDownloadAction::class)->execute(new RecordDocumentDownloadData($document->id));
 
-        return Storage::disk('local')->download($document->file_path, str_replace(['/', '\\'], '-', $this->invoice->invoice_number).'.html');
+        return Storage::disk(config('filesystems.documents_disk'))->download($document->file_path, str_replace(['/', '\\'], '-', $this->invoice->invoice_number).'.html');
     }
 
     public function render(): View

@@ -16,6 +16,17 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+    | Role-based disks: every file read/write in the app resolves its disk
+    | from these keys, so the .env alone moves storage (e.g. to s3).
+    | documents_disk: private files, generated documents, uploads.
+    | public_assets_disk: school branding (logo, crest, letterhead).
+    | backups_disk: encrypted backups. BACKUP_DISK is a legacy alias.
+    */
+    'documents_disk' => env('DOCUMENTS_DISK', env('FILESYSTEM_DISK', 'local')),
+    'public_assets_disk' => env('PUBLIC_ASSETS_DISK', 'public'),
+    'backups_disk' => env('BACKUPS_DISK', env('BACKUP_DISK', 'backups')),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------

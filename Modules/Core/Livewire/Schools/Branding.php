@@ -58,9 +58,9 @@ final class Branding extends Component
             'letterhead' => ['nullable', 'image', 'max:4096'],
         ]);
 
-        $logoPath = $this->logo?->store('schools/'.$this->school->id, 'public') ?: null;
-        $crestPath = $this->crest?->store('schools/'.$this->school->id, 'public') ?: null;
-        $letterheadPath = $this->letterhead?->store('schools/'.$this->school->id, 'public') ?: null;
+        $logoPath = $this->logo?->store('schools/'.$this->school->id, config('filesystems.public_assets_disk')) ?: null;
+        $crestPath = $this->crest?->store('schools/'.$this->school->id, config('filesystems.public_assets_disk')) ?: null;
+        $letterheadPath = $this->letterhead?->store('schools/'.$this->school->id, config('filesystems.public_assets_disk')) ?: null;
 
         $updated = app(UpdateSchoolProfileAction::class)->execute(new UpdateSchoolData(
             schoolId: $this->school->id,
@@ -81,9 +81,9 @@ final class Branding extends Component
     public function render(): View
     {
         return view('core::schools.branding', [
-            'logoUrl' => $this->school->logo_path !== null ? Storage::disk('public')->url($this->school->logo_path) : null,
-            'crestUrl' => $this->school->crest_path !== null ? Storage::disk('public')->url($this->school->crest_path) : null,
-            'letterheadUrl' => $this->school->letterhead_path !== null ? Storage::disk('public')->url($this->school->letterhead_path) : null,
+            'logoUrl' => $this->school->logo_path !== null ? Storage::disk(config('filesystems.public_assets_disk'))->url($this->school->logo_path) : null,
+            'crestUrl' => $this->school->crest_path !== null ? Storage::disk(config('filesystems.public_assets_disk'))->url($this->school->crest_path) : null,
+            'letterheadUrl' => $this->school->letterhead_path !== null ? Storage::disk(config('filesystems.public_assets_disk'))->url($this->school->letterhead_path) : null,
         ]);
     }
 }

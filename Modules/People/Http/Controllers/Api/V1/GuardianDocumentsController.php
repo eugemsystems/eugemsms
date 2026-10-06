@@ -56,7 +56,7 @@ final class GuardianDocumentsController
         $found = $this->visible($link->student)->where('ulid', $document)->first();
         abort_if($found === null, 404);
 
-        if (! Storage::disk('local')->exists($found->file_path)) {
+        if (! Storage::disk(config('filesystems.documents_disk'))->exists($found->file_path)) {
             return ApiResponse::error('NOT_FOUND', 'This document\'s file is not available.', 404);
         }
 
@@ -65,7 +65,7 @@ final class GuardianDocumentsController
         $extension = pathinfo($found->file_path, PATHINFO_EXTENSION);
         $filename = trim("{$found->document_type}-{$found->number}", '-').'.'.$extension;
 
-        return Storage::disk('local')->download($found->file_path, $filename);
+        return Storage::disk(config('filesystems.documents_disk'))->download($found->file_path, $filename);
     }
 
     /**

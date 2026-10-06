@@ -51,7 +51,7 @@ final class GenerateDocumentAction extends Action
             $hash = hash('sha256', $rendered);
 
             $path = "documents/{$data->schoolId}/{$hash}.{$this->renderer->fileExtension()}";
-            Storage::disk('local')->put($path, $rendered);
+            Storage::disk(config('filesystems.documents_disk'))->put($path, $rendered);
 
             $document = Document::create([
                 'school_id' => $data->schoolId,

@@ -145,7 +145,7 @@ final class Generate extends Component
         ), (int) auth()->id());
         app(RecordDocumentDownloadAction::class)->execute(new RecordDocumentDownloadData($document->id));
 
-        return Storage::disk('local')->download($document->file_path, 'statement-'.$this->from.'-'.$this->to.'.html');
+        return Storage::disk(config('filesystems.documents_disk'))->download($document->file_path, 'statement-'.$this->from.'-'.$this->to.'.html');
     }
 
     public function render(): View

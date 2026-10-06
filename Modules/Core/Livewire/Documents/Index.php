@@ -59,7 +59,7 @@ final class Index extends Component
 
         $document = Document::where('school_id', $this->school->id)->findOrFail($documentId);
 
-        if (! Storage::disk('local')->exists($document->file_path)) {
+        if (! Storage::disk(config('filesystems.documents_disk'))->exists($document->file_path)) {
             $this->toast(__('This document\'s file is missing from storage.'), 'danger');
 
             return null;
@@ -70,7 +70,7 @@ final class Index extends Component
         $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
         $filename = trim("{$document->document_type}-{$document->number}", '-').".{$extension}";
 
-        return Storage::disk('local')->download($document->file_path, $filename);
+        return Storage::disk(config('filesystems.documents_disk'))->download($document->file_path, $filename);
     }
 
     public function render(): View

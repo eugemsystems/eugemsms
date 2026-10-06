@@ -35,7 +35,7 @@ final class RegenerateDocumentAction extends Action
         $hash = hash('sha256', $rendered);
         $path = "documents/{$original->school_id}/{$hash}.{$this->renderer->fileExtension()}";
 
-        Storage::disk('local')->put($path, $rendered);
+        Storage::disk(config('filesystems.documents_disk'))->put($path, $rendered);
 
         return $this->transaction(function () use ($original, $template, $rendered, $hash, $path): Document {
             return Document::create([

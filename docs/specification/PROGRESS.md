@@ -93,7 +93,7 @@ admin-UI Pest tests → Pint → PHPStan (module, then whole-app) → full suite
 | CORE-07 | Workflow & Approvals Engine | ✅ (`Livewire/Approvals/`) — commit `396533b` |
 | CORE-08 | Audit, Activity & Data Integrity | ✅ (`Livewire/Audit/`) — commit `fe37398` |
 | CORE-09 | Notification Orchestration Bus | ✅ (`Livewire/Notifications/`) — commit `c0461b0` |
-| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9` |
+| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9`. Disk-agnostic storage (`DOCUMENTS_DISK`/`PUBLIC_ASSETS_DISK`/`BACKUPS_DISK`, `ScanFileJob` streams) written but UNVERIFIED: tests could not run (no vendor/); only `php -l` done. |
 | CORE-11 | Data Import & Migration Toolkit | ✅ (`Livewire/Imports/`) — commit `ae47797` |
 | CORE-12 | Jobs, Scheduling & Observability | ✅ (`Livewire/Scheduling/`) — commit `de6e637` |
 | CORE-13 | Backup, Restore & Disaster Recovery | ✅ (`Livewire/Backups/`) — commit `acefbcc` |
