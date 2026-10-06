@@ -1,13 +1,13 @@
 <div>
     <h4 class="mb-1">{{ __('Newsletters') }}</h4>
-    <p class="text-body-secondary small">{{ __('Save an issue as a draft or schedule it. Automatic sending to an audience is not available yet, so a scheduled issue is not delivered by this screen.') }}</p>
+    <p class="text-body-secondary small">{{ __('Save an issue as a draft, schedule it, or send it now by email to every guardian and staff member with an address on file. A scheduled issue is sent automatically when its time comes.') }}</p>
 
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="card">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>{{ __('Issue') }}</th><th>{{ __('Title') }}</th><th>{{ __('Status') }}</th><th>{{ __('Scheduled') }}</th></tr></thead>
+                        <thead><tr><th>{{ __('Issue') }}</th><th>{{ __('Title') }}</th><th>{{ __('Status') }}</th><th>{{ __('Scheduled') }}</th><th></th></tr></thead>
                         <tbody>
                             @forelse ($newsletters as $newsletter)
                                 <tr wire:key="nl-{{ $newsletter->id }}">
@@ -15,9 +15,14 @@
                                     <td>{{ $newsletter->title }}</td>
                                     <td><span class="badge {{ $newsletter->status === 'sent' ? 'bg-label-success' : ($newsletter->status === 'scheduled' ? 'bg-label-warning' : 'bg-label-secondary') }}">{{ $newsletter->status }}</span></td>
                                     <td class="small">{{ $newsletter->scheduled_for?->toDateTimeString() ?? '—' }}</td>
+                                    <td>
+                                        @if (in_array($newsletter->status, ['draft', 'scheduled'], true))
+                                            <button type="button" class="btn btn-sm btn-outline-primary" wire:click="send({{ $newsletter->id }})" wire:confirm="{{ __('Send this issue now?') }}">{{ __('Send now') }}</button>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center text-body-secondary py-3">{{ __('No newsletters yet.') }}</td></tr>
+                                <tr><td colspan="5" class="text-center text-body-secondary py-3">{{ __('No newsletters yet.') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>

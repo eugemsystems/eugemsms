@@ -12,6 +12,7 @@ use Livewire\Livewire;
 use Modules\Comms\Console\Tasks\CheckComplaintSlasTask;
 use Modules\Comms\Console\Tasks\EscalateUnreadUrgentNoticesTask;
 use Modules\Comms\Console\Tasks\RunDueScanRulesTask;
+use Modules\Comms\Console\Tasks\SendDueNewslettersTask;
 use Modules\Comms\Domain\Actions\CheckGatewayHealthAction;
 use Modules\Comms\Domain\Actions\PurgeExpiredRecordingsAction;
 use Modules\Comms\Domain\Actions\RebuildCalendarAction;
@@ -583,6 +584,14 @@ class CommsServiceProvider extends ModuleServiceProvider
         ));
 
         NotificationKeyRegistry::register(new NotificationKeyDefinition(
+            key: 'comms.newsletter',
+            variables: ['newsletter.title', 'newsletter.issue_number', 'newsletter.text'],
+            defaultChannels: ['email'],
+            defaultAudience: 'guardian',
+            isTransactional: false,
+        ));
+
+        NotificationKeyRegistry::register(new NotificationKeyDefinition(
             key: 'comms.event_waitlist_promoted',
             variables: ['event.title'],
             defaultChannels: ['sms', 'email'],
@@ -699,6 +708,16 @@ class CommsServiceProvider extends ModuleServiceProvider
             handler: CheckComplaintSlasTask::class,
             description: 'Warns of approaching and breached complaint SLAs.',
             alertIfNotRunWithinMinutes: 120,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'comms.send_due_newsletters',
+            moduleCode: 'COM-06',
+            name: 'Send Scheduled Newsletters',
+            cron: '*/5 * * * *',
+            handler: SendDueNewslettersTask::class,
+            description: 'Sends every newsletter whose scheduled time has passed.',
+            alertIfNotRunWithinMinutes: 60,
         );
 
         ScheduledTaskHandlerRegistry::register(

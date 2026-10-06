@@ -3,9 +3,13 @@
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use Modules\Comms\Console\Tasks\SendDueNewslettersTask;
 use Modules\Comms\Domain\Actions\CreateCalendarEventAction;
 use Modules\Comms\Domain\Actions\CreateEventRegistrationAction;
+use Modules\Comms\Domain\Actions\CreateNewsletterAction;
 use Modules\Comms\Domain\Actions\RegisterForEventAction;
+use Modules\Comms\Domain\Actions\SendNewsletterAction;
+use Modules\Comms\Domain\DataObjects\CreateNewsletterData;
 use Modules\Comms\Domain\DataObjects\RegisterForEventData;
 use Modules\Comms\Livewire\Calendar\View as CalendarView;
 use Modules\Comms\Livewire\Events\CheckIn;
@@ -21,15 +25,19 @@ use Modules\Comms\Models\Notice;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\FeeComponent;
 use Modules\Finance\Models\Receipt;
+use Modules\People\Models\Guardian;
+use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 
 /**
@@ -348,4 +356,50 @@ it('lists only seat-holding attendees at the door and filters by name', function
         ->assertDontSee('Bob Waiting')
         ->set('search', 'zzz')
         ->assertDontSee('Alice Held');
+});
+
+it('sends a newsletter once to every distinct guardian and staff address and marks it sent (COM-06)', function (): void {
+    $f = com06AdminFixture();
+    $editor = com06AdminUser($f, 'newsletters.manage');
+    Guardian::factory()->for($f['school'])->create(['email' => 'parent@example.com', 'status' => 'active']);
+    Guardian::factory()->for($f['school'])->create(['email' => 'PARENT@example.com', 'status' => 'active']);
+    Guardian::factory()->for($f['school'])->create(['email' => null, 'status' => 'active']);
+    Staff::factory()->for($f['school'])->create(['work_email' => 'teacher@example.com', 'status' => 'active']);
+    $newsletter = app(CreateNewsletterAction::class)->execute(new CreateNewsletterData(
+        schoolId: $f['school']->id, issueNumber: '2026-T1-09', title: 'Sports day', contentHtml: '<p>See you there</p>',
+    ));
+
+    Livewire::actingAs($editor)->test(NewsletterCompose::class, ['school' => $f['school']])->call('send', $newsletter->id);
+
+    expect($newsletter->fresh()->status)->toBe('sent')
+        ->and($newsletter->fresh()->sent_at)->not->toBeNull()
+        ->and(Notification::where('notification_key', 'comms.newsletter')->where('channel', 'email')->count())->toBe(2);
+
+    Livewire::actingAs($editor)->test(NewsletterCompose::class, ['school' => $f['school']])->call('send', $newsletter->id);
+    expect(Notification::where('notification_key', 'comms.newsletter')->where('channel', 'email')->count())->toBe(2);
+});
+
+it('refuses to send a newsletter aimed at a section or level', function (): void {
+    $f = com06AdminFixture();
+    $newsletter = app(CreateNewsletterAction::class)->execute(new CreateNewsletterData(
+        schoolId: $f['school']->id, issueNumber: '2026-T1-10', title: 'Form 1 only', contentHtml: '<p>Hi</p>', audienceScope: 'level',
+    ));
+
+    expect(fn () => app(SendNewsletterAction::class)->execute($newsletter->id))->toThrow(InvalidStateTransitionException::class)
+        ->and($newsletter->fresh()->status)->toBe('draft');
+});
+
+it('sends due scheduled newsletters from the scheduled task and leaves future ones', function (): void {
+    $f = com06AdminFixture();
+    $due = app(CreateNewsletterAction::class)->execute(new CreateNewsletterData(
+        schoolId: $f['school']->id, issueNumber: '2026-T1-11', title: 'Due', contentHtml: '<p>Now</p>', scheduledFor: now()->addMinute(),
+    ));
+    $future = app(CreateNewsletterAction::class)->execute(new CreateNewsletterData(
+        schoolId: $f['school']->id, issueNumber: '2026-T1-12', title: 'Later', contentHtml: '<p>Later</p>', scheduledFor: now()->addWeek(),
+    ));
+    $due->update(['scheduled_for' => now()->subMinute()]);
+
+    expect((new SendDueNewslettersTask)->handle($f['school']))->toBe('1 newsletter(s) sent')
+        ->and($due->fresh()->status)->toBe('sent')
+        ->and($future->fresh()->status)->toBe('scheduled');
 });

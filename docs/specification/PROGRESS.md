@@ -165,6 +165,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   missing required answers, answers outside the options, out-of-range scale/NPS values and a second
   answer from the same identified respondent. The raiser can rate a resolved complaint 1–5, once
   (`RateComplaintResolutionAction`). Anonymous surveys cannot be de-duplicated by design.
+- **COM-06 newsletter sending.** `SendNewsletterAction` emails an issue through the notification bus
+  (whole-school: active guardians and staff; staff: staff only; one message per distinct address;
+  section/level audiences are refused because the issue does not record a target). "Send now" on
+  `Newsletters\Compose`, and a `comms.send_due_newsletters` job sends scheduled issues.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -175,7 +179,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 **Still open (not yet started in this pass)**:
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
-prior-period and board-pack reports; COM gaps (newsletter sending, survey distribution, the head's termly complaint report); the
+prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
 gateway drivers (need sandbox credentials).
 

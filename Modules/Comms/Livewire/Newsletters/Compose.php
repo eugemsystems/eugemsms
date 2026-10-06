@@ -12,21 +12,20 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Comms\Domain\Actions\CreateNewsletterAction;
+use Modules\Comms\Domain\Actions\SendNewsletterAction;
 use Modules\Comms\Domain\DataObjects\CreateNewsletterData;
 use Modules\Comms\Models\Newsletter;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
 
 /**
  * `Comms\Newsletters\Compose` (Book I COM-06 §4, `newsletters.manage`).
- * Saves a draft or schedules an issue. **Sending is not built**: the
- * backend has no newsletter sender (fan-out to an audience is not
- * something CORE-09's one-recipient dispatch does), so no issue ever
- * reaches `sent` from here and none is shown as such unless something
- * else sets it. The saved HTML is tag-allowlisted by the Action, and
- * this screen lists issues by title and status only — it never renders
- * stored HTML.
+ * Saves a draft, schedules an issue, or sends it now (`SendNewsletterAction`);
+ * a scheduled issue goes out from the `comms.send_due_newsletters` job. The
+ * saved HTML is tag-allowlisted by the Action, and this screen lists issues by
+ * title and status only — it never renders stored HTML.
  */
 #[Title('Newsletters')]
 #[Layout('layouts.app')]
@@ -71,6 +70,21 @@ final class Compose extends Component
 
         $this->reset(['issueNumber', 'title', 'contentHtml', 'scheduledFor']);
         $this->toast($newsletter->status === 'scheduled' ? __('Newsletter scheduled.') : __('Newsletter saved as a draft.'));
+    }
+
+    public function send(int $newsletterId): void
+    {
+        $this->authorizePermission('newsletters.manage');
+
+        try {
+            $result = app(SendNewsletterAction::class)->execute(Newsletter::where('school_id', $this->school->id)->findOrFail($newsletterId)->id);
+        } catch (InvalidStateTransitionException $exception) {
+            $this->toast($exception->getMessage(), 'danger');
+
+            return;
+        }
+
+        $this->toast(__('Sent to :sent recipient(s); :failed could not be reached.', ['sent' => $result['sent'], 'failed' => $result['failed']]));
     }
 
     public function render(): View
