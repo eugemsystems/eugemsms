@@ -1,10 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Modules\Boarding\Models\Hostel;
 use Modules\Boarding\Models\RollCall;
 use Modules\Boarding\Models\RollCallRecord;
-use Illuminate\Support\Facades\Event;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\School;
 use Modules\Intelligence\Domain\Actions\IssueApiClientAction;
@@ -101,7 +101,6 @@ it('refuses a client whose abilities do not cover the route (AC-INT-04-001)', fu
         'device_id' => $f['device']->ulid, 'tag' => 'X', 'scanned_at' => now()->toIso8601String(), 'target_id' => 1,
     ])->assertStatus(403)->assertJsonPath('error.code', 'INSUFFICIENT_SCOPE');
 });
-
 
 it('answers 429 with Retry-After once the client exceeds its own per-minute limit (BR-INT-04-003, AC-INT-04-005)', function (): void {
     Event::fake([RateLimitExceeded::class]);

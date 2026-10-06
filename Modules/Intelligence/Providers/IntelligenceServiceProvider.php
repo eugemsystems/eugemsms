@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Intelligence\Providers;
 
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Academic\Models\AttendanceSummary;

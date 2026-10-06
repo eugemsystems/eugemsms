@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Http\Controllers\Api\V1;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Academic\Models\Assignment;
@@ -101,9 +102,9 @@ final class GuardianLmsController
     /**
      * Active course spaces, in the session term, of the teaching groups the learner is in today.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<CourseSpace>
+     * @return Builder<CourseSpace>
      */
-    private function spaces(int $studentId): \Illuminate\Database\Eloquent\Builder
+    private function spaces(int $studentId): Builder
     {
         $today = now()->toDateString();
         $groupIds = TeachingGroupMember::query()

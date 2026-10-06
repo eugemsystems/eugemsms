@@ -10,7 +10,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 use Modules\Core\Domain\Exceptions\InsufficientScopeException;
 use Modules\Core\Domain\Exceptions\SerpException;
 use Modules\Core\Domain\Support\SchoolContext;
@@ -19,8 +18,9 @@ use Modules\Intelligence\Domain\Events\RateLimitExceeded;
 use Modules\Intelligence\Models\ApiClient;
 use Modules\Intelligence\Models\ApiUsageLog;
 use Symfony\Component\HttpFoundation\IpUtils;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
 
 /**
  * Book J INT-04 §3 ⭐/BR-INT-04-001/002/007. Authenticates a third-party or
