@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Academic\Http\Controllers\Api\V1\ReportCardsController;
 use Modules\Academic\Http\Controllers\Api\V1\StudentAcademicsController;
 use Modules\Academic\Http\Controllers\Api\V1\TeacherAttendanceController;
+use Modules\Academic\Http\Controllers\Api\V1\TeacherMarksController;
 use Modules\Boarding\Http\Controllers\Api\V1\GuardianExeatsController;
 use Modules\Comms\Http\Controllers\Api\V1\DevicesController;
 use Modules\Comms\Http\Controllers\Api\V1\InboxController;
@@ -70,6 +71,11 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
     Route::get('teacher/classes', [TeacherAttendanceController::class, 'classes'])->middleware('serp.token-ability:attendance.mark');
     Route::get('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'register'])->middleware('serp.token-ability:attendance.mark');
     Route::post('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'mark'])->middleware('serp.token-ability:attendance.mark');
+
+    Route::get('teacher/assessments', [TeacherMarksController::class, 'index'])->middleware('serp.token-ability:results.enter');
+    Route::get('teacher/assessments/{assessment}', [TeacherMarksController::class, 'show'])->middleware('serp.token-ability:results.enter');
+    Route::post('teacher/assessments/{assessment}/marks', [TeacherMarksController::class, 'save'])->middleware(['serp.token-ability:results.enter', 'serp.idempotent']);
+    Route::post('teacher/assessments/{assessment}/submit', [TeacherMarksController::class, 'submit'])->middleware(['serp.token-ability:results.enter', 'serp.idempotent']);
 
     Route::get('exeat-types', [GuardianExeatsController::class, 'types'])->middleware('serp.token-ability:exeats.read');
     Route::get('students/{student}/exeats', [GuardianExeatsController::class, 'index'])->middleware('serp.token-ability:exeats.read');

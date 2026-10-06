@@ -246,6 +246,36 @@ paths:
         - { name: student, in: path, required: true, schema: { type: string } }
       responses:
         "200": { description: OK }
+  /teacher/assessments:
+    get:
+      tags: [Teacher]
+      summary: Draft or open assessments the teacher may enter marks for this term (ability results.enter). Section or school reach sees all; narrower reach sees those they created or teach the subject of.
+      responses:
+        "200": { description: OK }
+  /teacher/assessments/{assessment}:
+    get:
+      tags: [Teacher]
+      summary: The assessment's roster (learners enrolled for the subject) with saved marks
+      parameters:
+        - { name: assessment, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /teacher/assessments/{assessment}/marks:
+    post:
+      tags: [Teacher]
+      summary: Save marks (Idempotency-Key required). Each learner is reported separately in data.results so one bad mark never loses an offline batch; saving overwrites while the assessment is draft or open.
+      parameters:
+        - { name: assessment, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Per-learner results }
+  /teacher/assessments/{assessment}/submit:
+    post:
+      tags: [Teacher]
+      summary: Submit the assessment's marks; further changes need the amendment workflow
+      parameters:
+        - { name: assessment, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
   /exeat-types:
     get:
       tags: [Boarding]

@@ -241,6 +241,8 @@ depends on them. Status per item below; anything not listed as done is still ope
   guardians who may authorise exeats. Also fixed a gap that affected the staff screen too: the suspension and fee-arrears
   blocks were never actually computed (both flags were always false); `ExeatEligibility` now computes them from learner status
   and the school's `boarding.exeat_block_on_fee_arrears` / threshold settings and both callers use it.
+- **Teacher marks API.** `GET /teacher/assessments[/{id}]`, `POST .../marks` (per-learner results, offline-safe overwrite) and
+  `POST .../submit`, scoped by `academic.result.enter` reach.
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
@@ -256,7 +258,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 
 **Still open (not yet started in this pass)**:
 ACA-04 period-mode marking; FIN-12 board pack (the prior-period view is the
-Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
+Income statement's reconciling items); COM gaps (survey distribution, the head's termly complaint report); the rest of the `/api/v1` surface — homework/LMS and the `Accept-Language` header (no translations exist yet to select between); payment gateways other than Pesepay.
 
 ---
 
