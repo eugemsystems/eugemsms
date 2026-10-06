@@ -129,3 +129,16 @@ it('reports itself down without credentials and is registered for the pesepay dr
     expect((new PesepayGatewayDriver)->healthCheck()->status)->toBe('down')
         ->and(app(PaymentGatewayDriverRegistry::class)->resolve('pesepay'))->toBeInstanceOf(PesepayGatewayDriver::class);
 });
+
+it('reads the reference from pollUrl when the sandbox answers with referenceNumber null', function (): void {
+    $f = pesepayFixture();
+    Http::fake(['pesepay.test/*' => Http::response(['payload' => $f['crypto']->encrypt([
+        'referenceNumber' => null,
+        'transactionStatus' => 'SUCCESS',
+        'pollUrl' => 'https://api.test.sandbox.pesepay.com/payments-engine/v1/payments/check-payment?referenceNumber=20261006142714125-A05E4612',
+    ])])]);
+
+    $push = $f['driver']->createPush($f['intent'], '0777777777', 'ecocash');
+
+    expect($push->gatewayReference)->toBe('20261006142714125-A05E4612');
+});

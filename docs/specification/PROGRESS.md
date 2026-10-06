@@ -223,9 +223,11 @@ depends on them. Status per item below; anything not listed as done is still ope
   with un-centred lines on their own row so it adds to the income statement) and fee collection (billed,
   collected, outstanding and rate by grade level, voided invoices excluded).
 - **BRD-04 catering costs.** Real stores-backed costing and availability; `Catering\Costs` per meal, per week, over-production.
-- **Pesepay live check.** With `api.pesepay.com` allowed, the host answers, the `authorization: <integration key>` header is
-  the right one, but the supplied integration key is rejected (404 "Integration key record was not found"), so no
-  sandbox payment has been completed yet.
+- **Pesepay sandbox check.** Against `https://api.test.sandbox.pesepay.com/payments-engine` the supplied key works: EcoCash
+  make-payment (PZW211, USD) answers 200 with an encrypted body, `0777777777` -> SUCCESS and `0770000000` -> FAILED, and
+  check-payment returns the status. Finding fixed: make-payment returns `referenceNumber: null` with the reference only in
+  `pollUrl`; the driver now reads it from there. Sandbox is USD-only (EcoCash, Visa, Mastercard); not yet exercised: a
+  redirect checkout, the result callback to a public URL, and the Visa/CABS cards.
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from

@@ -64,7 +64,7 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
     public function createCheckout(PaymentIntent $intent): CheckoutResponse
     {
         $response = $this->send($intent, 'v1/payments/initiate', $this->basePayload($intent));
-        $reference = $this->requireString($response, 'referenceNumber');
+        $reference = $this->referenceFrom($response);
         $url = $this->requireString($response, 'redirectUrl');
 
         $intent->forceFill(['poll_url' => $response['pollUrl'] ?? null])->save();
@@ -83,7 +83,7 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
         ]);
 
         return new PushResponse(
-            gatewayReference: $this->requireString($response, 'referenceNumber'),
+            gatewayReference: $this->referenceFrom($response),
             instructions: "Approve the {$method} prompt on {$phone} to complete the payment.",
             pollUrl: isset($response['pollUrl']) ? (string) $response['pollUrl'] : null,
         );
@@ -313,6 +313,30 @@ final class PesepayGatewayDriver implements PaymentGatewayDriver
     private function url(string $path): string
     {
         return rtrim((string) config('services.pesepay.base_url'), '/').'/'.$path;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    /**
+     * The sandbox answers a make-payment call with `referenceNumber: null` and carries the reference
+     * only inside `pollUrl` (confirmed against api.test.sandbox.pesepay.com), so both are accepted.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function referenceFrom(array $data): string
+    {
+        $reference = $data['referenceNumber'] ?? null;
+
+        if (is_string($reference) && $reference !== '') {
+            return $reference;
+        }
+
+        $query = [];
+        parse_str((string) parse_url((string) ($data['pollUrl'] ?? ''), PHP_URL_QUERY), $query);
+        $fromUrl = $query['referenceNumber'] ?? null;
+
+        return is_string($fromUrl) && $fromUrl !== '' ? $fromUrl : throw new GatewayRequestFailedException("Pesepay's response had no [referenceNumber].");
     }
 
     /**
