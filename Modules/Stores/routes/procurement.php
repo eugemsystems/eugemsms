@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Stores\Livewire\Procurement\Contracts\Index as ContractsIndex;
 use Modules\Stores\Livewire\Procurement\Invoices\MatchReview;
 use Modules\Stores\Livewire\Procurement\Invoices\Register as InvoiceRegister;
 use Modules\Stores\Livewire\Procurement\Orders\Index as OrdersIndex;
@@ -24,6 +25,7 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/stores/procure
     Route::livewire('suppliers', SuppliersIndex::class)->name('suppliers.index');
     Route::livewire('suppliers/{supplier}', SupplierShow::class)->name('suppliers.show');
     Route::livewire('suppliers/{supplier}/bank-change', BankChange::class)->name('suppliers.bank-change');
+    Route::livewire('contracts', ContractsIndex::class)->name('contracts.index');
     Route::livewire('suppliers-clearances', Clearances::class)->name('suppliers.clearances');
     Route::livewire('requisitions', PurchaseRequisitionsIndex::class)->name('requisitions.index');
     Route::livewire('quotations', Compare::class)->name('quotations.compare');

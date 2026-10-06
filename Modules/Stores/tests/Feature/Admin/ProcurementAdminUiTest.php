@@ -15,6 +15,7 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Account;
 use Modules\Finance\Models\CostCentre;
+use Modules\Stores\Livewire\Procurement\Contracts\Index as ContractsIndex;
 use Modules\Stores\Livewire\Procurement\Invoices\MatchReview;
 use Modules\Stores\Livewire\Procurement\Invoices\Register;
 use Modules\Stores\Livewire\Procurement\Orders\Index as OrdersIndex;
@@ -28,6 +29,7 @@ use Modules\Stores\Livewire\Procurement\Suppliers\Clearances;
 use Modules\Stores\Livewire\Procurement\Suppliers\Index as SuppliersIndex;
 use Modules\Stores\Livewire\Procurement\Suppliers\Show as SupplierShow;
 use Modules\Stores\Models\Supplier;
+use Modules\Stores\Models\SupplierContract;
 use Modules\Stores\Models\SupplierInvoice;
 
 /**
@@ -162,4 +164,41 @@ it('renders every procurement screen for a fully-permissioned user', function ()
     Livewire::actingAs($admin)->test(MatchReview::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($admin)->test(Run::class, ['school' => $f['school']])->assertOk();
     Livewire::actingAs($admin)->test(ReportsIndex::class, ['school' => $f['school']])->assertOk();
+});
+
+it('records, renews and terminates a supplier contract, refusing a blacklisted supplier and a duplicate number (BR-FIN-08-024)', function (): void {
+    $f = procurementAdminFixture();
+    $manager = procurementAdminUser($f, 'procurement.supplier.view', 'procurement.supplier.manage');
+    $supplier = Supplier::factory()->for($f['school'])->create(['status' => 'active']);
+    $blacklisted = Supplier::factory()->for($f['school'])->create(['status' => 'blacklisted']);
+
+    $fill = fn () => Livewire::actingAs($manager)->test(ContractsIndex::class, ['school' => $f['school']])
+        ->set('supplierId', $supplier->id)->set('contractNumber', 'CTR-1')->set('title', 'Stationery')
+        ->set('startsOn', '2026-01-01')->set('endsOn', '2026-12-31')->set('renewalNoticeDays', '30')->set('autoRenew', true);
+
+    $fill()->call('create')->assertHasNoErrors();
+    $contract = SupplierContract::where('contract_number', 'CTR-1')->firstOrFail();
+    expect($contract->status)->toBe('active')->and($contract->auto_renew)->toBeTrue();
+
+    $fill()->call('create')->assertHasErrors(['contractNumber']);
+    $fill()->set('contractNumber', 'CTR-2')->set('supplierId', $blacklisted->id)->call('create')->assertHasErrors(['supplierId']);
+    $fill()->set('contractNumber', 'CTR-3')->set('endsOn', '2025-01-01')->call('create')->assertHasErrors(['endsOn']);
+
+    Livewire::actingAs($manager)->test(ContractsIndex::class, ['school' => $f['school']])
+        ->set("renewals.{$contract->id}", '2026-06-01')->call('renew', $contract->id);
+    expect($contract->fresh()->ends_on->toDateString())->toBe('2026-12-31');
+
+    Livewire::actingAs($manager)->test(ContractsIndex::class, ['school' => $f['school']])
+        ->set("renewals.{$contract->id}", '2027-12-31')->call('renew', $contract->id);
+    expect($contract->fresh()->ends_on->toDateString())->toBe('2027-12-31');
+
+    Livewire::actingAs($manager)->test(ContractsIndex::class, ['school' => $f['school']])->call('terminate', $contract->id);
+    expect($contract->fresh()->status)->toBe('terminated');
+});
+
+it('lets a viewer see contracts but not record one', function (): void {
+    $f = procurementAdminFixture();
+    $viewer = procurementAdminUser($f, 'procurement.supplier.view');
+
+    Livewire::actingAs($viewer)->test(ContractsIndex::class, ['school' => $f['school']])->assertOk()->call('create')->assertForbidden();
 });

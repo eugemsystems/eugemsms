@@ -861,6 +861,9 @@
                                     <a href="{{ route('stores.procurement.suppliers.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.suppliers.*') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-truck-line"></i> {{ __('Suppliers') }}
                                     </a>
+                                    <a href="{{ route('stores.procurement.contracts.index', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.contracts.*') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-file-text-line"></i> {{ __('Supplier contracts') }}
+                                    </a>
                                     <a href="{{ route('stores.procurement.suppliers.clearances', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('stores.procurement.suppliers.clearances') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-shield-check-line"></i> {{ __('Tax clearances') }}
                                     </a>

@@ -169,6 +169,8 @@ depends on them. Status per item below; anything not listed as done is still ope
   (whole-school: active guardians and staff; staff: staff only; one message per distinct address;
   section/level audiences are refused because the issue does not record a target). "Send now" on
   `Newsletters\Compose`, and a `comms.send_due_newsletters` job sends scheduled issues.
+- **FIN-08 contracts.** Record, renew and terminate supplier contracts; blacklisted suppliers and
+  duplicate numbers refused.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -177,7 +179,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   decorator; a failed log write never blocks the fiscal call.
 
 **Still open (not yet started in this pass)**:
-BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
+BRD-06 consultations; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
 SAA impersonation entry point; the public REST surface (`/api/v1`) for every module; real payment
@@ -706,12 +708,9 @@ reserved keyword), `Payments\Run`, `Reports\Index` (folds the spec's
 four separate report screens — Aging, Unclaimable VAT, Withholding,
 Spend — into one tabbed screen). A dedicated test proves withholding
 applies at the configured rate with no tax clearance on file
-(AC-FIN-08-001). **Deliberately not built**: a Contracts screen — no
-`CreateSupplierContractAction` exists anywhere in the domain layer
-(verified by grep; the model/migration/factory exist, but only
-`StoresServiceProvider`'s own tenancy-isolation-test factory call ever
-creates a row), the same "model exists, no Action ever wrote one" gap
-prior books have hit for other tables.
+(AC-FIN-08-001). Contracts (gap-closing pass): `Procurement\Contracts\Index` with
+`CreateSupplierContractAction`, `RenewSupplierContractAction` and `TerminateSupplierContractAction`;
+the existing expiry job keeps alerting.
 
 **FIN-10 note.** Built (`Livewire/Assets/{Register,Depreciation,
 Verification,Disposal,Insurance,Reports}/`, 8 screens): `Register\
