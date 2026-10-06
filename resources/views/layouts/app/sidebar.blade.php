@@ -446,6 +446,26 @@
                                     <a href="{{ route('academic.cbt.item-analysis', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.cbt.item-analysis') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-bar-chart-2-line"></i> {{ __('Item analysis') }}
                                     </a>
+
+                                    <div class="app-sidebar-heading">{{ __('Library') }}</div>
+                                    <a href="{{ route('academic.library.catalogue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.catalogue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-book-2-line"></i> {{ __('Catalogue') }}
+                                    </a>
+                                    <a href="{{ route('academic.library.circulation', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.circulation') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-arrow-left-right-line"></i> {{ __('Circulation desk') }}
+                                    </a>
+                                    <a href="{{ route('academic.library.bulk-issue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.bulk-issue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-stack-line"></i> {{ __('Bulk textbook issue') }}
+                                    </a>
+                                    <a href="{{ route('academic.library.overdue', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.overdue') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-alarm-warning-line"></i> {{ __('Overdue') }}
+                                    </a>
+                                    <a href="{{ route('academic.library.stock-take', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.stock-take') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-barcode-box-line"></i> {{ __('Stock-take') }}
+                                    </a>
+                                    <a href="{{ route('academic.library.acquisitions', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.library.acquisitions') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-shopping-cart-line"></i> {{ __('Acquisitions') }}
+                                    </a>
                                 </div>
                             </div>
                         </div>

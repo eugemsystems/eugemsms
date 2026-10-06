@@ -243,6 +243,16 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'mark' => ['description' => 'Mark written responses and file uploads in the manual marking queue.'],
         ]);
 
+        PermissionRegistry::register('LIBRARY', [
+            'view' => ['description' => 'Search the catalogue and see the overdue report.'],
+            'catalogue.manage' => ['description' => 'Add catalogue items and copies and set borrower-category loan limits.'],
+            'circulate' => ['description' => 'Issue, return, renew and mark lost at the circulation desk.'],
+            'bulk_issue' => ['description' => 'Issue and collect textbooks for a whole class; unreturned books are charged to the learner.', 'dangerous' => true],
+            'stocktake' => ['description' => 'Run a stock-take; copies still unscanned after the second pass are marked lost and charged.', 'dangerous' => true],
+            'acquisition.request' => ['description' => 'Request new titles for the library.'],
+            'acquisition.approve' => ['description' => 'Approve or reject acquisition requests; approval raises a purchase requisition.'],
+        ]);
+
         PermissionRegistry::register('LMS', [
             'course.manage' => ['description' => 'Create course spaces and manage their content — a teacher does so only for groups they teach.'],
             'assignment.create' => ['description' => 'Create, publish and close assignments in course spaces.'],
@@ -328,6 +338,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/exams.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/lms.php');
             $this->loadRoutesFrom(__DIR__.'/../routes/cbt.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/library.php');
         });
     }
 

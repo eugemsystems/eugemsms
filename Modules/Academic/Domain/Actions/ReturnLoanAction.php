@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\ReturnLoanData;
 use Modules\Academic\Models\Loan;
 use Modules\Core\Domain\Actions\Action;
@@ -39,7 +40,15 @@ final class ReturnLoanAction extends Action
             );
         }
 
+        if (! in_array($data->conditionAtReturn, ['new', 'good', 'fair', 'poor', 'damaged'], true)) {
+            throw new InvalidArgumentException("Unknown condition [{$data->conditionAtReturn}].");
+        }
+
         $returnedOn = $data->returnedOn?->toImmutable() ?? Carbon::today();
+
+        if ($returnedOn->lt($loan->issued_on) || $returnedOn->isFuture()) {
+            throw new InvalidArgumentException('A return date cannot be before the loan or in the future.');
+        }
         $daysLate = max(0, (int) $loan->due_on->diffInDays($returnedOn, false));
 
         $fineMinor = 0;
@@ -50,10 +59,15 @@ final class ReturnLoanAction extends Action
             $fineMinor = min($daysLate * $dailyRate, $replacementCost);
         }
 
-        return $this->transaction(function () use ($loan, $data, $returnedOn, $fineMinor): Loan {
-            $chargeId = null;
+        $chargeable = $loan->borrower_type === 'student';
 
-            if ($fineMinor > 0 && $data->feeComponentId !== null) {
+        if ($fineMinor > 0 && $chargeable && $data->feeComponentId === null) {
+            throw new InvalidArgumentException('This return is late and carries a fine: choose the fee component to charge it to.');
+        }
+
+        return $this->transaction(function () use ($loan, $data, $returnedOn, $fineMinor, $chargeable): Loan {
+            $chargeId = null;
+            if ($fineMinor > 0 && $chargeable && $data->feeComponentId !== null) {
                 $term = $loan->term;
                 $charge = $this->createAdHocCharge->execute(new CreateAdHocChargeData(
                     schoolId: $loan->school_id,
@@ -80,7 +94,7 @@ final class ReturnLoanAction extends Action
                 'fine_charge_id' => $chargeId,
             ]);
 
-            $loan->copy->update(['status' => 'available', 'condition' => $data->conditionAtReturn]);
+            $loan->copy->update(['status' => 'available', 'condition' => $data->conditionAtReturn === 'damaged' ? 'poor' : $data->conditionAtReturn]);
 
             return $loan->fresh();
         });

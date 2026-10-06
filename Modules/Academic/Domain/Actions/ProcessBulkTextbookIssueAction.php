@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\ProcessBulkTextbookIssueData;
 use Modules\Academic\Models\BulkTextbookIssue;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\LibraryCopy;
+use Modules\Academic\Models\LibraryItem;
 use Modules\Academic\Models\Loan;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Models\SchoolClass;
+use Modules\Core\Models\Term;
 
 /**
  * ACT-ProcessBulkTextbookIssue (Book K ACA-10 §3 ⭐/BR-ACA-10-007/
@@ -25,6 +29,14 @@ final class ProcessBulkTextbookIssueAction extends Action
 {
     public function execute(ProcessBulkTextbookIssueData $data): BulkTextbookIssue
     {
+        if ($data->itemIds === [] || LibraryItem::query()->whereIn('id', $data->itemIds)->where('is_active', true)->count() !== count(array_unique($data->itemIds))) {
+            throw new InvalidArgumentException('Choose at least one active catalogue item from this school.');
+        }
+
+        if (! SchoolClass::query()->whereKey($data->classId)->exists() || ! Term::query()->whereKey($data->termId)->exists()) {
+            throw new InvalidArgumentException('That class or term does not belong to this school.');
+        }
+
         $studentIds = ClassAllocation::query()
             ->where('school_id', $data->schoolId)
             ->where('term_id', $data->termId)
@@ -40,6 +52,18 @@ final class ProcessBulkTextbookIssueAction extends Action
                 $studentHadException = false;
 
                 foreach ($data->itemIds as $itemId) {
+                    $alreadyHolds = Loan::query()
+                        ->where('school_id', $data->schoolId)
+                        ->where('borrower_type', 'student')
+                        ->where('borrower_id', $studentId)
+                        ->where('status', 'active')
+                        ->whereHas('copy', fn ($q) => $q->where('item_id', $itemId))
+                        ->exists();
+
+                    if ($alreadyHolds) {
+                        continue;
+                    }
+
                     $copy = LibraryCopy::query()
                         ->where('school_id', $data->schoolId)
                         ->where('item_id', $itemId)

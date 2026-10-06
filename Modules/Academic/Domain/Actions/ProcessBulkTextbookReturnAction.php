@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\ProcessBulkTextbookReturnData;
 use Modules\Academic\Models\BulkTextbookIssue;
 use Modules\Academic\Models\ClassAllocation;
+use Modules\Academic\Models\LibraryItem;
 use Modules\Academic\Models\Loan;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Models\SchoolClass;
+use Modules\Core\Models\Term;
 use Modules\Finance\Domain\Actions\CreateAdHocChargeAction;
 use Modules\Finance\Domain\DataObjects\CreateAdHocChargeData;
+use Modules\Finance\Models\FeeComponent;
 
 /**
  * ACT-ProcessBulkTextbookReturn (Book K ACA-10 §3 ⭐/BR-ACA-10-007/008
@@ -32,6 +37,18 @@ final class ProcessBulkTextbookReturnAction extends Action
 
     public function execute(ProcessBulkTextbookReturnData $data): BulkTextbookIssue
     {
+        if ($data->itemIds === [] || LibraryItem::query()->whereIn('id', $data->itemIds)->where('is_active', true)->count() !== count(array_unique($data->itemIds))) {
+            throw new InvalidArgumentException('Choose at least one active catalogue item from this school.');
+        }
+
+        if (! SchoolClass::query()->whereKey($data->classId)->exists() || ! Term::query()->whereKey($data->termId)->exists()) {
+            throw new InvalidArgumentException('That class or term does not belong to this school.');
+        }
+
+        if (! FeeComponent::query()->whereKey($data->feeComponentId)->exists()) {
+            throw new InvalidArgumentException('That fee component does not belong to this school.');
+        }
+
         $studentIds = ClassAllocation::query()
             ->where('school_id', $data->schoolId)
             ->where('term_id', $data->termId)

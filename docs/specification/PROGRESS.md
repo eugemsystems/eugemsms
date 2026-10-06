@@ -1446,8 +1446,26 @@ FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in
 | PPL-06 | ✅ `People/Livewire/Alumni/` |
 | ACA-08 | ✅ `Academic/Livewire/Lms/` |
 | ACA-09 | ✅ `Academic/Livewire/Cbt/` (staff side) |
-| ACA-10 | ⬜ |
+| ACA-10 | ✅ `Academic/Livewire/Library/` |
 | ACA-11 | ⬜ |
+
+**ACA-10 note.** Six screens under `academic.library.*` — `Library\Catalogue`, `Circulation`,
+`BulkIssue`, `Overdue`, `StockTake`, `Acquisitions` — and the `library.*` permissions (`view`,
+`catalogue.manage`, `circulate`, `bulk_issue`, `stocktake`, `acquisition.request`,
+`acquisition.approve`; the last two beyond the spec's list, to separate cataloguing and
+approving from the desk). **Backend fixes:** the loan, copy, item, category and acquisition
+Actions now validate input and ownership (borrower and term belong to the school, retired
+titles cannot be lent, ISBN/barcode duplicates refused, copy locked at issue); a late return
+by a learner now refuses without a fee component instead of silently dropping the fine; a
+lost copy of a title with no replacement cost is refused for a learner; staff borrowers are
+never charged to a fee account; bulk issue no longer double-issues a title a learner already
+holds and bulk return checks class, term, titles and fee component; only one stock-take may be
+in progress; scans are limited to this school's copies. New `ApproveAcquisitionRequestAction`
+raises a FIN-08 purchase requisition linked by `source_type`/`source_id`
+(BR-ACA-10-010). **Known gaps:** no reservation queue, so renewal ignores reservations
+(BR-ACA-10-003); no scheduled escalating overdue reminders (on-demand button only,
+BR-ACA-10-004); no "raise the limit with a reason" override; bulk issue uses the `secondary`
+category and a four-month period; `/api/v1/library/*` endpoints; barcode/QR label printing.
 
 **ACA-09 note.** Five staff screens under `academic.cbt.*` — `Cbt\Bank`, `Builder`,
 `Monitor`, `ManualMarking`, `ItemAnalysis` — and the `cbt.*` permissions (`bank.manage`,

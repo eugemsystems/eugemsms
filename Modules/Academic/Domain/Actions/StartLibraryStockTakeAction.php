@@ -9,11 +9,16 @@ use Modules\Academic\Domain\DataObjects\StartLibraryStockTakeData;
 use Modules\Academic\Models\LibraryCopy;
 use Modules\Academic\Models\LibraryStockTake;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 
 final class StartLibraryStockTakeAction extends Action
 {
     public function execute(StartLibraryStockTakeData $data): LibraryStockTake
     {
+        if (LibraryStockTake::query()->where('school_id', $data->schoolId)->where('status', 'in_progress')->exists()) {
+            throw new InvalidStateTransitionException('A stock-take is already in progress.', ['school_id' => $data->schoolId]);
+        }
+
         $expectedCount = LibraryCopy::query()
             ->where('school_id', $data->schoolId)
             ->where('status', '!=', 'withdrawn')

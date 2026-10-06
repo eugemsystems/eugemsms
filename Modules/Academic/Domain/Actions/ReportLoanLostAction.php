@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Academic\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\ReportLoanLostData;
 use Modules\Academic\Models\Loan;
 use Modules\Core\Domain\Actions\Action;
@@ -35,7 +36,19 @@ final class ReportLoanLostAction extends Action
 
         $replacementCost = (int) ($loan->copy->item->replacement_cost_minor ?? 0);
 
-        return $this->transaction(function () use ($loan, $data, $replacementCost): Loan {
+        $chargeable = $loan->borrower_type === 'student';
+
+        if ($chargeable && $replacementCost <= 0) {
+            throw new InvalidArgumentException('Set a replacement cost on this title before reporting a copy lost, so the borrower can be charged.');
+        }
+
+        return $this->transaction(function () use ($loan, $data, $replacementCost, $chargeable): Loan {
+            if (! $chargeable) {
+                $loan->update(['status' => 'lost']);
+                $loan->copy->update(['status' => 'lost']);
+
+                return $loan->fresh();
+            }
             $charge = $this->createAdHocCharge->execute(new CreateAdHocChargeData(
                 schoolId: $loan->school_id,
                 academicYearId: $loan->term->academic_year_id,

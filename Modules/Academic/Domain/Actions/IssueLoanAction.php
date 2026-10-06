@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Academic\Domain\Actions;
 
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\IssueLoanData;
 use Modules\Academic\Domain\Exceptions\CopyNotAvailableException;
 use Modules\Academic\Domain\Exceptions\LoanLimitExceededException;
@@ -12,6 +13,9 @@ use Modules\Academic\Models\BorrowerCategory;
 use Modules\Academic\Models\LibraryCopy;
 use Modules\Academic\Models\Loan;
 use Modules\Core\Domain\Actions\Action;
+use Modules\Core\Models\Term;
+use Modules\People\Models\Staff;
+use Modules\People\Models\Student;
 
 /**
  * ACT-IssueLoan (Book K ACA-10 §4/BR-ACA-10-002/AC-ACA-10-003). Loan
@@ -23,10 +27,31 @@ final class IssueLoanAction extends Action
 {
     public function execute(IssueLoanData $data): Loan
     {
-        $copy = LibraryCopy::findOrFail($data->copyId);
+
+        $copy = LibraryCopy::with('item')->findOrFail($data->copyId);
 
         if ($copy->status !== 'available') {
             throw CopyNotAvailableException::forCopy($copy->id);
+        }
+
+        if (! $copy->item->is_active) {
+            throw new InvalidArgumentException('That title has been retired from the catalogue.');
+        }
+
+        if (! in_array($data->borrowerType, ['student', 'staff'], true)) {
+            throw new InvalidArgumentException("Unknown borrower type [{$data->borrowerType}].");
+        }
+
+        $borrowerExists = $data->borrowerType === 'student'
+            ? Student::query()->whereKey($data->borrowerId)->exists()
+            : Staff::query()->whereKey($data->borrowerId)->exists();
+
+        if (! $borrowerExists) {
+            throw new InvalidArgumentException('That borrower does not belong to this school.');
+        }
+
+        if (! Term::query()->whereKey($data->termId)->exists()) {
+            throw new InvalidArgumentException('That term does not belong to this school.');
         }
 
         $category = BorrowerCategory::query()
@@ -46,6 +71,11 @@ final class IssueLoanAction extends Action
         }
 
         return $this->transaction(function () use ($copy, $data, $category): Loan {
+            $locked = LibraryCopy::query()->whereKey($copy->id)->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== 'available') {
+                throw CopyNotAvailableException::forCopy($copy->id);
+            }
             $copy->update(['status' => 'on_loan']);
 
             return Loan::create([

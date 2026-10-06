@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Academic\Domain\Actions;
 
+use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\RecordStockTakeScanData;
+use Modules\Academic\Models\LibraryCopy;
 use Modules\Academic\Models\LibraryStockTake;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
@@ -20,6 +22,12 @@ final class RecordStockTakeScanAction extends Action
                 "Stock-take #{$stockTake->id} in [{$stockTake->status}] can no longer record scans.",
                 ['stock_take_id' => $stockTake->id, 'status' => $stockTake->status],
             );
+        }
+
+        $copy = LibraryCopy::query()->whereKey($data->copyId)->where('status', '!=', 'withdrawn')->first();
+
+        if ($copy === null) {
+            throw new InvalidArgumentException('That copy is not in this school\'s library.');
         }
 
         return $this->transaction(function () use ($stockTake, $data): LibraryStockTake {
