@@ -208,6 +208,7 @@ depends on them. Status per item below; anything not listed as done is still ope
   sandbox**: this environment's network policy blocks `api.pesepay.com`; the request shapes and the EcoCash
   method codes (`PZW211` USD, `PZW201` ZWG, overridable) follow Pesepay's documented API from memory and are
   covered by faked-HTTP tests only. First step on a machine that can reach it: one sandbox payment.
+- **ACA-04 attendance reports.** Class report, learner heatmap, absence follow-up and register CSV.
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
   the journal, as at any date, with a balance check) and `Financial\CashFlow` (direct method: bank
   movements by journal type between computed opening and closing positions).
@@ -217,7 +218,7 @@ depends on them. Status per item below; anything not listed as done is still ope
 
 **Still open (not yet started in this pass)**:
 BRD-04 cost analytics;
-ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 departmental, collection,
+ACA-04 period-mode marking; ACA-03 drag-and-drop; FIN-12 departmental, collection,
 prior-period and board-pack reports; COM gaps (survey distribution, the head's termly complaint report); the
 the rest of the `/api/v1` surface (see the API note below); payment gateways other than Pesepay.
 
@@ -337,9 +338,10 @@ enrolment (no bulk domain Action exists). See `.ai/rules/academic.md`.
 ReasonCodes}`. `Mark` is `daily` mode only (period/subject modes need
 an `ACA-03` timetable slot this screen doesn't surface); amendment is
 folded into `Mark` itself rather than a separate route.
-**Deliberately not built**: Learner attendance heatmap, Class
-attendance report, Absence follow-up, Statutory register export (no
-export-generation Action exists). See `.ai/rules/academic.md`.
+Gap-closing pass: `Attendance\Reports` — class report for a range, learner heatmap (unmarked days
+blank), absence follow-up (recent absences and whether the parent was told) and a register CSV
+(`GenerateAttendanceRegisterExportAction`). **Still not built**: period/subject-mode marking in the
+admin UI, and a statutory-format register (no statutory template is specified).
 
 **ACA-05 note.** Built: `Grading\Scales` (contiguity-validated band
 editor), `Assessment\Types`, `Assessment\Planner` (advisory live

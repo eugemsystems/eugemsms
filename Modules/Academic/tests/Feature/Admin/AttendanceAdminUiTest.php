@@ -1,8 +1,17 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Modules\Academic\Domain\Actions\GenerateAttendanceRegisterExportAction;
+use Modules\Academic\Domain\Actions\GenerateAttendanceSessionAction;
+use Modules\Academic\Domain\Actions\MarkAttendanceAction;
+use Modules\Academic\Domain\DataObjects\GenerateAttendanceRegisterExportData;
+use Modules\Academic\Domain\DataObjects\GenerateAttendanceSessionData;
+use Modules\Academic\Domain\DataObjects\MarkAttendanceData;
+use Modules\Academic\Domain\DataObjects\MarkAttendanceRecordInput;
 use Modules\Academic\Livewire\Attendance\Mark;
+use Modules\Academic\Livewire\Attendance\Reports;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
@@ -129,7 +138,7 @@ it('serves every other Attendance screen through a real routed request', functio
     $f = attendanceAdminFixture();
     $user = attendanceAdminUser($f, 'academic.attendance.view', 'academic.attendance.view_compliance', 'academic.attendance.manage');
 
-    foreach (['academic.attendance.daily', 'academic.attendance.compliance', 'academic.attendance.chronic', 'academic.attendance.reason-codes'] as $routeName) {
+    foreach (['academic.attendance.daily', 'academic.attendance.compliance', 'academic.attendance.chronic', 'academic.attendance.reason-codes', 'academic.attendance.reports'] as $routeName) {
         $this->actingAs($user)->get(route($routeName, $f['school']))->assertOk();
     }
 });
@@ -161,4 +170,61 @@ it('the first mark stands and a conflicting resubmission is recorded as a confli
 
     expect(AttendanceRecord::where('student_id', $student->id)->first()->status)->toBe('present')
         ->and(AttendanceRecord::where('student_id', $student->id)->count())->toBe(1);
+});
+
+it('reports a class\'s attendance for a range, never counting an unmarked day as present, and exports the register as CSV', function (): void {
+    $f = attendanceAdminFixture();
+    $student = attendanceAdminStudent($f);
+    $marker = attendanceAdminUser($f, 'academic.attendance.mark');
+    $viewer = attendanceAdminUser($f, 'academic.attendance.view');
+
+    foreach ([[3, 'present'], [2, 'absent'], [1, 'late']] as [$daysAgo, $status]) {
+        $session = app(GenerateAttendanceSessionAction::class)->execute(new GenerateAttendanceSessionData(
+            schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+            sessionDate: now()->subDays($daysAgo), mode: 'daily', classId: $f['class']->id,
+        ));
+        app(MarkAttendanceAction::class)->execute(new MarkAttendanceData($session->id, [new MarkAttendanceRecordInput($student->id, $status)], $marker->id));
+    }
+
+    $screen = Livewire::actingAs($viewer)->test(Reports::class, ['school' => $f['school']])
+        ->set('from', now()->subDays(10)->toDateString())->set('to', now()->toDateString())->set('classId', $f['class']->id);
+    $row = $screen->viewData('classReport')[0];
+
+    expect($row['present'])->toBe(1)->and($row['late'])->toBe(1)->and($row['absent'])->toBe(1)->and($row['percent'])->toBe(66.7);
+
+    $screen->call('export')->assertFileDownloaded();
+    $csv = app(GenerateAttendanceRegisterExportAction::class)->execute(new GenerateAttendanceRegisterExportData($f['class']->id, now()->subDays(10), now()));
+    $lines = explode("\n", trim($csv));
+
+    expect($lines)->toHaveCount(2)->and($lines[0])->toContain('Admission no')->and($lines[1])->toContain('Ndlovu')->and($lines[1])->toEndWith('"1","1","1","0"');
+    expect(fn () => app(GenerateAttendanceRegisterExportAction::class)->execute(new GenerateAttendanceRegisterExportData($f['class']->id, now(), now()->subDay())))->toThrow(ValidationException::class);
+});
+
+it('draws a learner heatmap with unmarked days blank and lists recent absences with whether the parent was told', function (): void {
+    $f = attendanceAdminFixture();
+    $student = attendanceAdminStudent($f);
+    $marker = attendanceAdminUser($f, 'academic.attendance.mark');
+    $viewer = attendanceAdminUser($f, 'academic.attendance.view');
+    $day = now()->subDay();
+
+    while ($day->isWeekend()) {
+        $day = $day->subDay();
+    }
+
+    $session = app(GenerateAttendanceSessionAction::class)->execute(new GenerateAttendanceSessionData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id, sessionDate: $day, mode: 'daily', classId: $f['class']->id,
+    ));
+    app(MarkAttendanceAction::class)->execute(new MarkAttendanceData($session->id, [new MarkAttendanceRecordInput($student->id, 'absent')], $marker->id));
+
+    $screen = Livewire::actingAs($viewer)->test(Reports::class, ['school' => $f['school']])
+        ->set('tab', 'heatmap')->set('from', now()->subDays(7)->toDateString())->set('to', now()->toDateString())->set('studentId', $student->id);
+    $cells = collect($screen->viewData('heatmap')['weeks'])->flatten(1)->filter()->keyBy('date');
+
+    expect($cells[$day->toDateString()]['status'])->toBe('absent')
+        ->and($cells->pluck('status')->filter()->count())->toBe(1);
+
+    $follow = Livewire::actingAs($viewer)->test(Reports::class, ['school' => $f['school']])->set('tab', 'followup');
+    expect($follow->viewData('followUp'))->toHaveCount(1);
+
+    Livewire::actingAs(attendanceAdminUser($f))->test(Reports::class, ['school' => $f['school']])->assertForbidden();
 });

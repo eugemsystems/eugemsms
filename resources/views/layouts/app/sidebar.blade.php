@@ -300,6 +300,9 @@
                                     <a href="{{ route('academic.attendance.chronic', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.attendance.chronic') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-alert-line"></i> {{ __('Chronic absentees') }}
                                     </a>
+                                    <a href="{{ route('academic.attendance.reports', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.attendance.reports') ? 'active' : '' }}" wire:navigate>
+                                        <i class="ri ri-bar-chart-line"></i> {{ __('Attendance reports') }}
+                                    </a>
                                     <a href="{{ route('academic.attendance.reason-codes', $sessionsSchool) }}" class="nav-link {{ request()->routeIs('academic.attendance.reason-codes') ? 'active' : '' }}" wire:navigate>
                                         <i class="ri ri-settings-3-line"></i> {{ __('Reason codes') }}
                                     </a>
