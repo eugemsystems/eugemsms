@@ -97,6 +97,14 @@
                                 <input type="checkbox" class="form-check-input" wire:model="lines.{{ $index }}.is_capital" id="cap-{{ $index }}">
                                 <label class="form-check-label" for="cap-{{ $index }}">{{ __('Capital item → FIN-10') }}</label>
                             </div>
+                            @if ($line['is_capital'])
+                                <select class="form-select form-select-sm mt-1" wire:model="lines.{{ $index }}.asset_category_id">
+                                    <option value="">{{ __('Asset category (blank = capitalise manually)') }}</option>
+                                    @foreach ($assetCategories as $category)
+                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                             @if (count($lines) > 1)
                                 <button type="button" class="btn btn-sm btn-outline-danger mt-1" wire:click="removeLine({{ $index }})">{{ __('Remove') }}</button>
                             @endif

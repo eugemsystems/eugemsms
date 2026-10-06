@@ -157,8 +157,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   issued (listeners never block the invoice or receipt); statements render on demand from journal
   lines. Templates are registered versioned defaults. "Print / download" on the invoice screen and
   the statement screen; downloads are recorded. Still open: a receipt download button.
+- **FIN-10 capitalisation.** Capital PO lines and capitalisable stock items name an asset category
+  and now capitalise automatically on receipt/issue (see FIN-10 note).
 
-**Still open (not yet started in this pass)**: FIN-10 capitalisation listeners; FIN-13 fiscal audit log writes; FIN-11 forecast maths;
+**Still open (not yet started in this pass)**: FIN-13 fiscal audit log writes; FIN-11 forecast maths;
 BRD-06 consultations; FIN-08 contracts; OPS-02 contractor/milestones; BRD-04 cost analytics;
 ACA-04 reports/heatmap/period mode; ACA-03 drag-and-drop; FIN-12 balance sheet, cash flow and
 board pack; COM gaps (newsletter sending, survey respondent form, complaint satisfaction); the
@@ -707,12 +709,11 @@ stays visibly pending, never silently absent), `Disposal\Create`,
 `Insurance\Index`, `Reports\Reconciliation`. A dedicated test proves a
 not-found asset cannot be written off by the same user who recorded
 the failed scan, and CAN be by a different one (BR-FIN-10-012,
-AC-FIN-10-005). **Deliberately not built**: no automatic
-capitalisation listener for `FIN-08`'s `CapitalPurchaseReceived`/
-`FIN-09`'s `ItemCapitalisationDue` — both events fire for real but
-have no subscriber yet, a documented backend gap
-(`StoresServiceProvider`'s own docblock, not this pass's to fabricate
-an `asset_category_id` column unreviewed).
+AC-FIN-10-005). Automatic capitalisation (gap-closing pass): a capital PO line and
+a capitalisable item each carry an optional `asset_category_id`; the FIN-08
+`CapitalPurchaseReceived` and FIN-09 `ItemCapitalisationDue` events now create one
+asset per whole unit and reclassify the expense. Without a category, capitalisation
+stays manual.
 
 **FIN-11 note ⭐.** Built (`Livewire/Budget/{Builder,Consolidation,
 Variance,Commitments,Virement,Forecast}/`, 6 screens): `Builder\Index`

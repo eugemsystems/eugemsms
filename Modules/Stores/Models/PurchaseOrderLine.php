@@ -28,6 +28,7 @@ use Modules\Stores\Database\Factories\PurchaseOrderLineFactory;
  * @property float $quantity_invoiced
  * @property int $unit_price_minor
  * @property int|null $expense_account_id
+ * @property int|null $asset_category_id
  * @property int $line_total_minor
  * @property bool $is_capital
  * @property int|null $store_id
@@ -44,7 +45,7 @@ class PurchaseOrderLine extends Model
     protected $fillable = [
         'school_id', 'purchase_order_id', 'line_number', 'item_id', 'description', 'quantity_ordered',
         'quantity_received', 'quantity_rejected', 'quantity_invoiced', 'unit', 'unit_price_minor',
-        'tax_rate_percent', 'tax_category', 'line_total_minor', 'expense_account_id', 'is_capital',
+        'tax_rate_percent', 'tax_category', 'line_total_minor', 'expense_account_id', 'is_capital', 'asset_category_id',
         'store_id',
     ];
 

@@ -26,8 +26,12 @@ use Modules\Stores\Domain\Actions\CheckInsuranceExpiryAction;
 use Modules\Stores\Domain\Actions\CheckTaxClearanceExpiryAction;
 use Modules\Stores\Domain\Actions\CheckUnderInsuranceAction;
 use Modules\Stores\Domain\Actions\ReconcileAssetRegisterAction;
+use Modules\Stores\Domain\Events\CapitalPurchaseReceived;
 use Modules\Stores\Domain\Events\InvoiceMatched;
+use Modules\Stores\Domain\Events\ItemCapitalisationDue;
 use Modules\Stores\Domain\Events\PurchaseOrderApproved;
+use Modules\Stores\Domain\Listeners\CapitaliseAssetOnCapitalPurchaseReceivedListener;
+use Modules\Stores\Domain\Listeners\CapitaliseAssetOnItemCapitalisationDueListener;
 use Modules\Stores\Domain\Listeners\CreateBudgetCommitmentOnPurchaseOrderApprovedListener;
 use Modules\Stores\Domain\Listeners\ReleaseBudgetCommitmentOnInvoiceMatchedListener;
 use Modules\Stores\Domain\Support\EloquentStoreIssuanceProvider;
@@ -121,19 +125,13 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * an approved, different-user write-off (BR-FIN-10-012 ⭐), disposal
  * with gain/loss computed against NBV and an approval threshold, and
  * insurance expiry/under-insurance checks reading real NBV totals.
- * Deliberately deferred, and flagged here explicitly rather than
- * silently wired around: `CapitalizeAssetAction` is NOT yet
- * subscribed to `FIN-08`'s `CapitalPurchaseReceived` or `FIN-09`'s
- * `ItemCapitalisationDue` events, even though BR-FIN-10-002 calls for
- * automatic capitalisation from both. Neither `purchase_order_lines`
- * nor `inventory_items` carries an `asset_category_id` today, so an
- * automatic listener would have to guess which category a capital
- * line or a capitalisable item belongs to — that column choice
- * belongs to a deliberate decision (on one or both of `FIN-08`'s and
- * `FIN-09`'s own tables), not something to invent unreviewed while
- * wiring `FIN-10`. Until that lands, both events still fire for real
- * and a human capitalises manually via `CapitalizeAssetAction`,
- * exactly the way this pass leaves them. `OPS-01` mileage/`OPS-04`
+ * Capitalisation is now automatic (BR-FIN-10-002): `purchase_order_lines`
+ * and `inventory_items` carry a nullable `asset_category_id`, and
+ * `CapitaliseAssetOnCapitalPurchaseReceivedListener` /
+ * `CapitaliseAssetOnItemCapitalisationDueListener` subscribe to
+ * `FIN-08`'s `CapitalPurchaseReceived` and `FIN-09`'s
+ * `ItemCapitalisationDue`. Without a category, a human still
+ * capitalises via `CapitalizeAssetAction`. `OPS-01` mileage/`OPS-04`
  * generator hours (BR-FIN-10-008's units-of-production source) and
  * `BRD-07`/security-incident integration for theft/loss disposal
  * (BR-FIN-10-014) are likewise deferred — neither module exists yet.
@@ -293,6 +291,8 @@ class StoresServiceProvider extends ModuleServiceProvider
     {
         Event::listen(PurchaseOrderApproved::class, CreateBudgetCommitmentOnPurchaseOrderApprovedListener::class);
         Event::listen(InvoiceMatched::class, ReleaseBudgetCommitmentOnInvoiceMatchedListener::class);
+        Event::listen(CapitalPurchaseReceived::class, CapitaliseAssetOnCapitalPurchaseReceivedListener::class);
+        Event::listen(ItemCapitalisationDue::class, CapitaliseAssetOnItemCapitalisationDueListener::class);
     }
 
     /**

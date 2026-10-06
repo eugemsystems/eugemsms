@@ -35,6 +35,7 @@ final class CreateInventoryItemAction extends Action
             'sale_fee_component_id' => $data->saleFeeComponentId,
             'is_capitalisable' => $data->isCapitalisable,
             'capitalisation_threshold_minor' => $data->capitalisationThresholdMinor,
+            'asset_category_id' => $data->isCapitalisable ? $data->assetCategoryId : null,
             'expense_account_id' => $data->expenseAccountId,
             'standard_cost_minor' => $data->standardCostMinor,
             'standard_cost_currency' => $data->standardCostCurrency,

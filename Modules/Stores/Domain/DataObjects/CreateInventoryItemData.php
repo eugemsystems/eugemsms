@@ -26,6 +26,7 @@ final readonly class CreateInventoryItemData
         public ?int $saleFeeComponentId = null,
         public bool $isCapitalisable = false,
         public ?int $capitalisationThresholdMinor = null,
+        public ?int $assetCategoryId = null,
         public ?int $expenseAccountId = null,
         public ?int $standardCostMinor = null,
         public ?string $standardCostCurrency = null,

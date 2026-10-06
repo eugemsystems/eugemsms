@@ -9,7 +9,7 @@ use Carbon\CarbonInterface;
 final readonly class CreatePurchaseOrderData
 {
     /**
-     * @param  array<int, array{itemId: ?int, description: string, quantityOrdered: float, unit: string, unitPriceMinor: int, taxRatePercent: float, taxCategory: string, expenseAccountId: ?int, isCapital: bool, storeId: ?int}>  $lines
+     * @param  array<int, array{itemId: ?int, description: string, quantityOrdered: float, unit: string, unitPriceMinor: int, taxRatePercent: float, taxCategory: string, expenseAccountId: ?int, isCapital: bool, storeId: ?int, assetCategoryId?: ?int}>  $lines
      */
     public function __construct(
         public int $schoolId,

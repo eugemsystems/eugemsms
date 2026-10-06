@@ -80,6 +80,12 @@
                     </div>
                     @if ($isCapitalisable)
                         <input type="number" class="form-control mb-2" wire:model="capitalisationThresholdMinor" placeholder="{{ __('Threshold (minor units, optional — falls back to school default)') }}">
+                        <select class="form-select mb-2" wire:model="assetCategoryId">
+                            <option value="">{{ __('Asset category (blank = capitalise manually)') }}</option>
+                            @foreach ($assetCategories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
                     @endif
                     <button type="button" class="btn btn-primary btn-sm" wire:click="create">{{ __('Create item') }}</button>
                 </div>

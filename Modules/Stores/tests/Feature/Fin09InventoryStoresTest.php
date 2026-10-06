@@ -55,7 +55,9 @@ use Modules\Stores\Domain\Events\ReorderLevelBreached;
 use Modules\Stores\Domain\Events\TransferDiscrepancy;
 use Modules\Stores\Domain\Exceptions\InsufficientStockException;
 use Modules\Stores\Domain\Support\EloquentStoreIssuanceProvider;
+use Modules\Stores\Models\AssetCategory;
 use Modules\Stores\Models\ConsumptionAnomaly;
+use Modules\Stores\Models\FixedAsset;
 use Modules\Stores\Models\InventoryItem;
 use Modules\Stores\Models\StockLot;
 use Modules\Stores\Models\StockMovement;
@@ -391,6 +393,39 @@ it('fires ItemCapitalisationDue instead of fabricating a FIN-10 asset when a cap
 
     expect($issued->total_cost_minor)->toBe(60000);
     Event::assertDispatched(ItemCapitalisationDue::class);
+});
+
+it('capitalises an issued item into the fixed-asset register when it names an asset category (BR-FIN-10-002)', function (): void {
+    $f = fin09Fixture();
+    $school = $f['school'];
+    app(CreateNumberingSeriesAction::class)->execute(new CreateNumberingSeriesData(
+        schoolId: $school->id, documentType: 'fixed_asset', pattern: 'FIX/{SEQ:5}',
+    ));
+    $category = AssetCategory::factory()->create([
+        'school_id' => $school->id, 'code' => 'LAB',
+        'asset_account_id' => Account::factory()->for($school)->create(['code' => 'ASSET-LAB'])->id,
+        'accum_depreciation_account_id' => Account::factory()->for($school)->create(['code' => 'ACC-LAB'])->id,
+        'depreciation_expense_account_id' => Account::factory()->for($school)->expense()->create(['code' => 'DEP-LAB'])->id,
+        'disposal_account_id' => Account::factory()->for($school)->create(['code' => 'DISP-LAB'])->id,
+    ]);
+    $item = InventoryItem::factory()->capitalisable()->for($school)->create(['asset_category_id' => $category->id]);
+    fin09Receive($f, $item, 5, 60000);
+
+    $requisition = app(RequestStoreRequisitionAction::class)->execute(new RequestStoreRequisitionData(
+        schoolId: $school->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        storeId: $f['store']->id, costCentreId: $f['store']->cost_centre_id, purpose: 'Lab equipment issue',
+        requestedByUserId: $f['user']->id, currency: 'USD',
+        lines: [['itemId' => $item->id, 'quantity' => 1, 'unit' => $item->base_unit]],
+    ));
+    app(ApproveStoreRequisitionAction::class)->execute($requisition->id, $f['user']->id);
+    app(IssueStockAction::class)->execute($requisition->id, $f['user']->id);
+
+    $asset = FixedAsset::query()->first();
+    expect($asset)->not->toBeNull()
+        ->and($asset->acquisition_cost_minor)->toBe(60000)
+        ->and($asset->category_id)->toBe($category->id)
+        ->and($asset->acquisition_source)->toBe('stock_issue')
+        ->and($asset->stock_movement_id)->not->toBeNull();
 });
 
 it('issues below zero on hand at last known cost and flags it, only when the store allows negative stock (BR-FIN-09-005)', function (): void {

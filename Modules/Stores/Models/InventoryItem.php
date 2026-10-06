@@ -42,6 +42,7 @@ use Modules\Stores\Database\Factories\InventoryItemFactory;
  * @property int|null $sale_fee_component_id
  * @property bool $is_capitalisable
  * @property int|null $capitalisation_threshold_minor
+ * @property int|null $asset_category_id
  * @property int|null $expense_account_id
  * @property int|null $preferred_supplier_id
  * @property int|null $standard_cost_minor
@@ -65,7 +66,7 @@ class InventoryItem extends Model
         'school_id', 'code', 'name', 'description', 'category_id', 'base_unit', 'purchase_unit',
         'purchase_conversion', 'issue_unit', 'issue_conversion', 'is_perishable', 'requires_batch_tracking',
         'shelf_life_days', 'is_high_risk', 'is_saleable', 'sale_price_minor', 'sale_currency',
-        'sale_fee_component_id', 'is_capitalisable', 'capitalisation_threshold_minor', 'expense_account_id',
+        'sale_fee_component_id', 'is_capitalisable', 'capitalisation_threshold_minor', 'asset_category_id', 'expense_account_id',
         'preferred_supplier_id', 'standard_cost_minor', 'standard_cost_currency', 'barcode', 'image_file_id',
         'is_active', 'created_by', 'updated_by',
     ];

@@ -15,6 +15,7 @@ use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
 use Modules\Stores\Domain\Actions\CreateInventoryItemAction;
 use Modules\Stores\Domain\DataObjects\CreateInventoryItemData;
+use Modules\Stores\Models\AssetCategory;
 use Modules\Stores\Models\InventoryItem;
 use Modules\Stores\Models\ItemCategory;
 
@@ -64,6 +65,8 @@ final class Index extends Component
 
     public ?int $capitalisationThresholdMinor = null;
 
+    public ?int $assetCategoryId = null;
+
     public string $search = '';
 
     public function mount(School $school): void
@@ -102,6 +105,7 @@ final class Index extends Component
                 saleCurrency: $this->isSaleable ? 'USD' : null,
                 isCapitalisable: $this->isCapitalisable,
                 capitalisationThresholdMinor: $this->capitalisationThresholdMinor,
+                assetCategoryId: $this->assetCategoryId,
                 createdByUserId: (int) auth()->id(),
             ));
         } catch (ValidationException $e) {
@@ -113,7 +117,7 @@ final class Index extends Component
         $this->reset([
             'code', 'name', 'purchaseUnit', 'issueUnit', 'shelfLifeDays', 'isPerishable',
             'requiresBatchTracking', 'isHighRisk', 'isSaleable', 'salePriceMinor',
-            'isCapitalisable', 'capitalisationThresholdMinor',
+            'isCapitalisable', 'capitalisationThresholdMinor', 'assetCategoryId',
         ]);
         $this->toast(__('Item created.'));
     }
@@ -129,6 +133,7 @@ final class Index extends Component
         return view('stores::items.index', [
             'items' => $items,
             'categories' => ItemCategory::where('school_id', $this->school->id)->orderBy('name')->get(),
+            'assetCategories' => AssetCategory::where('school_id', $this->school->id)->orderBy('name')->get(),
         ]);
     }
 }

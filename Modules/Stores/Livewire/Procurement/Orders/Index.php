@@ -25,6 +25,7 @@ use Modules\Stores\Domain\Actions\CheckBudgetAvailabilityAction;
 use Modules\Stores\Domain\Actions\ClosePurchaseOrderShortAction;
 use Modules\Stores\Domain\Actions\CreatePurchaseOrderAction;
 use Modules\Stores\Domain\DataObjects\CreatePurchaseOrderData;
+use Modules\Stores\Models\AssetCategory;
 use Modules\Stores\Models\BudgetLine;
 use Modules\Stores\Models\InventoryItem;
 use Modules\Stores\Models\PurchaseOrder;
@@ -58,7 +59,7 @@ final class Index extends Component
 
     public string $orderDate;
 
-    /** @var array<int, array{item_id: string, description: string, quantity_ordered: string, unit: string, unit_price_minor: string, tax_rate_percent: string, tax_category: string, expense_account_id: string, is_capital: bool, store_id: string}> */
+    /** @var array<int, array{item_id: string, description: string, quantity_ordered: string, unit: string, unit_price_minor: string, tax_rate_percent: string, tax_category: string, expense_account_id: string, is_capital: bool, asset_category_id: string, store_id: string}> */
     public array $lines = [];
 
     /** @var array<int, string> purchaseOrderId => reason */
@@ -78,7 +79,7 @@ final class Index extends Component
         $this->lines[] = [
             'item_id' => '', 'description' => '', 'quantity_ordered' => '', 'unit' => 'each',
             'unit_price_minor' => '', 'tax_rate_percent' => '0', 'tax_category' => 'standard',
-            'expense_account_id' => '', 'is_capital' => false, 'store_id' => '',
+            'expense_account_id' => '', 'is_capital' => false, 'asset_category_id' => '', 'store_id' => '',
         ];
     }
 
@@ -151,6 +152,7 @@ final class Index extends Component
                     'taxCategory' => $l['tax_category'],
                     'expenseAccountId' => $l['expense_account_id'] !== '' ? (int) $l['expense_account_id'] : null,
                     'isCapital' => (bool) $l['is_capital'],
+                    'assetCategoryId' => $l['asset_category_id'] !== '' ? (int) $l['asset_category_id'] : null,
                     'storeId' => $l['store_id'] !== '' ? (int) $l['store_id'] : null,
                 ])->all(),
                 createdByUserId: (int) auth()->id(),
@@ -225,6 +227,7 @@ final class Index extends Component
             'budgetLines' => BudgetLine::where('school_id', $this->school->id)->orderBy('id')->limit(200)->get(),
             'items' => InventoryItem::where('school_id', $this->school->id)->orderBy('name')->limit(300)->get(),
             'accounts' => Account::where('school_id', $this->school->id)->where('is_postable', true)->orderBy('code')->get(),
+            'assetCategories' => AssetCategory::where('school_id', $this->school->id)->orderBy('name')->get(),
             'stores' => Store::where('school_id', $this->school->id)->orderBy('code')->get(),
             'estimatedTotalMinor' => $this->estimatedTotalMinor(),
             'budgetAvailableMinor' => $this->budgetAvailableMinor(),

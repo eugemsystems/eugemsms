@@ -96,6 +96,7 @@ final class CreatePurchaseOrderAction extends Action
                     'line_total_minor' => $lineTotal,
                     'expense_account_id' => $line['expenseAccountId'],
                     'is_capital' => $line['isCapital'],
+                    'asset_category_id' => $line['isCapital'] ? ($line['assetCategoryId'] ?? null) : null,
                     'store_id' => $line['storeId'],
                 ]);
             }
