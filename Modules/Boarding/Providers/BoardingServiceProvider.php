@@ -102,11 +102,12 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  * interface (bound to `EloquentLiveOccupancyProvider`) that `BRD-04`
  * will consume. Deliberately deferred: the other five §4
  * pre-population sources (exeat/sick-bay/hospital/fixture/detention/
- * suspension — `BRD-03`/`BRD-06`/`BRD-07`/`OPS-07`, none built yet),
- * actual scheduled-command wiring for `AdvanceEscalationLadderAction`/
- * `CheckRollCallMissedAction` (the actions themselves are real and
- * directly testable against a fixed clock; the cron entry is a
- * deployment step), offline sync queue mechanics (a mobile/API
+ * suspension — `BRD-03`/`BRD-06`/`BRD-07`/`OPS-07`, none built yet).
+ * `AdvanceEscalationLadderAction`/`CheckRollCallMissedAction` are now
+ * wired to run via `serp:run-task` (see the `boarding.advance_escalation_ladders`/
+ * `boarding.check_roll_calls_missed` registrations below — closed in the
+ * project-wide scheduled-jobs gap-closing pass, 2026-10-07). Still
+ * deferred: offline sync queue mechanics (a mobile/API
  * concern — the marking primitive itself is idempotent by design),
  * and `notify_role_id`/`notify_guardians` dispatch fan-out (only
  * `notify_staff_id` actually dispatches a notification in this pass).

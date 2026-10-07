@@ -49,6 +49,15 @@ permission exists to check here, not an oversight.
 
 ## Deliberately not built
 
+**Correction (2026-10-07):** both items below were closed by a later gap-closing pass.
+`Projects\Index` now has a Details panel to name the main contractor
+(`AssignCapitalProjectContractorAction`, active suppliers only) and to add and complete
+milestones (`AddCapitalProjectMilestoneAction`, `CompleteCapitalProjectMilestoneAction`,
+confirmed present in `Modules/Operations/Domain/Actions/`). **Still genuinely not built**: a
+standalone "Contractor management" screen — no `is_contractor` flag or Action anywhere
+classifies a `Supplier` as a contractor in general; `AssignCapitalProjectContractorAction` only
+names one supplier as a specific project's contractor, it doesn't add that classification.
+
 **Contractor management.** The spec's own screen table lists "Contractor
 management | `Ops\Maintenance\Contractors` | `maintenance.manage`", but
 no `is_contractor` flag or Action anywhere distinguishes a contractor
@@ -58,12 +67,8 @@ any `Supplier` for `contractor_supplier_id`. Building a dedicated screen
 would mean inventing a new classification this book's own spec doesn't
 provide.
 
-**Capital project milestones** (`capital_project_milestones`). Same
-"model exists, no Action ever wrote one" gap as the two Actions added
-above, but NOT closed this pass — no acceptance criterion in this book
-names milestone-level behaviour (a stage-payment trigger, a completion
-gate) to build a UI against, and `Projects\Index` is already the largest
-fold in this module. Documented here rather than fabricated.
+**Capital project milestones** (`capital_project_milestones`) — now built, see the
+correction above.
 
 ## Permissions are registered under ONE module code, `MAINTENANCE`
 

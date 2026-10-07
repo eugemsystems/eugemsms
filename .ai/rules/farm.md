@@ -74,17 +74,23 @@ selected unit's own `ProductionOutput` rows where `output_type` is
 `milk`/`meat` — exercised end to end by this pass's own AC-OPS-03-003
 test.
 
-## `fiscal_receipt_id` stays null on every farm sale this screen creates
+## `fiscal_receipt_id` is populated by a separate listener, not by `RecordFarmSaleAction` itself
 
 `Sales\Index` calls `RecordFarmSaleAction` (Book H2 `OPS-03`), which
 posts its own `Dr Cash / Cr Farm Sales Income` journal directly rather
-than routing through `FIN-04`'s receipting engine — and `FIN-13`
-(fiscalisation, Book H3) doesn't exist yet in this codebase, a boundary
-`RecordFarmSaleAction`'s own docblock and `FarmServiceProvider`'s class
-docblock both already name. The spec's own `AC-OPS-03-006` ("the sale is
-fiscalised through FIN-13") is therefore **not literally true today** —
-recorded here explicitly rather than silently improvised past with a
-fabricated fiscal receipt.
+than routing through `FIN-04`'s receipting engine, and leaves
+`fiscal_receipt_id` null at the point it creates the row. **Correction
+(2026-10-07)**: this used to be a genuine gap ("`FIN-13` doesn't exist
+yet"), but `FIN-13` (`Modules\Fiscal`, Book H3) has since been built,
+and a later gap-closing pass added
+`Modules\Fiscal\Domain\Listeners\RouteFarmSaleListener` — registered on
+the already-dispatched `FarmSaleRecorded` event in
+`FiscalServiceProvider::registerListeners()` — which calls
+`RouteReceiptForFiscalisationAction` and sets
+`farm_sales.fiscal_receipt_id` for real. `RecordFarmSaleAction`'s own
+docblock still says the old thing; read it in light of this correction.
+The spec's own `AC-OPS-03-006` ("the sale is fiscalised through
+FIN-13") is now literally true.
 
 ## Permissions are registered under ONE module code, `FARM`
 

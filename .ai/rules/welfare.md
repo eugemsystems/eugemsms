@@ -7,6 +7,14 @@ paths:
 
 ## Book G admin-UI pass: what was built and deliberately deferred, by module
 
+**Correction (2026-10-07):** both "deliberately not built" claims below are stale. A later
+gap-closing pass added `RecordConsultationAction` (Tier 3, complaint/assessment/plan encrypted at
+rest, a visiting practitioner must be named) wired into `Health\Record` — `Consultations` is
+built. Separately, `OPS-07` (Book H2) has since built `Modules\Sport\Models\Fixture`, so the
+sports-fixture clash check for detentions is no longer blocked on a missing table — see
+`ScheduleDetentionAction`'s own corrected docblock for what's still actually open there (the
+cross-module query itself, not the table).
+
 **BRD-06** 🔒 (13 screens, `Livewire/Health/`): `Record` (folds
 "Clinical record" + "Condition register" — Tier 3, gated through
 `ResolveMedicalTierAction` itself, not the permission flag alone),
@@ -17,10 +25,9 @@ Tier 3 clinical detail never reaches it), `SickBay` (folds
 "Observations"), `MedicationRound`, `Prescriptions`, `Consents`,
 `Immunisations`, `Incidents`, `Referrals` (folds make → return →
 charge), `Stock` (folds "Controlled register"), `Outbreak` (new,
-aggregate-only, no Action backs it), `Screenings`. **Deliberately not
-built**: `Consultations` — no Action anywhere creates a `Consultation`
-row (model/migration/factory exist; zero `Consultation::create` calls
-in `Domain/Actions/`).
+aggregate-only, no Action backs it), `Screenings`. `Consultations` is
+now built too — `RecordConsultationAction`, via `Health\Record` (see
+the correction above).
 
 **BRD-07** (14 screens, `Livewire/Behaviour/`, `Sanctions/`,
 `Detentions/`, `Committee/`, `Appeals/`, `Leadership/`): `Behaviour\
@@ -31,7 +38,9 @@ grades". `Board`/`Review`/`Learner` all mask a safeguarding-paused
 (`is_confidential`) record's category/points, showing only "under
 review" (BR-BRD-07-018) — verified by a dedicated test.
 **Deliberately not built**: a sports-fixture clash check for
-detentions (`OPS-07`, not built).
+detentions — `OPS-07` has since built `Fixture`, so this is now only
+missing the cross-module query itself, not the table (see the
+correction above).
 
 **BRD-08** 🔒🔒 (9 screens, `Livewire/Safeguarding/`,
 `Livewire/Counselling/`) — see the dedicated section below before

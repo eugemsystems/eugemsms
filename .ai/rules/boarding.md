@@ -7,12 +7,20 @@ paths:
 
 ## Book F admin-UI pass: what was built and deliberately deferred, by module
 
+**Correction (2026-10-07):** `Allocation\Board`'s note below used to cite `ACA-03
+Timetable\Editor` as a same-shape precedent for staying a plain table, not a drag grid. A later
+gap-closing pass gave `Editor` real drag-to-move, so that's no longer an active precedent — `Board`
+itself is unaffected (confirmed still a plain table, no drag/sortable code), it just stands alone
+as its own simplification now, not a mirrored trade-off. Also stale: BRD-04's "Deliberately not
+built: Cost analytics" below — a later pass built `Catering\Costs` (confirmed via `find`), see that
+module's own note for what it actually covers.
+
 **BRD-01** (9 screens, `Livewire/Hostels/`, `Allocation/`, `Inspections/`,
 `Damages/`): `Hostels\{Structure,Show}`, `Allocation\{Board,Run,Waitlist,
 Constraints,Incompatibilities}`, `Inspections\Index`, `Damages\Index`.
 `Allocation\Board` is a plain occupied/free bed table per hostel, not the
-spec's own drag-to-move visual grid (`ACA-03 Timetable\Editor`'s own
-precedent for the same trade-off) — the real server-side constraint
+spec's own drag-to-move visual grid (a deliberate simplification on its
+own terms) — the real server-side constraint
 check still runs on every submit via `AllocateBedAction`/`MoveLearnerAction`.
 `Board` also folds in the spec's separate "Bed availability" report and
 "Learner allocation" screen (move/end acts directly on the selected
@@ -26,13 +34,19 @@ constraint check as you drag" backend hook, which doesn't exist either.
 Checkpoints}`, `Occupancy\Live`. `Escalation` folds in "Roll call
 points" (the spec's own screen table has no separate points screen —
 a point always references a profile). `Board` also stands in for "Roll
-call history" via a date picker over the same table. **Deliberately
+call history" via a date picker over the same table. **Correction
+(2026-10-07):** `AdvanceEscalationLadderAction`/`CheckRollCallMissedAction`
+are now genuinely scheduled — `BoardingServiceProvider` registers both
+with `ScheduledTaskHandlerRegistry`, and `routes/console.php`'s own
+generic `foreach (ScheduledTaskRegistry::all() as $task) { Schedule::command(...) }`
+gives every registered task a real cron entry automatically, closed in
+the project-wide scheduled-jobs gap-closing pass. **Still deliberately
 not built**: a live countdown timer client-side for the next escalation
 step (the server computes "due" on each `AdvanceEscalationLadderAction`
 call; no websocket/polling push exists to tick a clock in the browser)
-— `Incidents`'s "Check ladder" button is the honest on-demand
-stand-in until `AdvanceEscalationLadderAction`'s own scheduled-command
-wiring exists (see that action's own docblock).
+— `Incidents`'s "Check ladder" button remains a useful on-demand
+read alongside the now-real background schedule, not a stand-in for a
+missing one.
 
 **BRD-03** ⭐ (11 screens, `Livewire/Exeats/`, `Gate/`, `Visitors/`):
 `Exeats\{Index,Show,Approvals,Overdue,Types}`, `Gate\{Terminal,
@@ -51,11 +65,11 @@ exists for it — the quota table is populated lazily, by design, per
 "Menu planner"), `Recipes`, `ServicePlan` ⭐ (folds "Requisition &
 issue" — planning-only mode means there is no real stock to issue/
 return beyond the required-quantity lines this screen already shows),
-`ServingTerminal`, `Dietary`. **Deliberately not built**: Cost
-analytics/Wastage report (no real costing data exists while `FIN-09`
-is unbuilt — `NullStoreIssuanceProvider` (no longer bound; `StoresIssuanceProvider` is) returned unavailable, not
-zero, and a trend screen over permanently-unavailable figures would be
-decorative, not useful), `PublicMenu` (a learner/guardian portal
+`ServingTerminal`, `Dietary`. Cost analytics/wastage is now built — `Catering\Costs` (a later
+gap-closing pass, once `StoresIssuanceProvider` replaced the null provider): cost per meal, per
+week, and over-production (planned servings above those served — this screen's own wastage
+figure); unpriced services are counted apart, never shown as zero. **Still deliberately not
+built**: `PublicMenu` (a learner/guardian portal
 screen — `ACA-06`'s own precedent is to defer portal-facing screens,
 not build an admin stand-in for a different audience), and a dedicated
 meal-attendance-capture screen (`catering.meal_attendance_capture`

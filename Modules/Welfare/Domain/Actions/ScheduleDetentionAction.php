@@ -14,8 +14,10 @@ use Modules\Welfare\Models\Detention;
  * `detention` roll-status stub `BRD-02` §4 left open —
  * `OpenRollCallAction` queries `detentions.status` directly. A clash
  * check against a sports fixture (AC-BRD-07-009) is deliberately not
- * implemented: no fixture/timetable-clash table exists yet
- * (`OPS-07`, not built in this codebase) for this action to query.
+ * implemented: `OPS-07` (Book H2) has since built `Modules\Sport\Models\Fixture`,
+ * so the table this would query now exists, but no cross-module query
+ * against it has been added here yet — a genuine, still-open gap, just
+ * no longer blocked on the table not existing.
  */
 final class ScheduleDetentionAction extends Action
 {

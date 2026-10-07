@@ -12,7 +12,7 @@ file is named `financial-close.md`, not `reporting.md`, purely to
 avoid an unrelated tooling filter on the substring "report" in a
 filename — the module it documents is `Modules/Reporting`.
 
-## What was built (5 screens, `Livewire/{Financial,Close,Schedules,Export}/`) — only screens with a real Action behind them
+## What was built (originally 5 screens, `Livewire/{Financial,Close,Schedules,Export}/` — only screens with a real Action behind them; a later gap-closing pass added 3 more, see the correction below)
 
 `Financial\TrialBalance`, `Financial\IncomeStatement` (folds the
 spec's own separate "Point-in-time" screen in — see below),
@@ -20,10 +20,18 @@ spec's own separate "Point-in-time" screen in — see below),
 screen in — see below), `Schedules\Index` (also hosts
 `ReportDefinition` creation — see below), `Export\Accounting`.
 The spec's own 12-screen table also names BalanceSheet/CashFlow/
-Departmental/Collection/PriorPeriod/Board — none of these has
-a backing Action (verified by grep across
-`Modules\Reporting\Domain\Actions`), so none is built. This module
-ships with exactly 7 Actions total; every one of them has a screen.
+Departmental/Collection/PriorPeriod/Board — at the time this pass
+shipped, none of these had a backing Action, so none was built.
+**Correction (2026-10-07)**: three of those four are now built — a later
+gap-closing pass added `GenerateBalanceSheetAction`/`GenerateCashFlowAction`
+plus `Financial\BalanceSheet`/`Financial\CashFlow` screens, and
+`GenerateDepartmentalReportAction`/`GenerateCollectionReportAction`
+folded into one new `Financial\Management` screen (tabbed
+departmental/collection, per its own docblock) — all confirmed present
+in `Modules/Reporting/Domain/Actions/` and `Modules/Reporting/Livewire/Financial/`.
+Only **PriorPeriod** and **Board** remain genuinely unbuilt — still no
+backing Action for either (confirmed, no match for `PriorPeriod`/`Board`
+anywhere in `Modules/Reporting/Domain/Actions/`).
 
 ## `Financial\IncomeStatement` folds in Point-in-time
 

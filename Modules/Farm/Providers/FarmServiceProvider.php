@@ -51,10 +51,13 @@ use Nwidart\Modules\Support\ModuleServiceProvider;
  *    `CreateReceiptAction` (`FIN-04`) — that action is built around
  *    student-fee receipting (invoice allocation, till sessions) and
  *    doesn't fit an external buyer with no invoice.
- *  - `farm_sales.fiscal_receipt_id` stays a plain forward-reference
- *    column — `FIN-13` (Book H3, fiscalisation/compliance) doesn't
- *    exist yet, the same "not built yet" boundary `OPS-01`/`OPS-02`
- *    used for each other before both existed.
+ *  - `farm_sales.fiscal_receipt_id` was a plain forward-reference
+ *    column at the time this pass shipped — `FIN-13` didn't exist yet,
+ *    the same "not built yet" boundary `OPS-01`/`OPS-02` used for each
+ *    other before both existed. `FIN-13` (`Modules\Fiscal`) has since
+ *    been built, and its `RouteFarmSaleListener` now populates this
+ *    column for real on the already-dispatched `FarmSaleRecorded`
+ *    event — `RecordFarmSaleAction` itself is unaffected.
  *  - `BR-OPS-03-013`'s dipping/vaccination reminders have no schema
  *    to compute a "next due" date from — unlike `OPS-02`'s
  *    `MaintenanceSchedule`, this book's own data model gives farm

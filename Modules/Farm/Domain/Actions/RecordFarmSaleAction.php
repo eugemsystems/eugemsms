@@ -24,8 +24,10 @@ use Modules\Finance\Domain\DataObjects\PostJournalData;
  * external buyer with no invoice, so this posts its own journal the
  * same way `Modules\Utilities\Domain\Actions\PurchasePrepaidTokenAction`
  * does for a cost that doesn't cleanly fit an existing engine either.
- * `fiscal_receipt_id` stays null — `FIN-13` doesn't exist yet, see
- * `FarmSaleRecorded`'s own docblock.
+ * `fiscal_receipt_id` is left null here and populated later, by a
+ * separate listener — `FIN-13` (`Modules\Fiscal`) now exists and its
+ * `RouteFarmSaleListener` sets the column on the already-dispatched
+ * `FarmSaleRecorded` event, see `FarmSaleRecorded`'s own docblock.
  */
 final class RecordFarmSaleAction extends Action
 {

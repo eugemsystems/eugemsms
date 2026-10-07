@@ -30,10 +30,12 @@ use Modules\People\Models\Student;
  * `Allocation\Board` (Book F BRD-01 §5 ⭐, `boarding.allocation.view` to
  * browse, `boarding.allocation.manage` to allocate/move/end). A plain
  * occupied/free bed table per hostel rather than the spec's own
- * drag-to-move visual grid — `ACA-03 Timetable\Editor`'s own precedent
- * for the same trade-off ("a plain add-one-slot form ... not
- * drag-and-drop"). The server-side constraint check is what matters
- * and is real: `AllocateBedAction`/`MoveLearnerAction` run their full
+ * drag-to-move visual grid — a deliberate simplification on its own
+ * terms, not mirroring any other screen's trade-off (a later pass gave
+ * `ACA-03 Timetable\Editor` real drag-to-move, so that screen is no
+ * longer a same-shape precedent for this one). The server-side
+ * constraint check is what matters and is real:
+ * `AllocateBedAction`/`MoveLearnerAction` run their full
  * gender/incompatibility/room-service checks on every submit, with no
  * client-side bypass. Also stands in for the spec's separate "Bed
  * availability" report (the per-hostel free/occupied counts below).

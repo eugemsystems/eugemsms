@@ -28,9 +28,13 @@ No `RenewCertificateAction` exists distinct from
 renewal is registering a fresh device (a brand-new `device_id` ZIMRA
 assigns), and `environment` is fixed forever on an existing device
 per BR-FIN-13-016, so there is no "edit" to give a separate screen.
-Expiry/status show on each device's own row; `CheckCertificateExpiryAction`'s
-own on-demand scan (uncronned, matching this book's other periodic
-scans) is the honest stand-in for a scheduled alert.
+Expiry/status show on each device's own row. **Correction (2026-10-07)**:
+`CheckCertificateExpiryAction` is now genuinely scheduled —
+`fiscal.check_certificate_expiry` registered with
+`ScheduledTaskHandlerRegistry`, given a real cron entry by
+`routes/console.php`'s generic loop, closed in the project-wide
+scheduled-jobs gap-closing pass. It was previously documented here as
+on-demand-only; that's no longer accurate.
 
 ## `Receipts\Retry` also hosts manual credit-note raising
 
