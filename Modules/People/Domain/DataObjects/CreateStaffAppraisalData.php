@@ -12,5 +12,6 @@ final readonly class CreateStaffAppraisalData
         public int $academicYearId,
         public string $cycle,
         public int $appraiserStaffId,
+        public ?int $rubricId = null,
     ) {}
 }

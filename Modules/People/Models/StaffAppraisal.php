@@ -23,6 +23,7 @@ use Modules\People\Database\Factories\StaffAppraisalFactory;
  * @property int $academic_year_id
  * @property string $cycle
  * @property int $appraiser_staff_id
+ * @property int|null $rubric_id
  * @property array<string, mixed>|null $self_assessment
  * @property array<string, mixed>|null $appraiser_assessment
  * @property array<string, mixed>|null $objectives
@@ -44,7 +45,7 @@ class StaffAppraisal extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'school_id', 'staff_id', 'academic_year_id', 'cycle', 'appraiser_staff_id', 'self_assessment',
+        'school_id', 'staff_id', 'academic_year_id', 'cycle', 'appraiser_staff_id', 'rubric_id', 'self_assessment',
         'appraiser_assessment', 'objectives', 'overall_rating', 'development_plan', 'staff_comments',
         'status', 'signed_off_at',
     ];
@@ -81,5 +82,13 @@ class StaffAppraisal extends Model
     public function appraiser(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'appraiser_staff_id');
+    }
+
+    /**
+     * @return BelongsTo<StaffAppraisalRubric, $this>
+     */
+    public function rubric(): BelongsTo
+    {
+        return $this->belongsTo(StaffAppraisalRubric::class, 'rubric_id');
     }
 }

@@ -31,10 +31,36 @@
                                 <option value="annual">{{ __('Annual') }}</option>
                             </select>
                         </div>
+                        <div class="col-12">
+                            <select class="form-select form-select-sm" wire:model="rubricId">
+                                <option value="">{{ __('No rubric (free-text assessment)') }}</option>
+                                @foreach ($rubrics as $rubric)
+                                    <option value="{{ $rubric->id }}">{{ $rubric->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                     <button type="button" class="btn btn-primary btn-sm mt-3" wire:click="create">{{ __('Start appraisal') }}</button>
                 </div>
             </div>
+
+            @if ($canManageRubrics)
+                <div class="card mt-4">
+                    <div class="card-header">{{ __('New appraisal rubric') }}</div>
+                    <div class="card-body">
+                        <input type="text" class="form-control form-control-sm mb-2 @error('rubricName') is-invalid @enderror" wire:model="rubricName" placeholder="{{ __('Rubric name') }}">
+                        <textarea class="form-control form-control-sm @error('rubricCriteria') is-invalid @enderror" wire:model="rubricCriteria" rows="3" placeholder="{{ __("One criterion per line: Name: level one, level two, level three") }}"></textarea>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" wire:click="createRubric">{{ __('Create rubric') }}</button>
+                        @if ($rubrics->isNotEmpty())
+                            <ul class="list-unstyled small text-body-secondary mt-3 mb-0">
+                                @foreach ($rubrics as $rubric)
+                                    <li>{{ $rubric->name }} — {{ count($rubric->criteria) }} {{ __('criteria') }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="col-md-8">

@@ -204,6 +204,7 @@ class PeopleServiceProvider extends ModuleServiceProvider
             'staff.leave_approve' => ['description' => 'Approve, reject, or manage leave types and balances.'],
             'staff.duty_manage' => ['description' => 'Create duty rosters, generate assignments, and approve swaps.'],
             'staff.appraisal_manage' => ['description' => 'Manage staff appraisals through their full cycle.'],
+            'staff.appraisal_rubric_manage' => ['description' => 'Create and manage structured staff appraisal rubrics.'],
             'staff.disciplinary_manage' => ['description' => 'Report, view, and advance staff disciplinary cases.', 'dangerous' => true],
             'staff.document_manage' => ['description' => 'Add staff documents and review the compliance expiry dashboard.'],
             'staff.exit_process' => ['description' => 'Initiate and process a staff member\'s exit.', 'dangerous' => true],

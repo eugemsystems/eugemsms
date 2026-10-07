@@ -6,6 +6,7 @@ namespace Modules\People\Livewire\Appraisal;
 
 use App\Concerns\Toasts;
 use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -26,11 +27,14 @@ use Modules\People\Models\StaffAppraisal;
  * `People\Appraisal\Show` (Book C PPL-04 §5, `people.staff.appraisal_manage`).
  * One screen hosts the whole draft → self_assessment → appraiser_review
  * → meeting_held → signed_off lifecycle's action bar, same shape as
- * `Admissions\Applications\Show`. Assessment content is a single free
- * text note under a `notes` key rather than a structured rubric — the
- * spec's own JSON columns (`self_assessment`/`appraiser_assessment`/
- * `objectives`) accept arbitrary shape and no rubric/criteria list
- * exists anywhere in this backend to render a structured form against.
+ * `Admissions\Applications\Show`. When the appraisal was created against a
+ * `StaffAppraisalRubric` (`People\Appraisal\Index`'s own rubric picker), both
+ * assessments score every one of the rubric's criteria against its own named
+ * levels, validated by `AppraisalRubricScorer` — mirroring
+ * `Academic\Supervision\Observe`'s own criterion-by-criterion form. An
+ * appraisal with no rubric keeps the original single free-text note under a
+ * `notes` key, for backward compatibility with a school that hasn't
+ * configured one.
  */
 #[Title('Appraisal')]
 #[Layout('layouts.app')]
@@ -45,6 +49,12 @@ final class Show extends Component
     public string $selfAssessmentNotes = '';
 
     public string $appraiserAssessmentNotes = '';
+
+    /** @var array<int, string> criterion position => chosen level */
+    public array $selfScores = [];
+
+    /** @var array<int, string> criterion position => chosen level */
+    public array $appraiserScores = [];
 
     public string $overallRating = '';
 
@@ -64,14 +74,20 @@ final class Show extends Component
 
     public function submitSelfAssessment(): void
     {
-        $this->validate(['selfAssessmentNotes' => ['required', 'string']]);
+        $assessment = $this->buildAssessment($this->selfScores, $this->selfAssessmentNotes);
+
+        if ($assessment === null) {
+            $this->addError('selfAssessmentNotes', __('Enter a self-assessment.'));
+
+            return;
+        }
 
         try {
             $this->appraisal = app(SubmitSelfAssessmentAction::class)->execute(new SubmitSelfAssessmentData(
                 appraisalId: $this->appraisal->id,
-                selfAssessment: ['notes' => $this->selfAssessmentNotes],
+                selfAssessment: $assessment,
             ));
-        } catch (DomainException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             $this->toast($e->getMessage(), 'danger');
 
             return;
@@ -82,22 +98,53 @@ final class Show extends Component
 
     public function submitAppraiserAssessment(): void
     {
-        $this->validate(['appraiserAssessmentNotes' => ['required', 'string']]);
+        $assessment = $this->buildAssessment($this->appraiserScores, $this->appraiserAssessmentNotes);
+
+        if ($assessment === null) {
+            $this->addError('appraiserAssessmentNotes', __('Enter an appraiser assessment.'));
+
+            return;
+        }
 
         try {
             $this->appraisal = app(SubmitAppraiserAssessmentAction::class)->execute(new SubmitAppraiserAssessmentData(
                 appraisalId: $this->appraisal->id,
-                appraiserAssessment: ['notes' => $this->appraiserAssessmentNotes],
+                appraiserAssessment: $assessment,
                 overallRating: $this->overallRating !== '' ? $this->overallRating : null,
                 developmentPlan: $this->developmentPlan !== '' ? $this->developmentPlan : null,
             ));
-        } catch (DomainException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             $this->toast($e->getMessage(), 'danger');
 
             return;
         }
 
         $this->toast(__('Appraiser assessment submitted.'));
+    }
+
+    /**
+     * @param  array<int, string>  $scores  criterion position => chosen level
+     * @return array<string, mixed>|null
+     */
+    private function buildAssessment(array $scores, string $notes): ?array
+    {
+        $rubric = $this->appraisal->rubric;
+
+        if ($rubric === null) {
+            return trim($notes) === '' ? null : ['notes' => $notes];
+        }
+
+        $byCriterion = [];
+
+        foreach (array_values($rubric->criteria) as $position => $criterion) {
+            $byCriterion[(string) $criterion['criterion']] = (string) ($scores[$position] ?? '');
+        }
+
+        if (in_array('', $byCriterion, true)) {
+            return null;
+        }
+
+        return ['scores' => $byCriterion, 'comments' => trim($notes) === '' ? null : $notes];
     }
 
     public function recordMeeting(): void

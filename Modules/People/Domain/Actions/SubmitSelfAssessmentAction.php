@@ -7,6 +7,7 @@ namespace Modules\People\Domain\Actions;
 use Modules\Core\Domain\Actions\Action;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\People\Domain\DataObjects\SubmitSelfAssessmentData;
+use Modules\People\Domain\Support\AppraisalRubricScorer;
 use Modules\People\Models\StaffAppraisal;
 
 final class SubmitSelfAssessmentAction extends Action
@@ -21,6 +22,8 @@ final class SubmitSelfAssessmentAction extends Action
                 ['status' => $appraisal->status],
             );
         }
+
+        AppraisalRubricScorer::validate($appraisal->rubric, $data->selfAssessment);
 
         return $this->transaction(function () use ($appraisal, $data): StaffAppraisal {
             $appraisal->update(['self_assessment' => $data->selfAssessment, 'status' => 'self_assessment']);

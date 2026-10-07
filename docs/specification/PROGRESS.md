@@ -304,8 +304,17 @@ Book C's remaining gaps against the spec are real but much narrower than the not
    the merged-away student with a `superseded_by` pointer rather than being rewritten, with new
    Journal entries carrying the reassignment forward. Guardian merge (`MergeGuardiansAction`) has
    no such conflict and is already built.
-2. **The structured appraisal rubric (PPL-04)** — currently free-text notes instead of the spec's
-   weighted rubric. Buildable, no architectural blocker.
+2. ~~**The structured appraisal rubric (PPL-04)**~~ — **built 2026-10-07**. `staff_appraisal_rubrics`
+   (criterion/descriptor-levels JSON, same shape as ACA-11's `observation_rubrics`) plus a
+   `rubric_id` on `staff_appraisals`; `CreateStaffAppraisalRubricAction` validates it the same way
+   `CreateObservationRubricAction` does. `SubmitSelfAssessmentAction`/`SubmitAppraiserAssessmentAction`
+   now score every criterion against its own named levels via the new `AppraisalRubricScorer`
+   (mirroring `RecordLessonObservationAction`'s own validation) when an appraisal has a rubric —
+   an appraisal with none keeps the original free-text `notes` shape, so nothing already built
+   broke. Rubric authoring is folded into `People\Appraisal\Index` rather than a separate screen,
+   matching `Academic\Supervision\Observe`'s own precedent, gated by the new
+   `people.staff.appraisal_rubric_manage` permission. `Appraisal\Show` renders a select-per-criterion
+   form once an appraisal's rubric is set. 6 new tests, People module: 160/160 passing.
 3. **The public application form (PPL-02, BR-PPL-02-001)** — the spec wants an unauthenticated,
    rate-limited, CAPTCHA-protected form that writes directly to `applications` (with document
    upload and a tracking lookup). What's built instead (the gap-closing pass's own "PPL-02 public
@@ -324,7 +333,7 @@ Book C's remaining gaps against the spec are real but much narrower than the not
 | PPL-01 | Student Information System | 🟡 partial — only gap: learner-merge (design decision needed) |
 | PPL-03 | Guardian, Family & Fee Liability | ✅ (no remaining gap found) |
 | PPL-02 | Admissions & Enrolment CRM | 🟡 partial — only gap: the public *application* form (enquiry-only today) |
-| PPL-04 | Staff & Human Resources | 🟡 partial — only gap: the structured appraisal rubric |
+| PPL-04 | Staff & Human Resources | ✅ (structured appraisal rubric built 2026-10-07) |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
 Guardians tabs), Create (with duplicate check), Edit, **Change billing
@@ -383,8 +392,9 @@ a direct query (BR-PPL-04-020). Two screens remain deliberately
 simplified from the spec's own description (self-service folded into
 HR-facing capture; a pick-and-submit allocation form instead of a
 drag-and-drop grid) — see `.ai/rules/people.md` for why each was a
-reasonable cut. **Still not built**: the structured appraisal rubric
-— `Appraisal\{Index,Show}` still take free-text notes.
+reasonable cut. **The structured appraisal rubric was built 2026-10-07**
+— see the correction above for detail; `Appraisal\{Index,Show}` take a
+free-text note only for an appraisal with no rubric now.
 
 ### Book D — Academic Core — 🟡 in progress
 
