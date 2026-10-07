@@ -11,18 +11,23 @@ use Modules\Core\Domain\DataObjects\Install\SyncPermissionCatalogueData;
 use Modules\Core\Domain\DataObjects\Install\UpgradeData;
 use Modules\Core\Domain\DataObjects\Install\UpgradeResult;
 use Modules\Core\Domain\Exceptions\DomainException;
+use Modules\Core\Domain\Registry\ScheduledTaskRegistry;
 use Modules\Core\Domain\Support\Install\UpgradeStatus;
 use Modules\Core\Models\SystemUpgrade;
 use Throwable;
 
 /**
  * ACT-RunUpgrade (Book A CORE-01 §3): pre-backup → migrate → verify →
- * sync permissions → record. BR-CORE-01-011: takes a full backup before
- * running any migration and records the backup reference; an upgrade
- * with no verified backup is refused. The permission-catalogue sync
- * (Part 1.8: "synced to the database on deploy") runs after migrations
- * so any new columns/tables a module's permissions depend on already
- * exist.
+ * sync permissions → sync scheduled tasks → record. BR-CORE-01-011: takes
+ * a full backup before running any migration and records the backup
+ * reference; an upgrade with no verified backup is refused. The
+ * permission-catalogue sync (Part 1.8: "synced to the database on
+ * deploy") and the scheduled-task catalogue sync (CORE-12 §2 — see
+ * `.ai/rules/commands.md` for the gap this closes: `scheduled_tasks` was
+ * previously only ever populated by a one-time Book A migration, so any
+ * task a module registered afterwards was never written to the table an
+ * already-deployed database actually runs against) both run after
+ * migrations, so any new columns/tables either depends on already exist.
  */
 final class RunUpgradeAction extends Action
 {
@@ -60,6 +65,7 @@ final class RunUpgradeAction extends Action
             $ran = array_values(array_filter(explode("\n", Artisan::output())));
 
             $this->syncPermissions->execute(new SyncPermissionCatalogueData);
+            ScheduledTaskRegistry::syncToDatabase();
 
             $upgrade->update([
                 'status' => UpgradeStatus::Completed,

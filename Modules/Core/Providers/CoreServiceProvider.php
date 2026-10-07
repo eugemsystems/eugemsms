@@ -23,6 +23,7 @@ use Modules\Core\Console\Commands\SchedulerHeartbeatCommand;
 use Modules\Core\Console\Commands\SeedDemoDatasetCommand;
 use Modules\Core\Console\Commands\SeedZimbabweCommand;
 use Modules\Core\Console\Commands\SyncPermissionsCommand;
+use Modules\Core\Console\Commands\SyncScheduledTasksCommand;
 use Modules\Core\Console\Commands\UpgradeCommand;
 use Modules\Core\Domain\Contracts\Auth\BreachedPasswordChecker;
 use Modules\Core\Domain\Contracts\Auth\OtpDeliveryChannel;
@@ -143,6 +144,7 @@ class CoreServiceProvider extends ModuleServiceProvider
         SeedZimbabweCommand::class,
         SeedDemoDatasetCommand::class,
         SyncPermissionsCommand::class,
+        SyncScheduledTasksCommand::class,
         SchedulerHeartbeatCommand::class,
         RunHealthChecksCommand::class,
         RunIntegrityChecksCommand::class,

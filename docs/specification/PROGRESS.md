@@ -263,6 +263,19 @@ depends on them. Status per item below; anything not listed as done is still ope
   screen. Deliberately enquiry-only: a full application (documents, fee, verified guardian) is never created anonymously.
 - **FIN-13 audit log.** Every FDMS request/response is written to `fiscal_audit_log` by a driver
   decorator; a failed log write never blocks the fiscal call.
+- **Platform: `scheduled_tasks` table sync gap (2026-10-07).** The root-caused bug in
+  `.ai/rules/commands.md` — `scheduled_tasks` was only ever populated once, by an early Book A
+  migration, so any task a module registered afterwards was never written to the table an
+  already-deployed database actually checks (`StartScheduledTaskRunAction` reads the table, not
+  the in-memory registry) — is fixed: a new migration
+  (`0177_01_01_000001_resync_scheduled_tasks.php`) backfills an already-migrated database, a new
+  `serp:sync-scheduled-tasks` command (mirroring `serp:sync-permissions`) can be run on demand, and
+  `RunUpgradeAction` now calls `ScheduledTaskRegistry::syncToDatabase()` on every upgrade so future
+  modules never fall out of sync again. This retroactively unblocks every module note above that
+  named the sync gap as the reason a job isn't scheduled yet (e.g. INT-02's daily digest, INT-03's
+  nightly risk recompute) **once the wiring itself is added** — the gap closed here is only "the
+  table stays in sync with the code," not "every documented job now has a cron entry"; each
+  module's own still-missing `routes/console.php`/scheduler entry remains open until added.
 
 **Still open (not yet started in this pass)**:
 ACA-04 period-mode marking; FIN-12 board pack (the prior-period view is the

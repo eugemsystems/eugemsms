@@ -8,6 +8,7 @@ use Modules\Core\Domain\Exceptions\DomainException;
 use Modules\Core\Domain\Support\Install\NullBackupProvider;
 use Modules\Core\Domain\Support\Install\UpgradeStatus;
 use Modules\Core\Models\Backup;
+use Modules\Core\Models\ScheduledTask;
 use Modules\Core\Models\SystemUpgrade;
 
 it('refuses to upgrade when no backup provider is configured (BR-CORE-01-011)', function (): void {
@@ -62,4 +63,21 @@ it('runs the upgrade and records it once a backup is verified', function (): voi
     expect($record->status)->toBe(UpgradeStatus::Completed)
         ->and($record->to_version)->toBe('1.1.0')
         ->and($record->backup_reference)->toBe('s3://backups/pre-upgrade.sql');
+});
+
+it('resyncs the scheduled-task catalogue as part of every upgrade, backfilling a stale table (.ai/rules/commands.md)', function (): void {
+    $this->app->bind(BackupProvider::class, fn () => new class implements BackupProvider
+    {
+        public function backup(): BackupResult
+        {
+            return new BackupResult(verified: true, reference: 's3://backups/pre-upgrade.sql');
+        }
+    });
+
+    ScheduledTask::where('key', 'core.scheduler_heartbeat')->delete();
+
+    $result = app(RunUpgradeAction::class)->execute(new UpgradeData(toVersion: '1.1.0'));
+
+    expect($result->status)->toBe(UpgradeStatus::Completed)
+        ->and(ScheduledTask::where('key', 'core.scheduler_heartbeat')->exists())->toBeTrue();
 });
