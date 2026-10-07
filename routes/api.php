@@ -22,6 +22,7 @@ use Modules\Intelligence\Http\Controllers\Api\V1\HardwareController;
 use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 use Modules\People\Http\Controllers\Api\V1\GuardianDocumentsController;
+use Modules\People\Http\Controllers\Api\V1\Public\PublicApplicationsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +54,18 @@ Route::prefix('auth')->middleware(['serp.resolve-tenant', 'throttle:20,1'])->gro
     Route::post('otp/verify', [AuthController::class, 'verifyOtp']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('refresh', [AuthController::class, 'refresh']);
+});
+
+// Book C PPL-02 §6/BR-PPL-02-001: unauthenticated, rate-limited admissions REST surface, distinct
+// from the existing /apply/{slug} Blade form. See PublicApplicationsController's own docblock for
+// what "CAPTCHA-protected" and "signed upload" mean here in the absence of a real CAPTCHA service
+// or a signed-URL-for-anonymous-POST mechanism anywhere else in this codebase.
+Route::prefix('public')->middleware('throttle:10,1')->group(function (): void {
+    Route::get('intakes', [PublicApplicationsController::class, 'intakes']);
+    Route::post('applications', [PublicApplicationsController::class, 'store']);
+    Route::get('applications/track', [PublicApplicationsController::class, 'track']);
+    Route::post('applications/{ulid}/documents', [PublicApplicationsController::class, 'storeDocument']);
+    Route::post('enquiries', [PublicApplicationsController::class, 'storeEnquiry']);
 });
 
 Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {

@@ -148,9 +148,10 @@ depends on them. Status per item below; anything not listed as done is still ope
   (beneficiaries bill the sponsor through a real fee liability; budget envelope and beneficiary
   limit enforced), guardian verification, the contact-update approval queue, E.164 phone
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
-  ranking), interviews and the admissions funnel. 16 new screens. Learner merge and the structured
-  appraisal rubric were later built 2026-10-07 (see the dated notes further down). Still open in
-  Book C: the public application form and `/api/v1` endpoints.
+  ranking), interviews and the admissions funnel. 16 new screens. Learner merge, the structured
+  appraisal rubric, and the public application REST surface were all later built 2026-10-07 (see
+  the dated notes further down). Still open in Book C: the broader `/api/v1` endpoints every other
+  book's spec equally lacks (not Book-C-specific).
 
 - **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
   issued (listeners never block the invoice or receipt); statements render on demand from journal
@@ -324,12 +325,22 @@ Book C's remaining gaps against the spec are real but much narrower than the not
    matching `Academic\Supervision\Observe`'s own precedent, gated by the new
    `people.staff.appraisal_rubric_manage` permission. `Appraisal\Show` renders a select-per-criterion
    form once an appraisal's rubric is set. 6 new tests, People module: 160/160 passing.
-3. **The public application form (PPL-02, BR-PPL-02-001)** — the spec wants an unauthenticated,
-   rate-limited, CAPTCHA-protected form that writes directly to `applications` (with document
-   upload and a tracking lookup). What's built instead (the gap-closing pass's own "PPL-02 public
-   enquiry form") is deliberately narrower: it only ever creates an `enquiries` row, never a full
-   `applications` record with documents/fee/a verified guardian. Buildable, no architectural
-   blocker, but a real chunk of new work (public auth-free routes, CAPTCHA, signed uploads).
+3. ~~**The public application form (PPL-02, BR-PPL-02-001)**~~ — **built 2026-10-07**, as a proper
+   REST surface (`Modules\People\Http\Controllers\Api\V1\Public\PublicApplicationsController`,
+   `routes/api.php` under `/api/v1/public/*`, throttled, no `serp.api`/auth group — see
+   `.ai/rules/v1.md`'s new `Api/V1/Public/*` note for the pattern this establishes): `GET
+   intakes?school={ulid}`, `POST applications` (reuses the existing `SubmitApplicationAction`
+   unchanged — it already only ever wrote to `applications`, confirmed, never `students`, so
+   BR-PPL-02-001's own "it can never touch students" was already satisfied by the backend; this
+   pass only had to expose it publicly), `GET applications/track` (BR-PPL-02-015's own
+   application-number-plus-date-of-birth proof), `POST applications/{ulid}/documents` (same
+   date-of-birth proof substitutes for "signed", since no signed-URL-for-anonymous-POST mechanism
+   exists anywhere else to be consistent with), and `POST enquiries` (a REST-shaped sibling of the
+   existing `/apply/{slug}` Blade form, same `CreateEnquiryAction`). No real CAPTCHA service exists
+   in this project — every write endpoint reuses the honeypot-plus-minimum-fill-time mechanism
+   `PublicEnquiryController` already established. The public `createdByUserId` every write needs is
+   `ResolveSystemActorAction`'s own pre-seeded system user, the same account scheduled jobs use.
+   7 new tests, People module: 171/171 passing.
 4. **Book C's own `/api/v1` surface** (§9 PPL-01, §8 PPL-03, §6 PPL-02, §6 PPL-04 — `/students`,
    `/me/children`, `/me/staff-profile`, `/public/applications`, etc.) — **not Book-C-specific**:
    every book's spec names its own API endpoints, and across the whole project only the Volume 1
@@ -341,7 +352,7 @@ Book C's remaining gaps against the spec are real but much narrower than the not
 |---|---|---|
 | PPL-01 | Student Information System | ✅ (learner-merge built 2026-10-07) |
 | PPL-03 | Guardian, Family & Fee Liability | ✅ (no remaining gap found) |
-| PPL-02 | Admissions & Enrolment CRM | 🟡 partial — only gap: the public *application* form (enquiry-only today) |
+| PPL-02 | Admissions & Enrolment CRM | ✅ (public application REST surface built 2026-10-07) |
 | PPL-04 | Staff & Human Resources | ✅ (structured appraisal rubric built 2026-10-07) |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
@@ -382,10 +393,10 @@ lifecycle screen hosting the whole fee/offer/decline/accept/deposit/
 expire action bar), Convert (preflight, guardian-match preview,
 deposit-credit preview, one confirm), and (built in the later
 gap-closing pass) the Enquiries CRM board, Entrance exams, Interviews
-and Funnel analytics. **Still not built, deliberately**: the public
-*application* form (BR-PPL-02-001) — see the correction above; the
-public *enquiry* form that does exist is a deliberately narrower
-stand-in, not the same thing.
+and Funnel analytics. **The public application form (BR-PPL-02-001)
+was built 2026-10-07** as a REST API, not a Blade staff-facing
+stand-in — see the correction above; the earlier public *enquiry*
+Blade form stays as its own, separate, narrower thing.
 
 **PPL-04 note.** Built: `Staff\{Index,Show,Create,Contracts,
 Disciplinary,Compliance,Qualifications}`, `Staff\ExitProcessing` (not
