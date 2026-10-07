@@ -7,19 +7,26 @@ namespace Modules\Academic\Http\Controllers\Api\V1;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Academic\Domain\Support\SubjectEnrolmentQuery;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\AttendanceSummary;
+use Modules\Academic\Models\LearnerSubjectEnrolment;
+use Modules\Academic\Models\Subject;
+use Modules\Academic\Models\SubjectEnrolmentChange;
+use Modules\Academic\Models\TermSubjectResult;
 use Modules\Academic\Models\Timetable;
 use Modules\Academic\Models\TimetableSlot;
 use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Http\Support\ApiResponse;
+use Modules\Core\Models\Term;
 use Modules\People\Domain\Support\LinkedLearners;
 
 /**
- * `GET /api/v1/students/{student}/attendance` and `.../timetable` (Volume 1 §9.3). Both are read in
- * the session context the request resolved (the current term unless `X-Term-Id` says otherwise),
- * and only for a learner the signed-in guardian is currently linked to. The timetable is the
- * published one: a draft is never shown.
+ * `GET /api/v1/students/{student}/{attendance,timetable,subjects,subject-history,performance-trend}`
+ * (Volume 1 §9.3, Book D ACA-02 §7/ACA-05 §7). Every read here is scoped to a learner the signed-in
+ * guardian (or the learner themselves, via `LinkedLearners`'s own self-link) is currently linked
+ * to. `attendance`/`timetable` read in the session context the request resolved (the current term
+ * unless `X-Term-Id` says otherwise); the timetable is the published one, a draft is never shown.
  */
 final class StudentAcademicsController
 {
@@ -99,5 +106,79 @@ final class StudentAcademicsController
                 'venue' => $slot->venue?->name,
             ])->values()->all(),
         ]);
+    }
+
+    public function subjects(Request $request, string $student, LinkedLearners $linked): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $link = $linked->linkFor($user, $student);
+        abort_if($link === null, 404);
+
+        $termId = (int) SessionContext::termId();
+
+        $enrolments = LearnerSubjectEnrolment::query()
+            ->where('student_id', $link->student_id)
+            ->where('term_id', $termId)
+            ->where('status', 'active')
+            ->with('subject:id,ulid,name')
+            ->get();
+
+        return ApiResponse::ok($enrolments->map(fn (LearnerSubjectEnrolment $e): array => [
+            'subject' => ['id' => $e->subject->ulid, 'name' => $e->subject->name],
+            'effective_from' => $e->effective_from->toDateString(),
+            'enrolment_reason' => $e->enrolment_reason,
+        ])->values()->all());
+    }
+
+    public function subjectHistory(Request $request, string $student, LinkedLearners $linked, SubjectEnrolmentQuery $query): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $link = $linked->linkFor($user, $student);
+        abort_if($link === null, 404);
+
+        $term = Term::query()->findOrFail((int) SessionContext::termId());
+        $changes = $query->changesInTerm($link->student, $term);
+        $subjectNames = Subject::query()->whereIn('id', $changes->pluck('subject_id'))->pluck('name', 'id');
+
+        return ApiResponse::ok($changes->map(fn (SubjectEnrolmentChange $c): array => [
+            'subject' => $subjectNames[$c->subject_id] ?? null,
+            'change_type' => $c->change_type,
+            'effective_from' => $c->effective_from->toDateString(),
+            'reason' => $c->reason,
+        ])->values()->all());
+    }
+
+    public function performanceTrend(Request $request, string $student, LinkedLearners $linked): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $link = $linked->linkFor($user, $student);
+        abort_if($link === null, 404);
+
+        $data = $request->validate(['subject' => ['required', 'string'], 'from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        $subjectId = Subject::query()->where('ulid', $data['subject'])->value('id');
+        abort_if($subjectId === null, 404);
+
+        $results = TermSubjectResult::query()
+            ->where('student_id', $link->student_id)
+            ->where('subject_id', $subjectId)
+            ->whereNotNull('final_percent')
+            ->with('term:id,ulid,name,starts_on')
+            ->get()
+            ->filter(function (TermSubjectResult $r) use ($data): bool {
+                $startsOn = $r->term->starts_on->toDateString();
+
+                return (! isset($data['from']) || $startsOn >= $data['from']) && (! isset($data['to']) || $startsOn <= $data['to']);
+            })
+            ->sortBy(fn (TermSubjectResult $r): string => $r->term->starts_on->toDateString());
+
+        return ApiResponse::ok($results->map(fn (TermSubjectResult $r): array => [
+            'term' => ['id' => $r->term->ulid, 'name' => $r->term->name],
+            'final_percent' => $r->final_percent,
+            'grade' => $r->grade,
+            'class_position' => $r->class_position,
+        ])->values()->all());
     }
 }

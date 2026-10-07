@@ -464,7 +464,7 @@ reasonable cut. **The structured appraisal rubric was built 2026-10-07**
 — see the correction above for detail; `Appraisal\{Index,Show}` take a
 free-text note only for an appraisal with no rubric now.
 
-### Book D — Academic Core — 🟡 in progress (status label was stale below until the 2026-10-07 correction)
+### Book D — Academic Core — 🟡 in progress (one gap left: the statutory attendance register export — see below)
 
 **Correction (2026-10-07).** The ACA-05 note below said report card generation/withholding/
 publication/transcripts, applying a comment to a result, and the weight-shortfall block all "do
@@ -513,11 +513,18 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
    own "tick learners, apply, see who moved" shape. Tests added to `EnrolmentAdminUiTest.php` (3
    tests).
 6. **A statutory-format attendance register export** — no statutory template is specified
-   anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt.
-7. **Book D's own `/api/v1` surface** (ACA-01 §6, ACA-02 §7, ACA-04 §6, ACA-05 §7) — the same
-   "not Book-specific" situation Book C's 4th gap was: every book names its own endpoints, and
-   only the cross-cutting guardian/mobile slice (plus what Book C's own pass just added) exists
-   project-wide. Buildable the same way Book C's was.
+   anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt. The
+   one remaining Book D gap.
+7. ~~**Book D's own `/api/v1` surface**~~ — **built 2026-10-07.** `CurriculumController` (ACA-01
+   §6 catalogue reads + a learner-scoped `validate` preview), `StudentAcademicsController`/
+   `LearnerSelfController` subjects/subject-history/performance-trend/me-shortcuts,
+   `SubjectSelectionsController` (the guardian/learner submission path `Selection\Form`'s own
+   docblock named as unbuilt), `TeacherAttendanceController::sync` (offline-queue batch drain).
+   Several of the spec's literal endpoints were already served under different paths from earlier
+   passes (`teacher/assessments*`, `teacher/classes/*/attendance`, the generic documents download)
+   and were not duplicated — see `.ai/rules/academic.md`'s matching note. Teaching-groups/roll
+   deliberately not built (no mobile consumer beyond what already exists). Tests:
+   `BookDApiSurfaceTest.php` (9 tests).
 
 | Module | Screens | Status |
 |---|---|---|

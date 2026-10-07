@@ -70,6 +70,26 @@ Any test fixture that calls `CurriculumFramework::factory()->for($school)->creat
 ## Comment bank management is built; applying a *term-level* comment is too — a *per-subject* one still isn't (corrected 2026-10-07)
 `Results\Comments` manages `comment_banks` entries (create/list) via the existing `CreateCommentBankEntryAction`. This note originally said no Action applies a comment to a result at all — half wrong as of the gap-closing pass: `SetTermResultCommentsAction` exists, is wired into `Livewire/Results/Review.php`, and writes `term_results.class_teacher_comment`/`head_comment` (confirmed reading its own code). What's still genuinely missing: nothing writes `term_subject_results.teacher_comment` (the per-subject comment) — only the two term-level ones are covered.
 
+## Book D's own `/api/v1` surface (ACA-01 §6/ACA-02 §7/ACA-04 §6/ACA-05 §7, built 2026-10-07)
+The same "not Book-specific" gap Book C's own 4th gap already was — closed the same way, by adding
+real controllers/routes rather than rebuilding what already existed under a different name.
+**Already covered before this pass, under different paths than the spec's literal ones** (don't
+duplicate): `teacher/assessments*` already is ACA-05's `academic/assessments*`;
+`teacher/classes/{class}/attendance` already is ACA-04's daily-mode `attendance/sessions*`;
+`students/{student}/documents/{document}/download` already serves a published report card's
+actual file, so ACA-05's `report-cards/{ulid}/download` was never duplicated as a second route.
+**Built this pass**: `CurriculumController` (ACA-01 §6 — frameworks/subjects/subject-groups/
+offerings/selection-rules + a `validate` preview scoped to a linked learner);
+`StudentAcademicsController::{subjects,subjectHistory,performanceTrend}` and the equivalent
+`LearnerSelfController::{subjects,attendance,results}` "me/" shortcuts (mirroring
+`LearnerProfileController::show()`'s own `/me/profile` precedent); `SubjectSelectionsController`
+(submit/show/approve/preview-fee — the public/portal submission path `Selection\Form`'s own
+docblock names as unbuilt; school approval/allocation stay staff-only, no API route for either);
+`TeacherAttendanceController::sync` (the offline-queue batch drain, `markOneClass()` extracted as
+the shared primitive `mark()` and `sync()` both call). **Deliberately not built**: ACA-02's
+teaching-groups/roll endpoints — no mobile consumer for "my teaching groups" exists in this pass
+beyond what `teacher/assessments`/`teacher/classes` already expose for marking.
+
 ## Book D admin-UI pass: what was built and deliberately deferred, by module
 **ACA-01** (8 screens): `Curriculum\{Frameworks,Subjects,Groups,Offerings,Pathways,SelectionRules,Prerequisites,Syllabi}` — all list+create. `SelectionRules` carries the live rule tester (runs the real `SubjectSelectionRuleEngine::validate()`, the same class `EnrolSubjectAction` calls). `Frameworks` carries the `requires_confirmation` banner, read live from `subject_selection_rules` each render rather than a persisted "marked reviewed this year" flag — no column exists for that, so the banner shows every time instead of being dismissable per BR-ACA-01-009's letter (a deliberate simplification, not the full rule).
 

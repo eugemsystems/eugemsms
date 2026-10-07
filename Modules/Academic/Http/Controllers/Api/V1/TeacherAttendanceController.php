@@ -27,12 +27,16 @@ use Modules\Core\Http\Support\ApiResponse;
 use Modules\Core\Models\SchoolClass;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * `/api/v1/teacher/*` registers (Volume 1 §9.3, ACA-04). The teacher app lists the classes the
- * signed-in teacher may mark, reads a class register for a day, and submits marks — built for
- * offline: every mark carries its own `idempotency_key`, so a queue replayed after load shedding
- * is harmless, and a mark that conflicts with one already stored is reported back, never overwritten.
+ * `/api/v1/teacher/*` registers and `/api/v1/attendance/sync` (Volume 1 §9.3, ACA-04). The teacher
+ * app lists the classes the signed-in teacher may mark, reads a class register for a day, and
+ * submits marks — built for offline: every mark carries its own `idempotency_key`, so a queue
+ * replayed after load shedding is harmless, and a mark that conflicts with one already stored is
+ * reported back, never overwritten. `sync` is the batch drain for that same offline queue — several
+ * classes/dates in one call, each independent (`markOneClass()` is the shared primitive both
+ * `mark()` and `sync()` call).
  *
  * Reach follows `academic.attendance.mark`: school or section reach sees every active class; anything
  * narrower sees the classes the teacher is class teacher of or teaches on the timetable.
@@ -82,7 +86,49 @@ final class TeacherAttendanceController
     {
         /** @var User $user */
         $user = $request->user();
+        $data = $request->validate($this->markValidationRules());
+
+        return ApiResponse::ok($this->markOneClass($user, $class, $data['date'], $data['records'], $resolver, $generate, $mark));
+    }
+
+    /**
+     * `POST /api/v1/attendance/sync` (Book D ACA-04 §6). The offline-queue drain: a teacher's app
+     * may batch up several classes/dates marked while load-shedding kept it offline, and replay
+     * them all in one call once connectivity returns. Each batch is independent — the same
+     * discipline `MarkAttendanceAction` itself already holds per-record (a conflicting resubmission
+     * is reported back, never silently overwritten or allowed to abort the rest) applies per batch
+     * here too: one class/date that's no longer valid (e.g. outside the current term by the time
+     * the queue drains) is reported in `errors`, not thrown, so the remaining batches still apply.
+     */
+    public function sync(Request $request, PermissionScopeResolver $resolver, GenerateAttendanceSessionAction $generate, MarkAttendanceAction $mark): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
         $data = $request->validate([
+            'batches' => ['required', 'array', 'min:1', 'max:50'],
+            'batches.*.class' => ['required', 'string', 'max:40'],
+            ...$this->prefixRules($this->markValidationRules(), 'batches.*.'),
+        ]);
+
+        $results = [];
+
+        foreach ($data['batches'] as $batch) {
+            try {
+                $results[] = ['class' => $batch['class']] + $this->markOneClass($user, $batch['class'], $batch['date'], $batch['records'], $resolver, $generate, $mark);
+            } catch (HttpException $e) {
+                $results[] = ['class' => $batch['class'], 'error' => $e->getMessage()];
+            }
+        }
+
+        return ApiResponse::ok(['results' => $results]);
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function markValidationRules(): array
+    {
+        return [
             'date' => ['required', 'date', 'before_or_equal:today'],
             'records' => ['required', 'array', 'min:1', 'max:200'],
             'records.*.student' => ['required', 'string', 'max:40'],
@@ -91,14 +137,36 @@ final class TeacherAttendanceController
             'records.*.minutes_late' => ['nullable', 'integer', 'min:0', 'max:600'],
             'records.*.note' => ['nullable', 'string', 'max:500'],
             'records.*.idempotency_key' => ['required', 'string', 'max:64'],
-        ]);
+        ];
+    }
 
-        $found = $this->classFor($user, $class, $resolver);
-        $date = Carbon::parse($data['date']);
+    /**
+     * @param  array<string, array<int, string>>  $rules
+     * @return array<string, array<int, string>>
+     */
+    private function prefixRules(array $rules, string $prefix): array
+    {
+        $prefixed = [];
+
+        foreach ($rules as $field => $fieldRules) {
+            $prefixed[$prefix.$field] = $fieldRules;
+        }
+
+        return $prefixed;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $records
+     * @return array{session_status: ?string, conflicts: array<int, array<string, mixed>>}
+     */
+    private function markOneClass(User $user, string $classUlid, string $dateString, array $records, PermissionScopeResolver $resolver, GenerateAttendanceSessionAction $generate, MarkAttendanceAction $mark): array
+    {
+        $found = $this->classFor($user, $classUlid, $resolver);
+        $date = Carbon::parse($dateString);
         abort_unless(SessionContext::isSet() && SessionContext::term() !== null && $date->betweenIncluded(SessionContext::term()->starts_on, SessionContext::term()->ends_on), 422, 'That date is outside the current term.');
 
         $roster = $this->roster($found->id, $date)->keyBy('ulid');
-        abort_if(array_diff(array_column($data['records'], 'student'), $roster->keys()->all()) !== [], 422, 'Some learners are not on this class register.');
+        abort_if(array_diff(array_column($records, 'student'), $roster->keys()->all()) !== [], 422, 'Some learners are not on this class register.');
 
         $session = AttendanceSession::query()->whereDate('session_date', $date)->where('mode', 'daily')->where('class_id', $found->id)->first()
             ?? $generate->execute(new GenerateAttendanceSessionData(
@@ -118,16 +186,16 @@ final class TeacherAttendanceController
             minutesLate: $r['minutes_late'] ?? null,
             note: $r['note'] ?? null,
             idempotencyKey: $r['idempotency_key'],
-        ), $data['records']), $user->id));
+        ), $records), $user->id));
 
-        return ApiResponse::ok([
+        return [
             'session_status' => $session->fresh()?->status,
             'conflicts' => collect($result->conflicts)->map(fn (array $c): array => [
                 'student' => $roster->first(fn (Student $s): bool => $s->id === $c['student_id'])?->ulid,
                 'existing_status' => $c['existing_status'],
                 'attempted_status' => $c['attempted_status'],
             ])->values()->all(),
-        ]);
+        ];
     }
 
     private function classFor(User $user, string $ulid, PermissionScopeResolver $resolver): SchoolClass

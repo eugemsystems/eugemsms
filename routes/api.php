@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Academic\Http\Controllers\Api\V1\CurriculumController;
 use Modules\Academic\Http\Controllers\Api\V1\GuardianLmsController;
+use Modules\Academic\Http\Controllers\Api\V1\LearnerSelfController;
 use Modules\Academic\Http\Controllers\Api\V1\ReportCardsController;
 use Modules\Academic\Http\Controllers\Api\V1\StudentAcademicsController;
+use Modules\Academic\Http\Controllers\Api\V1\SubjectSelectionsController;
 use Modules\Academic\Http\Controllers\Api\V1\TeacherAttendanceController;
 use Modules\Academic\Http\Controllers\Api\V1\TeacherMarksController;
 use Modules\Boarding\Http\Controllers\Api\V1\GuardianExeatsController;
@@ -104,10 +107,30 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
 
     Route::get('students/{student}/attendance', [StudentAcademicsController::class, 'attendance'])->middleware('serp.token-ability:attendance.read');
     Route::get('students/{student}/timetable', [StudentAcademicsController::class, 'timetable'])->middleware('serp.token-ability:timetable.read');
+    Route::get('students/{student}/subjects', [StudentAcademicsController::class, 'subjects'])->middleware('serp.token-ability:subjects.read');
+    Route::get('students/{student}/subject-history', [StudentAcademicsController::class, 'subjectHistory'])->middleware('serp.token-ability:subjects.read');
+    Route::get('students/{student}/performance-trend', [StudentAcademicsController::class, 'performanceTrend'])->middleware('serp.token-ability:performance.read');
+
+    // Book D ACA-01 §6: read-only catalogue reference data for a mobile subject-selection flow.
+    Route::get('academic/frameworks', [CurriculumController::class, 'frameworks'])->middleware('serp.token-ability:catalogue.read');
+    Route::get('academic/subjects', [CurriculumController::class, 'subjects'])->middleware('serp.token-ability:catalogue.read');
+    Route::get('academic/subject-groups', [CurriculumController::class, 'subjectGroups'])->middleware('serp.token-ability:catalogue.read');
+    Route::get('academic/offerings', [CurriculumController::class, 'offerings'])->middleware('serp.token-ability:catalogue.read');
+    Route::get('academic/selection-rules', [CurriculumController::class, 'selectionRules'])->middleware('serp.token-ability:catalogue.read');
+    Route::post('academic/selection-rules/validate', [CurriculumController::class, 'validateSelection'])->middleware('serp.token-ability:catalogue.read');
+
+    // Book D ACA-02 §6/§7: the guardian/learner-facing half of subject selection
+    // `Academic\Selection\Form`'s own docblock names as unbuilt. School approval and allocation
+    // stay staff-only (`Selection\Approvals`) -- no API route for either.
+    Route::post('academic/selections', [SubjectSelectionsController::class, 'store'])->middleware(['serp.token-ability:selections.submit', 'serp.idempotent']);
+    Route::post('academic/selections/preview-fee', [SubjectSelectionsController::class, 'previewFee'])->middleware('serp.token-ability:selections.read');
+    Route::get('academic/selections/{selection}', [SubjectSelectionsController::class, 'show'])->middleware('serp.token-ability:selections.read');
+    Route::post('academic/selections/{selection}/approve', [SubjectSelectionsController::class, 'approve'])->middleware(['serp.token-ability:selections.approve', 'serp.idempotent']);
 
     Route::get('teacher/classes', [TeacherAttendanceController::class, 'classes'])->middleware('serp.token-ability:attendance.mark');
     Route::get('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'register'])->middleware('serp.token-ability:attendance.mark');
     Route::post('teacher/classes/{class}/attendance', [TeacherAttendanceController::class, 'mark'])->middleware('serp.token-ability:attendance.mark');
+    Route::post('attendance/sync', [TeacherAttendanceController::class, 'sync'])->middleware('serp.token-ability:attendance.mark');
 
     Route::get('teacher/assessments', [TeacherMarksController::class, 'index'])->middleware('serp.token-ability:results.enter');
     Route::get('teacher/assessments/{assessment}', [TeacherMarksController::class, 'show'])->middleware('serp.token-ability:results.enter');
@@ -134,6 +157,15 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
 
     // Book C PPL-01 §9: a learner token's own reduced profile.
     Route::get('me/profile', [LearnerProfileController::class, 'show'])->middleware('serp.token-ability:profile.read');
+
+    // Book D ACA-02 §7/ACA-04 §6/ACA-05 §7: the same "me" ergonomic shortcut as /me/profile, for a
+    // learner token that would otherwise need to already know its own ulid to call the
+    // students/{student}/* equivalents above. Teaching-groups/roll (ACA-02 §7) is deliberately not
+    // built -- no mobile consumer for "my teaching groups" exists in this pass beyond what
+    // teacher/assessments and teacher/classes already expose for marking.
+    Route::get('me/subjects', [LearnerSelfController::class, 'subjects'])->middleware('serp.token-ability:subjects.read');
+    Route::get('me/attendance', [LearnerSelfController::class, 'attendance'])->middleware('serp.token-ability:attendance.read');
+    Route::get('me/results', [LearnerSelfController::class, 'results'])->middleware('serp.token-ability:results.read');
 
     // Book C PPL-03 §8: guardian self-service beyond the existing finance/children slice.
     Route::patch('me/contact-details', [GuardianProfileController::class, 'updateContactDetails'])->middleware('serp.token-ability:contact.manage');
