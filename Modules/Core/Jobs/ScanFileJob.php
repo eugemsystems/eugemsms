@@ -41,6 +41,11 @@ final class ScanFileJob implements ShouldQueue
 
         try {
             $target = fopen($tempPath, 'wb');
+
+            if (! is_resource($target)) {
+                throw new RuntimeException("Could not open temp file [{$tempPath}] for file [{$file->id}]'s scan copy.");
+            }
+
             stream_copy_to_stream($stream, $target);
             fclose($target);
             fclose($stream);

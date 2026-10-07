@@ -93,7 +93,7 @@ admin-UI Pest tests → Pint → PHPStan (module, then whole-app) → full suite
 | CORE-07 | Workflow & Approvals Engine | ✅ (`Livewire/Approvals/`) — commit `396533b` |
 | CORE-08 | Audit, Activity & Data Integrity | ✅ (`Livewire/Audit/`) — commit `fe37398` |
 | CORE-09 | Notification Orchestration Bus | ✅ (`Livewire/Notifications/`) — commit `c0461b0` |
-| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9`. Disk-agnostic storage (`DOCUMENTS_DISK`/`PUBLIC_ASSETS_DISK`/`BACKUPS_DISK`, `ScanFileJob` streams) — **verified 2026-10-07**: now that `vendor/` installs cleanly, `ConfiguredDiskTest` actually runs and passes (its own gap: the document-generation case needed a numbering series fixture, now added). **Still open, found by the same pass's whole-app PHPStan run:** `ScanFileJob.php:44-45` passes a `resource|false` (an unchecked `fopen()`) where `stream_copy_to_stream`/`fclose` expect a plain `resource` — not yet fixed. |
+| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9`. Disk-agnostic storage (`DOCUMENTS_DISK`/`PUBLIC_ASSETS_DISK`/`BACKUPS_DISK`, `ScanFileJob` streams) — **verified 2026-10-07**: now that `vendor/` installs cleanly, `ConfiguredDiskTest` actually runs and passes (its own gap: the document-generation case needed a numbering series fixture, now added). The same pass's whole-app PHPStan run found `ScanFileJob.php:44-45` passing a `resource|false` (an unchecked `fopen()`) where `stream_copy_to_stream`/`fclose` expect a plain `resource` — **fixed same day**: guarded with `is_resource()`, matching the read stream's own existing check. |
 | CORE-11 | Data Import & Migration Toolkit | ✅ (`Livewire/Imports/`) — commit `ae47797` |
 | CORE-12 | Jobs, Scheduling & Observability | ✅ (`Livewire/Scheduling/`) — commit `de6e637` |
 | CORE-13 | Backup, Restore & Disaster Recovery | ✅ (`Livewire/Backups/`) — commit `acefbcc` |
@@ -1510,12 +1510,15 @@ downloads were denied, so these tests and the existing suite were only `php -l` 
 `vendor/bin/pest Modules/Intelligence/tests/Feature` passes, including `Int04HardwareApiTest` (one
 test bug found and fixed: it called `RevokeApiClientAction::execute()` with only the client id,
 missing the `revokedByUserId` the Action itself has always required — the real caller,
-`Vendor\Clients\Index`, already passed both; the test alone was wrong). **Still open, found by
-this same verification pass's whole-app PHPStan run, not yet fixed:** `OpenApiDocumentBuilder.php`
-(three `is_string()` calls PHPStan now proves always true, plus a call to the non-existent
-`FormRequest::rules()` at line 215) and `AuthenticateApiClient.php:57` (an `array<int<0,
-max>|string, string>` passed where `array<int, string>` is expected) — both BR-INT-04-010-adjacent
-and worth a dedicated small fix pass. Choices where the spec is ambiguous: (1) API keys are now
+`Vendor\Clients\Index`, already passed both; the test alone was wrong). This same verification
+pass's whole-app PHPStan run also found, and **fixed the same day**: `OpenApiDocumentBuilder.php`
+had three `is_string()` checks PHPStan proved always true given the method's own `@param
+array<int, string>` type (removed as dead code) and a call to `FormRequest::rules()` — a method
+the base class itself never declares, left to each subclass by convention with no interface
+enforcing it — now guarded with `method_exists()` and invoked via a variable method name rather
+than assumed; `AuthenticateApiClient.php:57` passed the variadic `$abilities` through
+`array_values()` first, normalising it to a genuine `array<int, string>` list before handing it to
+`authorised()`. Choices where the spec is ambiguous: (1) API keys are now
 `{client ulid}.{secret}` (previously a bare random string) so the row can be found before the hash is
 checked; keys issued earlier cannot authenticate and must be rotated; (2) the scan body adds
 `target_id` (roll call or checkpoint id) and optional `direction`, which the spec's example omits but
@@ -1798,12 +1801,12 @@ confirming those notes were accurate rather than optimistic:
   derive-FKs-from-a-throwaway-factory trap plus a `term_results` unique-constraint collision — see
   the mobile/parent API gap pass note above for detail); one was a real production bug
   (`SetApiLocale`/`ApiLocaleTest` — see the same note).
-- **`vendor/bin/phpstan analyse` — 7 errors**, all pre-existing and none touched by the fixes above:
-  2 in `Modules/Core/Jobs/ScanFileJob.php` (CORE-10), 4 in
-  `Modules/Intelligence/Domain/Support/OpenApiDocumentBuilder.php` and 1 in
+- **`vendor/bin/phpstan analyse` — 7 errors**, all pre-existing: 2 in `Modules/Core/Jobs/ScanFileJob.php`
+  (CORE-10), 4 in `Modules/Intelligence/Domain/Support/OpenApiDocumentBuilder.php` and 1 in
   `Modules/Intelligence/Http/Middleware/AuthenticateApiClient.php` (both INT-04's public REST
-  surface pass) — see each module's own note above. Left open for a dedicated small pass rather
-  than fixed as a side effect of the scheduled-task/test-verification work.
+  surface pass). **Fixed and re-verified 2026-10-07, same day**: `vendor/bin/phpstan analyse` now
+  reports **0 errors**; the full suite stayed green throughout (2207/2207) — see each module's own
+  note above for what changed in each file.
 
 ## How to keep this file honest
 

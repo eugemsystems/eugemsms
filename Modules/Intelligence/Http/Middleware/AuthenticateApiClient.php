@@ -54,7 +54,7 @@ final class AuthenticateApiClient
         $response = null;
 
         try {
-            $response = $this->throttle($client) ?? $this->authorised($request, $client, $abilities, $next);
+            $response = $this->throttle($client) ?? $this->authorised($request, $client, array_values($abilities), $next);
 
             return $response;
         } catch (SerpException $e) {

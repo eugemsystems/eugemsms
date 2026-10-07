@@ -148,7 +148,7 @@ final class OpenApiDocumentBuilder
         $abilities = [];
 
         foreach ($middleware as $entry) {
-            if (! is_string($entry) || ! str_contains($entry, ':')) {
+            if (! str_contains($entry, ':')) {
                 continue;
             }
 
@@ -168,7 +168,7 @@ final class OpenApiDocumentBuilder
     private function isPublic(array $middleware): bool
     {
         foreach ($middleware as $entry) {
-            if (is_string($entry) && (str_starts_with($entry, 'auth') || str_starts_with($entry, 'serp.api'))) {
+            if (str_starts_with($entry, 'auth') || str_starts_with($entry, 'serp.api')) {
                 return false;
             }
         }
@@ -182,7 +182,7 @@ final class OpenApiDocumentBuilder
     private function isRateLimited(array $middleware): bool
     {
         foreach ($middleware as $entry) {
-            if (is_string($entry) && (str_starts_with($entry, 'throttle') || str_starts_with($entry, 'serp.api-client'))) {
+            if (str_starts_with($entry, 'throttle') || str_starts_with($entry, 'serp.api-client')) {
                 return true;
             }
         }
@@ -211,8 +211,20 @@ final class OpenApiDocumentBuilder
             $type = $parameter->getType();
 
             if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && is_subclass_of($type->getName(), FormRequest::class)) {
+                $instance = new ($type->getName());
+
+                // The base FormRequest class declares no rules() method of its own -- each
+                // subclass defines it by convention, not a contract any interface enforces -- so
+                // this guards the same way a non-FormRequest branch above already does, rather
+                // than assuming every subclass complies.
+                $method = 'rules';
+
+                if (! method_exists($instance, $method)) {
+                    return null;
+                }
+
                 /** @var array<string, mixed> $rules */
-                $rules = (new ($type->getName()))->rules();
+                $rules = $instance->$method();
 
                 return $rules;
             }
