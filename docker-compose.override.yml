@@ -8,6 +8,14 @@ x-dev-app: &dev-app
   image: eugemsms-app:dev
   volumes:
     - .:/var/www/html
+    # vendor/ lives in a named volume, not the bind mount: on Windows/Docker Desktop, Composer's
+    # write-zip-then-unzip dependency extraction races the bind mount's NTFS translation layer
+    # and fails ("cannot find or open tmp-*.zip"). A named volume is real Linux-native storage.
+    - vendor:/var/www/html/vendor
+  # Windows/Docker Desktop bind mounts don't honor the UID/GID build args (NTFS has no
+  # real unix ownership), so the non-root `app` user from the Dockerfile can't write to
+  # the bind-mounted source. Root-only override for dev; production never bind-mounts.
+  user: root
 
 services:
   app:
@@ -36,19 +44,22 @@ services:
       - "${DB_FORWARD_PORT:-3306}:3306"
 
   # Vite dev server (HMR). Run `docker compose run --rm vite npm run build` for a one-off build instead.
+  # Host port is configurable (VITE_PORT) since other local Docker stacks already claim 5173;
+  # internal --port must match so the `hot` file Vite writes resolves to a reachable port.
   vite:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port ${VITE_PORT:-5173}"
     volumes:
       - .:/app
+      - node_modules:/app/node_modules # same race as vendor/ above, for `npm ci`
     ports:
-      - "5173:5173"
+      - "${VITE_PORT:-5173}:${VITE_PORT:-5173}"
 
   mailpit:
     image: axllent/mailpit
     ports:
-      - "8025:8025"
+      - "${MAILPIT_PORT:-8025}:8025"
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 10s
@@ -84,3 +95,7 @@ services:
       RUN_MIGRATIONS: "false"
     command: ["vendor/bin/pest"]
     restart: "no"
+
+volumes:
+  vendor:
+  node_modules:

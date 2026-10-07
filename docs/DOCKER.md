@@ -12,6 +12,13 @@ docker compose up --build        # app http://localhost:8080, mail UI :8025, vit
 First start runs `composer install` (host `vendor/`) and migrations (`RUN_MIGRATIONS` defaults to true in dev).
 Key: `echo "APP_KEY=base64:$(openssl rand -base64 32)"`.
 
+## Local domain via Traefik
+Optional: route `web` through a shared local Traefik proxy (`docker-compose.traefik.yml`) instead of only reaching it via `WEB_PORT`. Useful when running several local Docker stacks that all want port 80/443.
+1. One-time host setup: add `127.0.0.2 eugemsms.local` to your hosts file, register an mkcert cert for `eugemsms.local` in the shared `local-infra/dynamic.yml`, and have that `traefik-local` stack running (it owns the external `local-net` network).
+2. Set `LOCAL_INFRA_CERTS_DIR` in `.env` to that same mkcert certs directory (e.g. `../../GithubRainesProjects/local-infra/certs`). This overlay mounts it into the `vite` container so the dev server can also serve https — without it, the page loads over https but Vite's assets are plain http and the browser blocks them as mixed content (CSS/JS silently missing).
+3. `docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.traefik.yml up -d`
+4. Visit `https://eugemsms.local`. `WEB_PORT` still works in parallel; this overlay only adds a second route in.
+
 ## Tests and static analysis
 ```
 docker compose run --rm app vendor/bin/pest                 # sqlite :memory: per phpunit.xml

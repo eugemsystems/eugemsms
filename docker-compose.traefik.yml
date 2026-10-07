@@ -1,0 +1,36 @@
+# Optional overlay: route eugemsms through the shared local Traefik proxy (see
+# ../../GithubRainesProjects/local-infra) instead of only reaching `web` via WEB_PORT.
+# One-time host setup (see docs/DOCKER.md "Local domain via Traefik"):
+#   - hosts file entry: 127.0.0.2 eugemsms.local
+#   - mkcert cert for eugemsms.local registered in local-infra/dynamic.yml
+#   - local-infra's `traefik-local` stack running (owns the external `local-net` network)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.traefik.yml up -d
+services:
+  web:
+    networks:
+      - default
+      - local-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=local-net"
+      - "traefik.http.routers.eugemsms.rule=Host(`eugemsms.local`)"
+      - "traefik.http.routers.eugemsms.entrypoints=web,websecure"
+      - "traefik.http.routers.eugemsms.tls=true"
+      - "traefik.http.services.eugemsms.loadbalancer.server.port=8080"
+
+  # The browser loads `web` over https here, so the Vite dev server (assets, HMR) needs https
+  # too or Chrome/Firefox block its stylesheet/script as mixed content. Reuses the same mkcert
+  # cert already issued for eugemsms.local -- Vite listens on its own port directly (vite.config.js
+  # server.origin/https), not routed through Traefik, so no extra hostname or cert SAN is needed.
+  vite:
+    volumes:
+      - ${LOCAL_INFRA_CERTS_DIR:?set LOCAL_INFRA_CERTS_DIR to your mkcert certs dir, see docs/DOCKER.md}:/certs:ro
+    environment:
+      VITE_TLS_CERT: /certs/eugemsms.local.pem
+      VITE_TLS_KEY: /certs/eugemsms.local-key.pem
+
+networks:
+  local-net:
+    external: true

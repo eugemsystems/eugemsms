@@ -168,8 +168,11 @@ services:
     image: dxflrs/garage:v2.3.0
     restart: unless-stopped
     environment:
-      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set GARAGE_RPC_SECRET (openssl rand -hex 32)}
-      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set GARAGE_ADMIN_TOKEN (openssl rand -base64 32)}
+      # Required when this profile is active; compose interpolates all services' vars even when
+      # the profile is off, so these must default rather than use `:?` or `docker compose up` fails
+      # for everyone, profile or not. The container itself still needs real values to start.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-}
     # ports:
     #   - "127.0.0.1:3900:3900"
     volumes:
@@ -194,12 +197,14 @@ services:
       garage:
         condition: service_healthy
     environment:
-      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set GARAGE_RPC_SECRET}
-      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set GARAGE_ADMIN_TOKEN}
-      GARAGE_BUCKET: ${AWS_BUCKET:?set AWS_BUCKET}
+      # See the note on the `garage` service above: these must default, not `:?`, so compose
+      # doesn't require them when the `garage` profile isn't active.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-}
+      GARAGE_BUCKET: ${AWS_BUCKET:-}
       GARAGE_KEY_NAME: ${GARAGE_KEY_NAME:-eugemsms}
-      GARAGE_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID (GK + 24 hex chars)}
-      GARAGE_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY (64 hex chars)}
+      GARAGE_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      GARAGE_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       GARAGE_CAPACITY: ${GARAGE_CAPACITY:-10G}
     volumes:
       - ./docker/garage/garage.toml:/etc/garage.toml:ro

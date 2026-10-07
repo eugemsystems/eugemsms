@@ -22,6 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // `app` (php-fpm) is never reachable except from `web` (nginx) over the Docker-internal
+        // network -- port 9000 isn't published to the host in either compose file -- so trusting
+        // every proxy is safe here. Without this, url()/asset()/secure requests all resolve to
+        // http even when a TLS-terminating proxy in front of `web` (Traefik locally, a load
+        // balancer in production) forwards X-Forwarded-Proto: https, which Laravel ignores by
+        // default and browsers then block as mixed content (e.g. Livewire's own <script src>).
+        $middleware->trustProxies(at: '*');
+
         // BR-CORE-05-005: applied to every web request (not just the
         // module route groups that remember to ask for it) so a
         // mandatory-2FA-but-unenrolled user can't reach anything by

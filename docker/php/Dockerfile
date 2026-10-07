@@ -39,6 +39,8 @@ RUN npm run build
 # ---------- dev ----------
 FROM base AS dev
 COPY docker/php/php-dev.ini /usr/local/etc/php/conf.d/zz-app.ini
+# `worker` runs supervisord from this stage too (docker-compose.override.yml builds it with target: dev).
+COPY docker/supervisor /etc/supervisor
 # Source is bind-mounted in dev; entrypoint runs `composer install` if vendor/ is missing. Composer stays in this image.
 USER app
 ENTRYPOINT ["/sbin/tini", "--", "entrypoint.sh"]
