@@ -308,6 +308,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'result.amend' => ['description' => 'Amend a mark on an assessment that has not yet published.', 'dangerous' => true],
             'result.amend_published' => ['description' => 'Amend a mark on an already-published assessment, recomputing class and level positions.', 'dangerous' => true],
             'result.compute' => ['description' => 'Run the results computation and position-recomputation pipeline for a class; publish an assessment.'],
+            'result.moderate' => ['description' => 'Review an assessment\'s mark distribution and outliers, and sign off moderation before publication.'],
             'result.comment' => ['description' => 'Add an entry to the results comment bank, and write class-teacher and head comments on a learner\'s term result.'],
             'result.review' => ['description' => 'Review computed term results and approve them for report card generation.'],
             'report_card.view' => ['description' => 'See generated and withheld report cards.'],

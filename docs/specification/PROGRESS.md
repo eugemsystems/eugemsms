@@ -464,14 +464,48 @@ reasonable cut. **The structured appraisal rubric was built 2026-10-07**
 — see the correction above for detail; `Appraisal\{Index,Show}` take a
 free-text note only for an appraisal with no rubric now.
 
-### Book D — Academic Core — 🟡 in progress
+### Book D — Academic Core — 🟡 in progress (status label was stale below until the 2026-10-07 correction)
+
+**Correction (2026-10-07).** The ACA-05 note below said report card generation/withholding/
+publication/transcripts, applying a comment to a result, and the weight-shortfall block all "do
+not exist in the domain layer at all" — true when written, during the original admin-UI pass, but
+a later "Gap-closing pass (after Book K)" above built all of it except per-assessment moderation.
+Verified directly against the code, not just the note: `GenerateReportCardsAction`,
+`PublishReportCardsAction`, `RegenerateReportCardAction`, `GenerateTranscriptAction`, and
+`SetTermResultCommentsAction` all exist, and `ComputeTermSubjectResultsAction` now genuinely
+throws `AssessmentWeightsIncompleteException` on a weight shortfall. See `.ai/rules/academic.md`'s
+own matching correction for detail. Book D's real remaining gaps, confirmed against the code:
+
+1. ~~**ACA-05 per-assessment moderation (`Marks\Moderate`)**~~ — **built 2026-10-07.**
+   `ModerateAssessmentAction` transitions a plain `Assessment` `submitted` → `moderated`
+   (new `moderated_by`/`moderated_at`/`moderation_note` columns), and `Marks\Moderate` shows a
+   distribution summary (count/average/min/max/std-dev) plus an outlier list (>2 std deviations
+   from the mean), computed inline the same way `Results\Compute`'s own exception report computes
+   its weight totals. Optional, not a forced gate — `PublishAssessmentAction` still accepts a
+   straight `submitted → published` path. `academic.result.moderate` permission (already
+   registered, previously unused). Tests: `AssessmentModerationTest.php` (4 tests).
+2. **ACA-05 per-subject result comment** (`term_subject_results.teacher_comment`) — only the two
+   *term-level* comments (`class_teacher_comment`/`head_comment`, via `SetTermResultCommentsAction`)
+   are covered; nothing writes the per-subject one. Buildable.
+3. **ACA-04 period/subject-mode attendance marking** — `Attendance\Mark` is `daily` mode only;
+   period/subject modes need an ACA-03 timetable slot the screen doesn't yet surface. Buildable
+   now that ACA-03's timetable is complete.
+4. **ACA-02 bulk subject enrolment** — `EnrolSubjectAction` is single-learner only; no bulk Action
+   exists. Buildable, mirroring ACA-02's own `Allocation\Classes`/Boarding's bulk-allocation
+   precedent.
+5. **A statutory-format attendance register export** — no statutory template is specified
+   anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt.
+6. **Book D's own `/api/v1` surface** (ACA-01 §6, ACA-02 §7, ACA-04 §6, ACA-05 §7) — the same
+   "not Book-specific" situation Book C's 4th gap was: every book names its own endpoints, and
+   only the cross-cutting guardian/mobile slice (plus what Book C's own pass just added) exists
+   project-wide. Buildable the same way Book C's was.
 
 | Module | Screens | Status |
 |---|---|---|
 | ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
-| ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial (see note) |
-| ACA-04 | Attendance | 🟡 partial (see note) |
-| ACA-05 | Assessment, Grading & Report Cards | 🟡 partial (see note) |
+| ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial — gap: bulk subject enrolment |
+| ACA-04 | Attendance | 🟡 partial — gaps: period/subject-mode marking, statutory register export |
+| ACA-05 | Assessment, Grading & Report Cards | 🟡 partial — gap: per-subject comment (moderation built 2026-10-07; see correction above — most of this module's old "not built" list is now built) |
 
 **ACA-01 note.** Built: `Curriculum\{Frameworks,Subjects,Groups,Offerings,
 Pathways,SelectionRules,Prerequisites,Syllabi}` — all list+create.
@@ -504,22 +538,18 @@ blank), absence follow-up (recent absences and whether the parent was told) and 
 (`GenerateAttendanceRegisterExportAction`). **Still not built**: period/subject-mode marking in the
 admin UI, and a statutory-format register (no statutory template is specified).
 
-**ACA-05 note.** Built: `Grading\Scales` (contiguity-validated band
+**ACA-05 note.** Built (original pass): `Grading\Scales` (contiguity-validated band
 editor), `Assessment\Types`, `Assessment\Planner` (advisory live
 weight total), `Marks\Entry` ⭐ (folds in submit + publish — one
 lifecycle action bar), `Marks\Amend`, `Results\Compute` (the full
-aggregation → position-recompute pipeline per class, with its own
-weight-shortfall advisory report), `Results\Comments` (comment-bank
-management only — applying a comment to a specific result has no
-Action). **Deliberately not built, because the backend for them
-doesn't exist at all** (verified: no Action anywhere generates,
-withholds, publishes, or moderates a report card/transcript, confirmed
-in `AmendMarkAction`'s own docblock) — Moderation, Report card run,
-Withheld reports, Publication, Transcripts, Performance analytics. Also
-found: `AC-ACA-05-001`'s weight-shortfall **block** is not actually
-implemented anywhere in the domain layer despite being named as
-checked in two Actions' own docblocks — this pass's `Results\Compute`
-computes the shortfall itself and shows it as a non-blocking advisory.
+aggregation → position-recompute pipeline per class), `Results\Comments` (comment-bank
+management only). **Built in the later gap-closing pass** (corrected 2026-10-07, see the Book D
+correction above): `Results\Review` (class/head comments via the real `SetTermResultCommentsAction`,
+approve), `ReportCards\{Run,Withheld,Publish}`, `Results\{Transcripts,Analytics}`; `AC-ACA-05-001`'s
+weight-shortfall block is now real and enforced by `ComputeTermSubjectResultsAction`, not just an
+advisory. **Still genuinely not built**: `Marks\Moderate` (per-assessment moderation — no Action
+exists, unlike ACA-06/07's own moderation actions) and a per-subject
+`term_subject_results.teacher_comment` (only the two term-level comments are covered).
 See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
@@ -868,11 +898,16 @@ Consumption}`. A dedicated test reproduces AC-FIN-09-001 itself
 through the admin screens (two lots at $0.80/$0.95, 150-unit issue,
 one $127.50 journal). **Deliberately not built**: a dedicated screen
 for `RebuildStockBalanceAction` as a dispatchable job trigger (folded
-into `Stock\OnHand` as a per-item "Rebuild" button instead) and any
-scheduled-command wiring for the expiry/reorder/anomaly checks (the
-Actions are real and run on-demand from their own screens; the cron
-entries are a documented backend gap per `StoresServiceProvider`'s own
-docblock). **New gap-filling Action**: `RecordStockTakeVarianceReasonAction`
+into `Stock\OnHand` as a per-item "Rebuild" button instead). **Correction
+(2026-10-07):** the expiry check now has real scheduled wiring —
+`stores.check_expiring_lots` (wrapping `CheckExpiringLotsAction`) is
+registered with `ScheduledTaskHandlerRegistry` and gets a genuine cron
+entry via `routes/console.php`'s generic scheduler loop, closed in the
+project-wide scheduled-jobs gap-closing pass. The reorder
+(`CheckReorderLevelsAction`) and anomaly (`DetectConsumptionAnomalyAction`)
+checks remain genuinely unscheduled — confirmed, neither key is
+registered in `StoresServiceProvider` — still on-demand only, from
+their own screens. **New gap-filling Action**: `RecordStockTakeVarianceReasonAction`
 — `StockTake\Variance`'s own "save reason" control originally wrote
 `StockTakeLine::update()` directly; no Action anywhere in the domain
 layer ever set just that one field even though
@@ -988,8 +1023,14 @@ list+detail action bar — approve/complete/verify/issue parts/record
 labour/record contractor cost all operate on the selected order),
 `Maintenance\Assets\Index` (also stands in for "Asset maintenance
 history"), `Maintenance\Schedules\Index` (preventive schedules + an
-on-demand "Generate due" button, since `GeneratePreventiveWorkOrdersAction`
-has no cron wiring yet), `Maintenance\Reports\Index` (folds the spec's
+on-demand "Generate due" button — **correction (2026-10-07)**:
+`GeneratePreventiveWorkOrdersAction` is now also genuinely scheduled,
+`operations.generate_preventive_work_orders` registered with
+`ScheduledTaskHandlerRegistry` and given a real cron entry by
+`routes/console.php`'s generic loop, closed in the project-wide
+scheduled-jobs gap-closing pass; the on-demand button remains a useful
+trigger alongside it, not a stand-in for a missing one),
+`Maintenance\Reports\Index` (folds the spec's
 separate SLA and Cost analysis screens into one tabbed read),
 `Projects\Index` (capital projects, create/advance/complete). **Three new
 gap-filling Actions**: `CreateMaintenanceAssetAction`,
@@ -1016,7 +1057,13 @@ route+stop creation — the spec names no separate "Zones" screen),
 picked stop's own zone), `Trips\Index` (schedule + depart + odometer),
 `Manifest\Show` (tap-to-board/alight), `Fuel\Index`, `FuelAnomalies\Index`
 ⭐ (never dismissed without a recorded explanation; a "Run 30-day check"
-button for `CheckCumulativeFuelAnomalyAction`, uncronned), `Incidents\Index`,
+button for `CheckCumulativeFuelAnomalyAction` — **correction
+(2026-10-07)**: the Action is now also genuinely scheduled,
+`transport.check_fuel_anomalies` registered with
+`ScheduledTaskHandlerRegistry` and given a real cron entry by
+`routes/console.php`'s generic loop, closed in the project-wide
+scheduled-jobs gap-closing pass; the button remains a useful on-demand
+trigger alongside it), `Incidents\Index`,
 `RouteCosts\Index`. **One new gap-filling Action**: `ReactivateVehicleAction`
 — `GroundVehicleAction` shipped with no reverse, which would have left
 the Compliance monitor's own "grounded vehicles" view a one-way trip.
@@ -1039,12 +1086,19 @@ the cycle `RecordHarvestAction` just updated), `Livestock\Index`
 bare `Transfers`: a real cross-module Livewire component-name collision
 was found and fixed in this pass** (see below), `Sales\Index`,
 `Reports\Index` (folds the spec's separate "Profitability" and "Savings
-report" screens into one tabbed read). **Deliberately not built**: no
-screen fabricates fiscalisation — `farm_sales.fiscal_receipt_id` stays
-null on every row `Sales\Index` creates, since `FIN-13` (Book H3) doesn't
-exist yet (`RecordFarmSaleAction`'s own documented boundary); the spec's
-own AC-OPS-03-006 ("fiscalised through FIN-13") is therefore not
-literally true today, recorded here rather than silently improvised past.
+report" screens into one tabbed read). **Correction (2026-10-07)**: the
+"no screen fabricates fiscalisation" gap below is closed — `FIN-13`
+(Book H3, `Modules\Fiscal`) has since been built, and a later
+gap-closing pass added `Modules\Fiscal\Domain\Listeners\RouteFarmSaleListener`
+on the already-dispatched `FarmSaleRecorded` event (registered in
+`FiscalServiceProvider::registerListeners()`), which calls
+`RouteReceiptForFiscalisationAction` and sets
+`farm_sales.fiscal_receipt_id` — a real, additive listener, not an edit
+to `RecordFarmSaleAction` itself. AC-OPS-03-006 ("fiscalised through
+FIN-13") is now literally true. `RecordFarmSaleAction`'s own docblock
+still says `fiscal_receipt_id` stays null — that line is itself now
+stale and should be read in light of this correction, not taken at face
+value.
 Two dedicated tests prove AC-OPS-03-001 (a 1,440/1,800kg cycle yields
 exactly 80 minor-unit cost per kg) and AC-OPS-03-003 (a kitchen transfer
 of milk from a cow within a recorded withdrawal period is blocked, naming
@@ -1540,8 +1594,14 @@ managers. Churn flags always render their plain-language, weighted, sourced fact
 `intervention_logged` records the move only; no vendor authoring UI for knowledge-base
 articles, product tours or release-note distribution (Actions exist; the spec's screen
 list does not include them); the `/api/v1/support/*`, `/help/articles` and `/tours/*`
-endpoints; no scheduled stall alerts, adoption recompute or SLA checks (on-demand buttons
-only).
+endpoints. **Correction (2026-10-07)**: adoption recompute and SLA checks are now
+genuinely scheduled — `saas.record_module_adoption` (`RecordModuleAdoptionAction`) and
+`saas.check_support_ticket_slas` (`CheckSupportTicketSlaAction`, via
+`ScheduledTaskHandlerRegistry::registerGlobal`) are both registered and given real cron
+entries by `routes/console.php`'s generic loop, closed in the project-wide scheduled-jobs
+gap-closing pass. Onboarding-checklist stall alerts remain genuinely unscheduled
+(`ListStalledOnboardingChecklistsAction` has a registered notification key but no
+matching scheduled-task key) — still on-demand buttons only.
 
 **SAA-02 note.** Vendor screens `Tenants\Index`, `Tenants\Show`, `Rollouts\Index`,
 `Releases\Index`, `Broadcasts\Compose`, `Incidents\Manage` (routes `vendor.*`), the
@@ -1558,7 +1618,11 @@ version format, tenants and uniqueness, and a rolled-back release can no longer 
 tenants, and an empty audience is an error rather than "all"; incidents validate severity,
 components and status and refuse updates once resolved. **Known gaps:** (1) the
 **impersonation entry point** (BR-SAA-02-002) is now built — see the gap-closing pass; (2) `GET /api/v1/vendor/tenants/{id}/health`
-is not built; (3) nightly health snapshots are not scheduled (on-demand recompute only);
+is not built; (3) **correction (2026-10-07)**: nightly health snapshots are now genuinely
+scheduled — `saas.compute_tenant_health` (`ComputeTenantHealthSnapshotAction`, via
+`ScheduledTaskHandlerRegistry::registerGlobal`) registered and given a real cron entry
+by `routes/console.php`'s generic loop, closed in the project-wide scheduled-jobs
+gap-closing pass; on-demand recompute remains available alongside it;
 (4) a tenant's own incident visibility to its administrators is the `Announcements`
 page, not yet a global banner.
 
@@ -1581,7 +1645,11 @@ the tenant (entitlements are written per school) and a second live subscription;
 `RecordTenantPaymentAction` refuses zero, wrong-currency and void-invoice payments;
 `IssueLicenceKeyAction` binds the key to the subscription's own tenant; new
 `SetSubscriptionPlanActiveAction`. **Known gaps:** the `/api/v1/subscription/*` endpoints;
-no scheduled renewal/past-due/usage-metering runs (screens call the Actions on demand); no
+**correction (2026-10-07)**: renewal is now genuinely scheduled —
+`saas.renew_subscriptions` (`RenewSubscriptionAction`, via `ScheduledTaskHandlerRegistry::registerGlobal`)
+registered and given a real cron entry by `routes/console.php`'s generic loop, closed in the
+project-wide scheduled-jobs gap-closing pass; past-due marking and usage-metering remain
+genuinely unscheduled (confirmed, no matching key registered) — still on demand; no
 plan create/edit form (catalogue is read + withdraw/offer); `serp.vendor`'s IP allowlist is
 deliberately permissive while `VENDOR_IP_ALLOWLIST` is unset (existing, documented stance) —
 **set it in every deployed environment**; all vendor staff currently have equal console
@@ -1659,11 +1727,16 @@ registered learner indicators can be re-weighted or disabled; (3)
 a closed flag; (4) `ComputeFeeDefaultRiskAction` clears rows for households
 no longer overdue (the table is one current row per guardian);
 (5) `StaffWellbeingVisibility` limits wellbeing to the staff member and their
-`reports_to_staff_id` line manager — no school-wide override. **Known gap:** no
-nightly recompute is scheduled (BR-INT-03-005, `risk.recompute_hour`) — the
-scheduled-task sync gap in `.ai/rules/commands.md` blocks it; recompute is
-on demand from the screens until that platform fix lands. Likewise the three
-`/api/v1/risk/*` endpoints are not built (API surface is INT-04's pass).
+`reports_to_staff_id` line manager — no school-wide override. **Correction
+(2026-10-07):** the "no nightly recompute is scheduled" gap below is now only
+partially true — `intelligence.compute_fee_default_risk` (`ComputeFeeDefaultRiskAction`)
+is genuinely scheduled, registered with `ScheduledTaskHandlerRegistry` and given a
+real cron entry by `routes/console.php`'s generic loop, closed in the project-wide
+scheduled-jobs gap-closing pass. `ComputeLearnerRiskScoreAction` (withdrawal risk) and
+`RecalculateStaffWellbeingIndicatorAction` (staff wellbeing) remain genuinely
+unscheduled — confirmed, neither key is registered — still on demand from their own
+screens. Likewise the three `/api/v1/risk/*` endpoints are not built (API surface is
+INT-04's pass).
 
 **INT-02 note.** Built the spec's 4 screens — `Executive\HeadDashboard`,
 `Executive\BursarDashboard`, `Executive\Kpis`, `Executive\BoardPack` — under
@@ -1686,9 +1759,12 @@ statement unmodified, staffing, boarding); `academic` and the INT-03 risk
 summary are not offered. One backend hardening: `SetKpiTargetAction` now refuses
 an unregistered KPI key. **Deliberately not built:** the `/api/v1/executive/*`
 endpoints, the daily digest *scheduling* (the Action exists; the cron wiring is
-the backend's deferred gap), a manual warehouse-snapshot trigger (the
-comparative shows "no snapshot yet" until the nightly rebuild runs, and nothing
-schedules it yet), the fuel-anomaly list (no persisted anomaly table exists),
+the backend's deferred gap). **Correction (2026-10-07):** the warehouse-snapshot
+rebuild is now genuinely scheduled — `intelligence.rebuild_warehouse`
+(`RebuildWarehouseSnapshotAction`) registered with `ScheduledTaskHandlerRegistry`,
+given a real cron entry by `routes/console.php`'s generic loop, closed in the
+project-wide scheduled-jobs gap-closing pass; the comparative no longer depends on a
+manual trigger. Still deliberately not built: the fuel-anomaly list (no persisted anomaly table exists),
 and a PDF board pack (it is a JSON file in the vault). Intelligence module: 79
 tests; PHPStan clean.
 

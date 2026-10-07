@@ -45,6 +45,9 @@ use Modules\Core\Models\Term;
  * @property int $created_by
  * @property int|null $submitted_by
  * @property Carbon|null $submitted_at
+ * @property int|null $moderated_by
+ * @property Carbon|null $moderated_at
+ * @property string|null $moderation_note
  * @property int|null $approved_by
  * @property Carbon|null $approved_at
  * @property Carbon|null $published_at
@@ -62,7 +65,7 @@ class Assessment extends Model
         'school_id', 'academic_year_id', 'term_id', 'assessment_type_id', 'subject_id',
         'grade_level_id', 'class_id', 'teaching_group_id', 'title', 'max_mark', 'weight_percent',
         'assessed_on', 'grading_scale_id', 'status', 'created_by', 'submitted_by', 'submitted_at',
-        'approved_by', 'approved_at', 'published_at',
+        'moderated_by', 'moderated_at', 'moderation_note', 'approved_by', 'approved_at', 'published_at',
     ];
 
     protected function casts(): array
@@ -70,6 +73,7 @@ class Assessment extends Model
         return [
             'assessed_on' => 'date',
             'submitted_at' => 'datetime',
+            'moderated_at' => 'datetime',
             'approved_at' => 'datetime',
             'published_at' => 'datetime',
         ];

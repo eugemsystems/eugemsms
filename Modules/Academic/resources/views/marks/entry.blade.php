@@ -7,6 +7,9 @@
         @if (in_array($assessment->status, ['draft', 'open'], true))
             <button type="button" class="btn btn-outline-primary" wire:click="submit">{{ __('Submit') }}</button>
         @endif
+        @if (in_array($assessment->status, ['submitted', 'moderated'], true))
+            <a href="{{ route('academic.marks.moderate', ['school' => $school, 'assessment' => $assessment]) }}" class="btn btn-outline-secondary">{{ __('Moderate') }}</a>
+        @endif
         @if (in_array($assessment->status, ['submitted', 'moderated', 'approved'], true))
             <button type="button" class="btn btn-primary" wire:click="publish" wire:confirm="{{ __('Publish? Marks will feed the aggregation pipeline.') }}">{{ __('Publish') }}</button>
         @endif

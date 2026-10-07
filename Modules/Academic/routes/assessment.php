@@ -8,6 +8,7 @@ use Modules\Academic\Livewire\Assessment\Types;
 use Modules\Academic\Livewire\Grading\Scales;
 use Modules\Academic\Livewire\Marks\Amend;
 use Modules\Academic\Livewire\Marks\Entry;
+use Modules\Academic\Livewire\Marks\Moderate;
 use Modules\Academic\Livewire\ReportCards\Publish as ReportCardsPublish;
 use Modules\Academic\Livewire\ReportCards\Run as ReportCardRun;
 use Modules\Academic\Livewire\ReportCards\Withheld as ReportCardsWithheld;
@@ -30,6 +31,7 @@ Route::middleware(['auth', 'verified'])->prefix('schools/{school}/academic')->na
 
     Route::livewire('assessments/{assessment}/marks', Entry::class)->name('marks.entry');
     Route::livewire('assessments/{assessment}/amend', Amend::class)->name('marks.amend');
+    Route::livewire('assessments/{assessment}/moderate', Moderate::class)->name('marks.moderate');
 
     Route::livewire('results/compute', Compute::class)->name('results.compute');
     Route::livewire('results/comments', Comments::class)->name('results.comments');
