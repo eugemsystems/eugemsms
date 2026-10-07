@@ -5,6 +5,23 @@ paths:
 
 # People
 
+## Correction (2026-10-07): the "deliberately not built" claims below are stale
+Several notes in this file say a table/screen "doesn't exist" or was "genuinely absent from the
+backend" — true when each note was written, during the original admin-UI pass, but a later
+"Gap-closing pass (after Book K)" (see `docs/specification/PROGRESS.md`) built almost all of it:
+`student_documents`/`student_prior_schools`/`student_siblings`/`student_timeline`,
+`households`/`sponsorships`/`guardian_verification`/`guardian_contact_updates`,
+`enquiries`/`entrance_exams`/`entrance_exam_candidates`/`interviews`, and `staff_qualifications`
+all now have real migrations/models/Actions, plus the matching `Livewire/` screens — verified
+directly against the code and against `Modules/People/tests/Feature/Admin/
+BookCCompletionAdminUiTest.php` (154/154 People tests pass). The specific "not built" callouts
+below are left in place as a historical record of what each pass found at the time, but don't
+trust them as current state — check `Modules/People/Livewire/` yourself first. What's genuinely
+still missing, confirmed 2026-10-07: merging duplicate learners (blocked on a design decision —
+the spec wants it to reassign financial records, which the project's append-only-ledger rule
+forbids), the structured appraisal rubric (PPL-04, still free-text), and the public
+*application* form (PPL-02, BR-PPL-02-001 — only a narrower public *enquiry* form exists).
+
 ## PPL-03 is an intentionally minimal Guardian/Liability slice
 Built solely to close FIN-03's billed-party dependency (Book B FIN-03 §3/§4 explicitly needs `fee_liabilities` and the liability resolution algorithm). Built: `guardians`, `student_guardian` (the rights matrix — only `is_primary_contact`/`is_emergency_contact`/`is_fee_responsible`/`may_collect_learner`/`may_view_full_balance`/`has_court_restriction` kept), `fee_liabilities`, `LiabilityResolver` (percentage rules round independently against a shared base — never batched through `Money::allocate()`, so a genuinely partial percentage split correctly falls through to the residual guardian per BR-FIN-03-007), `CreateGuardianAction`/`LinkGuardianToStudentAction`/`DeactivateStudentGuardianAction`/`CreateFeeLiabilityAction`.
 

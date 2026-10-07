@@ -283,84 +283,108 @@ Income statement's reconciling items); COM gaps (survey distribution, the head's
 
 ---
 
-### Book C — People & Organisation — 🟡 in progress
+### Book C — People & Organisation — 🟡 in progress (status label is stale below — see the 2026-10-07 correction)
 
-Backend build order was `PPL-01 → PPL-03 → PPL-02 → PPL-04` (Book C §0.2 —
-"without `PPL-03`, invoices have nobody to bill"); the admin-UI pass
-follows the same order.
+**Correction, 2026-10-07.** The per-module notes below were written during the original admin-UI
+pass and never updated after the later "Gap-closing pass (after Book K)" section above built
+almost everything they call "deliberately not built because the backend doesn't exist" —
+confirmed by checking the actual code, not just this file (per this file's own "how to keep this
+file honest" rule): `Modules/People/Livewire/` now has `Students/{Documents,Siblings,Timeline,
+IdCards,PriorHistory,Duplicates,TransferOut}`, `Guardians/{PortalAccess,Verification,UpdateQueue,
+Duplicates}`, `Households/Index`, `Sponsorships/{Index,Show}`,
+`Admissions/{Enquiries/Board,Exams/Manage,Interviews/Schedule,Reports/Funnel}`, and
+`Staff/Qualifications` — all exercised by `Modules/People/tests/Feature/Admin/
+BookCCompletionAdminUiTest.php`. The full People module suite is green: **154/154 tests pass**.
+Book C's remaining gaps against the spec are real but much narrower than the notes below suggest:
+
+1. **Merging duplicate learners (PPL-01, `ACT-MergeDuplicateStudents`)** — genuinely not built, and
+   not a simple backlog item: the spec asks it to reassign every financial record to the surviving
+   student, which this project's own non-negotiable append-only-ledger rule forbids. **Needs a
+   design decision before any code is written** — e.g., financial records could stay attached to
+   the merged-away student with a `superseded_by` pointer rather than being rewritten, with new
+   Journal entries carrying the reassignment forward. Guardian merge (`MergeGuardiansAction`) has
+   no such conflict and is already built.
+2. **The structured appraisal rubric (PPL-04)** — currently free-text notes instead of the spec's
+   weighted rubric. Buildable, no architectural blocker.
+3. **The public application form (PPL-02, BR-PPL-02-001)** — the spec wants an unauthenticated,
+   rate-limited, CAPTCHA-protected form that writes directly to `applications` (with document
+   upload and a tracking lookup). What's built instead (the gap-closing pass's own "PPL-02 public
+   enquiry form") is deliberately narrower: it only ever creates an `enquiries` row, never a full
+   `applications` record with documents/fee/a verified guardian. Buildable, no architectural
+   blocker, but a real chunk of new work (public auth-free routes, CAPTCHA, signed uploads).
+4. **Book C's own `/api/v1` surface** (§9 PPL-01, §8 PPL-03, §6 PPL-02, §6 PPL-04 — `/students`,
+   `/me/children`, `/me/staff-profile`, `/public/applications`, etc.) — **not Book-C-specific**:
+   every book's spec names its own API endpoints, and across the whole project only the Volume 1
+   §9 cross-cutting guardian/mobile slice has ever been built (see "Known, deliberately-documented
+   backend gaps" above). Building Book C's alone would be inconsistent with every other book being
+   in the same state — this is its own project-wide phase, not a Book C gap specifically.
 
 | Module | Screens | Status |
 |---|---|---|
-| PPL-01 | Student Information System | 🟡 partial (see note) |
-| PPL-03 | Guardian, Family & Fee Liability | 🟡 partial (see note) |
-| PPL-02 | Admissions & Enrolment CRM | 🟡 partial (see note) |
-| PPL-04 | Staff & Human Resources | 🟡 partial (see note) |
+| PPL-01 | Student Information System | 🟡 partial — only gap: learner-merge (design decision needed) |
+| PPL-03 | Guardian, Family & Fee Liability | ✅ (no remaining gap found) |
+| PPL-02 | Admissions & Enrolment CRM | 🟡 partial — only gap: the public *application* form (enquiry-only today) |
+| PPL-04 | Staff & Human Resources | 🟡 partial — only gap: the structured appraisal rubric |
 
 **PPL-01 note.** Built: Directory, Profile (Overview/Academic/Financial/
 Guardians tabs), Create (with duplicate check), Edit, **Change billing
 attribute** (with a real live fee-impact preview, reusing FIN-02's own
 `FeeStructureResolver`/`FeeLineCalculator`), Change status (suspend/
-withdraw/readmit/graduate), and an on-demand Duplicate scanner. Also: a
+withdraw/readmit/graduate), an on-demand Duplicate scanner, and (built in
+the later gap-closing pass) Documents, Prior schooling, Siblings, a real
+Timeline tab, ID cards, and transfer-out with a clearance check. Also: a
 new `PreviewBillingAttributeChangeAction`, a real pre-existing bug fixed
 in `DetectPossibleDuplicatesAction` (date-of-birth matching was silently
 broken on every school), and two documented Livewire gotchas (see
-`.ai/rules/people.md`). **Deliberately not built**, because the backend
-for them doesn't exist at all (verified: no migration) — Documents, Prior
-schooling, Siblings, a real Timeline tab, Class/House allocation, Bulk
-operations, ID cards, Merge duplicates. See `.ai/rules/people.md`'s own
-"PPL-01's admin UI pass found four tables..." note before touching any of
-these — they need new backend work, not a UI retrofit.
+`.ai/rules/people.md`). Class/house allocation is `Academic\Allocation\Bulk`
+(ACA-02), not a PPL-01 screen. **Still not built, deliberately**: merging
+duplicate learners — see the correction above.
 
 **PPL-03 note.** Built: Guardian directory, profile (linked learners +
 active fee-liability rules, both read-only with links out), Create
 (individual or organisation guardian — create-only, no update action
-exists), and the student-scoped relationship editor
+exists), the student-scoped relationship editor
 (`People\Students\Guardians`, replacing `People\Students\Show`'s old
 "Guardians" tab placeholder) backed by `LinkGuardianToStudentAction`/
 `DeactivateStudentGuardianAction`, including the last-fee-responsible-
-guardian refusal (BR-PPL-03-004/022). **Already existed, discovered
-during this pass**: the spec's own "Liability designer" screen was
-built during the FIN-03 pass as `Finance\Liabilities\Editor`
-(`finance.liabilities.editor`) — PPL-03's UI links out to it rather
-than duplicating it. **Deliberately not built**, because the backend
-for them doesn't exist at all (verified: no migration) — Households,
-Sponsorships (index + detail), Portal access, Contact update queue,
-Duplicate review, Verification. See `.ai/rules/people.md` before
-touching any of these.
+guardian refusal (BR-PPL-03-004/022), and (built in the later gap-closing
+pass) Households, Sponsorships, Portal access, the contact-update
+approval queue, Duplicate review and guardian Verification —
+`MergeGuardiansAction` folds a duplicate guardian into another, re-pointing
+every linked table. **Already existed, discovered during the original
+pass**: the spec's own "Liability designer" screen was built during the
+FIN-03 pass as `Finance\Liabilities\Editor` (`finance.liabilities.editor`)
+— PPL-03's UI links out to it rather than duplicating it. No remaining
+gap found against the spec's own screen list.
 
 **PPL-02 note.** Built: Intakes (list+create), Applications (list —
 also stands in for the spec's separate Waitlist screen, Create — the
 staff-facing stand-in for the unbuilt public form, Show — one
 lifecycle screen hosting the whole fee/offer/decline/accept/deposit/
-expire action bar), and Convert (preflight, guardian-match preview,
-deposit-credit preview, one confirm). **Deliberately not built**,
-because the backend for them doesn't exist at all (verified: no
-migration) — Enquiries (the CRM kanban pipeline), Entrance exams,
-Interviews, Funnel analytics. See `.ai/rules/people.md` before
-touching any of these.
+expire action bar), Convert (preflight, guardian-match preview,
+deposit-credit preview, one confirm), and (built in the later
+gap-closing pass) the Enquiries CRM board, Entrance exams, Interviews
+and Funnel analytics. **Still not built, deliberately**: the public
+*application* form (BR-PPL-02-001) — see the correction above; the
+public *enquiry* form that does exist is a deliberately narrower
+stand-in, not the same thing.
 
 **PPL-04 note.** Built: `Staff\{Index,Show,Create,Contracts,
-Disciplinary,Compliance}`, `Staff\ExitProcessing` (not `Exit` —
-`exit` is a reserved PHP keyword and cannot name a class),
+Disciplinary,Compliance,Qualifications}`, `Staff\ExitProcessing` (not
+`Exit` — `exit` is a reserved PHP keyword and cannot name a class),
 `Establishment\Index`, `Allocation\TeacherMatrix`, `Leave\{Request,
-Approvals,Balances}`, `Duty\Rosters`, `Appraisal\{Index,Show}` — 27
-backend Actions' worth of screens, by far the largest module this
-pass has covered. Compensation fields (salary/banking) are absent
-from `Staff\Show`'s response entirely for a viewer without
+Approvals,Balances}`, `Duty\Rosters`, `Appraisal\{Index,Show}` — the
+largest module this pass covered, plus the Qualifications tab added in
+the later gap-closing pass. Compensation fields (salary/banking) are
+absent from `Staff\Show`'s response entirely for a viewer without
 `people.staff.view_compensation` (AC-PPL-04-009); disciplinary case
 detail is only ever read through `ViewDisciplinaryCaseAction`, never
-a direct query (BR-PPL-04-020). **Deliberately not built**, because
-the backend for it doesn't exist at all (verified: no migration) —
-a Qualifications tab (`staff_qualifications`). Three screens
-deliberately simplified from the spec's own description (self-
-service folded into HR-facing capture, a pick-and-submit allocation
-form instead of a drag-and-drop grid, free-text appraisal notes
-instead of a structured rubric) — see `.ai/rules/people.md` for why
-each one was a reasonable cut, not a missed requirement. Book C's
-four modules (PPL-01/02/03/04) are now all built and each carries its
-own documented partial-coverage note — Book C stays 🟡 rather than
-✅ because every module genuinely has a real, named gap, not because
-anything is unfinished-by-oversight.
+a direct query (BR-PPL-04-020). Two screens remain deliberately
+simplified from the spec's own description (self-service folded into
+HR-facing capture; a pick-and-submit allocation form instead of a
+drag-and-drop grid) — see `.ai/rules/people.md` for why each was a
+reasonable cut. **Still not built**: the structured appraisal rubric
+— `Appraisal\{Index,Show}` still take free-text notes.
 
 ### Book D — Academic Core — 🟡 in progress
 
