@@ -22,7 +22,12 @@ use Modules\Intelligence\Http\Controllers\Api\V1\HardwareController;
 use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 use Modules\People\Http\Controllers\Api\V1\GuardianDocumentsController;
+use Modules\People\Http\Controllers\Api\V1\GuardianProfileController;
+use Modules\People\Http\Controllers\Api\V1\LearnerProfileController;
 use Modules\People\Http\Controllers\Api\V1\Public\PublicApplicationsController;
+use Modules\People\Http\Controllers\Api\V1\StaffController;
+use Modules\People\Http\Controllers\Api\V1\StaffSelfServiceController;
+use Modules\People\Http\Controllers\Api\V1\StudentsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -116,4 +121,39 @@ Route::middleware(['serp.api', 'throttle:120,1'])->group(function (): void {
     Route::get('communications/inbox', [InboxController::class, 'index'])->middleware('serp.token-ability:notices.read');
     Route::post('communications/inbox/{notification}/read', [InboxController::class, 'read'])->middleware('serp.token-ability:notices.read');
     Route::get('communications/notices', [NoticesController::class, 'index'])->middleware('serp.token-ability:notices.read');
+
+    // Book C PPL-01 §9/PPL-03 §8: staff-scoped student directory, read-only (no Action exists for
+    // any of these queries, only for the writes that created the rows -- see StudentsController's
+    // own docblock).
+    Route::get('students', [StudentsController::class, 'index'])->middleware('serp.token-ability:students.read');
+    Route::get('students/{student}', [StudentsController::class, 'show'])->middleware('serp.token-ability:students.read');
+    Route::get('students/{student}/timeline', [StudentsController::class, 'timeline'])->middleware('serp.token-ability:students.read');
+    Route::get('students/{student}/enrolments', [StudentsController::class, 'enrolments'])->middleware('serp.token-ability:students.read');
+    Route::get('students/{student}/guardians', [StudentsController::class, 'guardians'])->middleware('serp.token-ability:students.read');
+    Route::get('students/{student}/collection-authorised', [StudentsController::class, 'collectionAuthorised'])->middleware('serp.token-ability:collection.read');
+
+    // Book C PPL-01 §9: a learner token's own reduced profile.
+    Route::get('me/profile', [LearnerProfileController::class, 'show'])->middleware('serp.token-ability:profile.read');
+
+    // Book C PPL-03 §8: guardian self-service beyond the existing finance/children slice.
+    Route::patch('me/contact-details', [GuardianProfileController::class, 'updateContactDetails'])->middleware('serp.token-ability:contact.manage');
+    Route::get('me/notification-preferences', [GuardianProfileController::class, 'notificationPreferences'])->middleware('serp.token-ability:notification_preferences.manage');
+    Route::put('me/notification-preferences', [GuardianProfileController::class, 'updateNotificationPreferences'])->middleware('serp.token-ability:notification_preferences.manage');
+    Route::get('me/liabilities', [GuardianFinanceController::class, 'liabilities'])->middleware('serp.token-ability:fees.read');
+    Route::get('me/statement', [GuardianFinanceController::class, 'statement'])->middleware('serp.token-ability:fees.read');
+
+    // Book C PPL-04 §6: staff self-service. /me/timetable is deliberately not here -- the spec
+    // itself delegates it to ACA-03, which has no /api/v1 surface of its own yet.
+    Route::get('me/staff-profile', [StaffSelfServiceController::class, 'profile'])->middleware('serp.token-ability:staff.self');
+    Route::get('me/allocations', [StaffSelfServiceController::class, 'allocations'])->middleware('serp.token-ability:staff.self');
+    Route::get('me/workload', [StaffSelfServiceController::class, 'workload'])->middleware('serp.token-ability:staff.self');
+    Route::get('me/duties', [StaffSelfServiceController::class, 'duties'])->middleware('serp.token-ability:staff.self');
+    Route::post('me/duties/{assignment}/swap-request', [StaffSelfServiceController::class, 'requestDutySwap'])->middleware(['serp.token-ability:staff.self', 'serp.idempotent']);
+    Route::get('me/leave/balances', [StaffSelfServiceController::class, 'leaveBalances'])->middleware('serp.token-ability:staff.self');
+    Route::get('me/leave/requests', [StaffSelfServiceController::class, 'leaveRequests'])->middleware('serp.token-ability:staff.self');
+    Route::post('me/leave/requests', [StaffSelfServiceController::class, 'storeLeaveRequest'])->middleware(['serp.token-ability:staff.self', 'serp.idempotent']);
+    Route::delete('me/leave/requests/{leaveRequest}', [StaffSelfServiceController::class, 'cancelLeaveRequest'])->middleware('serp.token-ability:staff.self');
+
+    Route::get('staff', [StaffController::class, 'index'])->middleware('serp.token-ability:staff.read');
+    Route::get('staff/{staff}', [StaffController::class, 'show'])->middleware('serp.token-ability:staff.read');
 });

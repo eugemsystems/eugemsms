@@ -149,9 +149,9 @@ depends on them. Status per item below; anything not listed as done is still ope
   limit enforced), guardian verification, the contact-update approval queue, E.164 phone
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
   ranking), interviews and the admissions funnel. 16 new screens. Learner merge, the structured
-  appraisal rubric, and the public application REST surface were all later built 2026-10-07 (see
-  the dated notes further down). Still open in Book C: the broader `/api/v1` endpoints every other
-  book's spec equally lacks (not Book-C-specific).
+  appraisal rubric, the public application REST surface, and Book C's own broader `/api/v1`
+  surface were all later built 2026-10-07 (see the dated notes further down) — Book C is now ✅
+  complete; every other book's own equivalent API-surface gap remains, unaffected by this.
 
 - **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
   issued (listeners never block the invoice or receipt); statements render on demand from journal
@@ -282,7 +282,7 @@ Income statement's reconciling items); COM gaps (survey distribution, the head's
 
 ---
 
-### Book C — People & Organisation — 🟡 in progress (status label is stale below — see the 2026-10-07 correction)
+### Book C — People & Organisation — ✅ complete (2026-10-07 — see the correction below for how it got here)
 
 **Correction, 2026-10-07.** The per-module notes below were written during the original admin-UI
 pass and never updated after the later "Gap-closing pass (after Book K)" section above built
@@ -341,12 +341,60 @@ Book C's remaining gaps against the spec are real but much narrower than the not
    `PublicEnquiryController` already established. The public `createdByUserId` every write needs is
    `ResolveSystemActorAction`'s own pre-seeded system user, the same account scheduled jobs use.
    7 new tests, People module: 171/171 passing.
-4. **Book C's own `/api/v1` surface** (§9 PPL-01, §8 PPL-03, §6 PPL-02, §6 PPL-04 — `/students`,
-   `/me/children`, `/me/staff-profile`, `/public/applications`, etc.) — **not Book-C-specific**:
-   every book's spec names its own API endpoints, and across the whole project only the Volume 1
-   §9 cross-cutting guardian/mobile slice has ever been built (see "Known, deliberately-documented
-   backend gaps" above). Building Book C's alone would be inconsistent with every other book being
-   in the same state — this is its own project-wide phase, not a Book C gap specifically.
+4. ~~**Book C's own `/api/v1` surface**~~ — **built 2026-10-07**. Though noted at the time as "not
+   Book-C-specific" (every book's spec names its own endpoints, and only the Volume 1 §9
+   cross-cutting guardian/mobile slice existed before this), the project owner asked for all four
+   Book C gaps closed, so this one was built as Book C's own slice rather than left open — every
+   other book's equivalent gap remains, unaffected by this. All deliberately thin wrappers around
+   existing Actions/direct reads (confirmed: no Action existed for any of these queries beyond the
+   writes that already created the rows, matching the admin-UI screens' own precedent) — no new
+   backend business logic:
+   - `StudentsController` (PPL-01 §9/PPL-03 §8, staff-scoped): `GET students[?q=]`,
+     `GET students/{ulid}[/timeline|/enrolments|/guardians|/collection-authorised]`. The
+     collection-authorised check reuses `Boarding\Domain\Support\CollectionAuthorityChecker`
+     directly (not `RecordDepartureAction`, which also persists an attempt and mutates the exeat —
+     a GET must stay side-effect-free).
+   - `LearnerProfileController` (PPL-01 §9): `GET me/profile`. Its `PATCH` is deliberately NOT
+     built — confirmed by grep, no Action anywhere lets a learner request their own profile
+     change, unlike a guardian's contact details; inventing one would be new backend logic, not
+     exposing an existing Action, so it stays a documented gap.
+   - `GuardianProfileController` (PPL-03 §8): `PATCH me/contact-details` (queues via the existing
+     `RequestGuardianContactUpdateAction`, approval-gated, never applies immediately — 202, not
+     200), `GET|PUT me/notification-preferences`.
+   - `GuardianFinanceController` additions: `GET me/liabilities`, `GET me/statement` (reuses
+     FIN-03's own `GenerateStatementAction` — `journal_lines` are always keyed by the student's own
+     subledger, confirmed: every `subledger_type` elsewhere in this codebase is `'student'`, never
+     `'guardian'`, so this reads one linked learner's statement at a time behind the same
+     `may_view_full_balance` gate every other balance-bearing guardian endpoint already uses,
+     rather than a single guardian-keyed statement that doesn't exist in the ledger).
+   - `StaffController` (PPL-04 §6): `GET staff[?q=]`, `GET staff/{ulid}` — compensation fields
+     absent entirely without `people.staff.view_compensation`, the same field-is-absent rule
+     `People\Staff\Show` already applies.
+   - `StaffSelfServiceController` (PPL-04 §6): `GET me/staff-profile`, `GET me/allocations[?term=]`,
+     `GET me/workload[?term=]`, `GET me/duties[?from=&to=]`,
+     `POST me/duties/{id}/swap-request`, `GET me/leave/balances`, `GET|POST me/leave/requests`,
+     `DELETE me/leave/requests/{ulid}`. `/me/timetable` is deliberately NOT here: the spec itself
+     delegates it to ACA-03, which has no `/api/v1` surface of its own yet — not a PPL-04 gap.
+     The duty "swap-request" endpoint is honest about a real backend limitation:
+     `SwapDutyAssignmentAction` performs an already-consented swap immediately — there is no
+     separate pending/approval state modelled (`duty_assignments.status` has no such value) — so
+     a self-service "request" here means the caller is asserting consent was already obtained
+     (`both_parties_consented` is a required field, never assumed), not a new approval workflow
+     invented to paper over the gap.
+   - New `Api/V1/Public/*`-style convention established for this slice, documented in
+     `.ai/rules/v1.md`: every mutating write that maps to a `DomainException`-throwing Action is
+     deliberately left uncaught in the controller, so `bootstrap/app.php`'s own global renderer
+     produces the Action's own specific error code — catching and re-wrapping it as a generic
+     `VALIDATION_FAILED` would have thrown away information the client needs.
+   - One real pre-existing documentation gap fixed along the way: `GuardianContactUpdate`'s own
+     docblock was missing `@property Carbon $created_at` despite the column being real and cast —
+     added, not routed around.
+
+   14 new tests across `Modules/People`/`Modules/Finance`; People module: 404/404 passing
+   (combined with Finance). Full suite and whole-app PHPStan re-verified clean.
+
+**Book C — People & Organisation is now ✅ complete.** All four gaps found in the 2026-10-07
+correction above are closed.
 
 | Module | Screens | Status |
 |---|---|---|
@@ -580,8 +628,10 @@ gaps. See `.ai/rules/academic.md`.
 `Damages/` — 9 screens): `Hostels\{Structure,Show}`, `Allocation\{Board,
 Run,Waitlist,Constraints,Incompatibilities}`, `Inspections\Index`,
 `Damages\Index`. `Allocation\Board` is a plain occupied/free bed table
-(not the spec's own drag-to-move visual grid — the same trade-off
-`ACA-03 Timetable\Editor` already made) but also stands in for the
+(not the spec's own drag-to-move visual grid — a deliberate
+simplification on its own terms; `ACA-03 Timetable\Editor` is no longer
+a same-shape precedent for this, since a later pass gave it real
+drag-to-move) but also stands in for the
 spec's separate "Bed availability" report; `Board` folds in the spec's
 own "Learner allocation" screen too (move/end actions operate directly
 on the selected bed's current occupant). **Gender segregation has no
@@ -617,9 +667,10 @@ to record an empty action, confirms it's refused, then confirms a real
 free-text action record succeeds. A second test confirms
 `MissingLearnerIncident::delete()` throws at the model's own database-
 grant-enforcing `booted()` hook, for any caller. `AdvanceEscalationLadderAction`/
-`CheckRollCallMissedAction` have no scheduled-command wiring yet (per
-their own docblocks) — `Incidents`'s "Check ladder" button and
-`RollCall\Board`'s own read are the honest on-demand stand-ins.
+`CheckRollCallMissedAction` are now genuinely scheduled (project-wide scheduled-jobs
+gap-closing pass, 2026-10-07) — registered with `ScheduledTaskHandlerRegistry`, given a real
+cron entry automatically by `routes/console.php`'s own generic scheduler loop. `Incidents`'s
+"Check ladder" button and `RollCall\Board`'s own read remain useful on-demand reads alongside it.
 **New gap-filling Action**: `CreateMovementCheckpointAction` (same
 "no Action ever created one" gap as BRD-01's wing/constraint/
 incompatibility rows).
@@ -728,9 +779,11 @@ showing only "under review" — verified by a dedicated test.
 active trigger category, verified by a dedicated test. `Sanctions\Issue`
 surfaces `IssueSanctionAction`'s own committee/boarding-arrangement
 refusals as toasts, never a silent create. **Deliberately not built**:
-a sports-fixture clash check for detentions — no fixture/timetable
-table exists yet (`OPS-07`), matching `ScheduleDetentionAction`'s own
-documented gap.
+a sports-fixture clash check for detentions — `OPS-07` has since built
+`Fixture`, so the table exists now, but no cross-module query against
+it has been added to `ScheduleDetentionAction` — still a genuine gap,
+just no longer blocked on the table itself (see that Action's own
+corrected docblock).
 
 **BRD-08 note 🔒🔒 — read before touching anything in this module.**
 Built (`Livewire/Safeguarding/`, `Livewire/Counselling/`, 9 screens):

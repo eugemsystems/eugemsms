@@ -23,6 +23,7 @@ use Modules\People\Database\Factories\GuardianContactUpdateFactory;
  * @property int|null $decided_by
  * @property Carbon|null $decided_at
  * @property string|null $decision_note
+ * @property Carbon $created_at
  */
 class GuardianContactUpdate extends Model
 {
