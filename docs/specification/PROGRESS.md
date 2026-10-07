@@ -507,9 +507,11 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
    generated for the date (never generates one itself) and rosters from `TeachingGroupMember` or
    `ClassAllocation` depending on what the session carries. Tests added to
    `AttendanceAdminUiTest.php` (2 tests).
-5. **ACA-02 bulk subject enrolment** — `EnrolSubjectAction` is single-learner only; no bulk Action
-   exists. Buildable, mirroring ACA-02's own `Allocation\Classes`/Boarding's bulk-allocation
-   precedent.
+5. ~~**ACA-02 bulk subject enrolment**~~ — **built 2026-10-07.** `BulkEnrolSubjectsAction` runs the
+   real `EnrolSubjectAction` once per ticked learner (same rule-engine/proration/cutoff checks, no
+   lighter path) and reports a per-learner outcome; `Enrolment\Bulk` mirrors `Allocation\Bulk`'s
+   own "tick learners, apply, see who moved" shape. Tests added to `EnrolmentAdminUiTest.php` (3
+   tests).
 6. **A statutory-format attendance register export** — no statutory template is specified
    anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt.
 7. **Book D's own `/api/v1` surface** (ACA-01 §6, ACA-02 §7, ACA-04 §6, ACA-05 §7) — the same
@@ -520,7 +522,7 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
 | Module | Screens | Status |
 |---|---|---|
 | ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
-| ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial — gap: bulk subject enrolment |
+| ACA-02 | Class, Stream & Subject Enrolment ⭐ | ✅ complete (bulk subject enrolment built 2026-10-07) |
 | ACA-04 | Attendance | 🟡 partial — gap: statutory register export (period/subject-mode marking built 2026-10-07) |
 | ACA-05 | Assessment, Grading & Report Cards | ✅ complete (moderation + per-subject comment both built 2026-10-07; see correction above) |
 
@@ -543,8 +545,9 @@ stands in for the spec's "Subject registers"), `Groups\Allocate`,
 `Selection\Form` (staff-facing stand-in for the unbuilt public/portal
 form), `Selection\Approvals` (one lifecycle screen, guardian-approve/
 school-approve/reject), `Enrolment\BillingCheck` ⭐ (the part-time
-billing reconciliation screen). **Deliberately not built**: Bulk subject
-enrolment (no bulk domain Action exists). See `.ai/rules/academic.md`.
+billing reconciliation screen). **Built this session (2026-10-07)**: `Enrolment\Bulk` —
+`BulkEnrolSubjectsAction` runs the real `EnrolSubjectAction` per ticked learner and reports a
+per-learner outcome, same shape `Allocation\Bulk` already uses. See `.ai/rules/academic.md`.
 
 **ACA-04 note.** Built: `Attendance\{Mark,Daily,Compliance,Chronic,
 ReasonCodes}`. Amendment is folded into `Mark` itself rather than a separate route.

@@ -3,13 +3,17 @@
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Modules\Academic\Domain\Actions\EnrolSubjectAction;
+use Modules\Academic\Domain\DataObjects\EnrolSubjectData;
 use Modules\Academic\Livewire\Allocation\Bulk;
 use Modules\Academic\Livewire\Enrolment\BillingCheck;
+use Modules\Academic\Livewire\Enrolment\Bulk as EnrolmentBulk;
 use Modules\Academic\Livewire\Enrolment\LearnerSubjects;
 use Modules\Academic\Models\ClassAllocation;
 use Modules\Academic\Models\CurriculumFramework;
 use Modules\Academic\Models\LearnerSubjectEnrolment;
 use Modules\Academic\Models\Subject;
+use Modules\Academic\Models\SubjectSelectionRule;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
@@ -126,9 +130,10 @@ it('serves Enrolment\\LearnerSubjects through a real routed request', function (
 it('serves every other Enrolment screen through a real routed request', function (): void {
     $f = enrolmentAdminFixture();
     $student = enrolmentAdminStudent($f);
-    $user = enrolmentAdminUser($f, 'academic.allocation.manage', 'academic.group.view', 'academic.group.manage', 'academic.selection.submit', 'academic.selection.approve', 'academic.enrolment.view');
+    $user = enrolmentAdminUser($f, 'academic.allocation.manage', 'academic.group.view', 'academic.group.manage', 'academic.selection.submit', 'academic.selection.approve', 'academic.enrolment.view', 'academic.enrolment.manage');
 
     $this->actingAs($user)->get(route('academic.allocation.classes', $f['school']))->assertOk();
+    $this->actingAs($user)->get(route('academic.enrolment.bulk', $f['school']))->assertOk();
     $this->actingAs($user)->get(route('academic.groups.index', $f['school']))->assertOk();
     $this->actingAs($user)->get(route('academic.groups.allocate', $f['school']))->assertOk();
     $this->actingAs($user)->get(route('academic.selection.form', [$f['school'], $student]))->assertOk();
@@ -179,6 +184,54 @@ it('surfaces a billing mismatch for a part-time learner whose add has not yet bi
         ->and($row['mismatch'])->toBeTrue()
         ->and($row['actualCount'])->toBe(1)
         ->and($row['billedCount'])->toBe(0);
+});
+
+it('serves Enrolment\\Bulk through a real routed request', function (): void {
+    $f = enrolmentAdminFixture();
+    $user = enrolmentAdminUser($f, 'academic.enrolment.manage');
+
+    $this->actingAs($user)
+        ->get(route('academic.enrolment.bulk', $f['school']))
+        ->assertOk();
+});
+
+it('refuses Enrolment\\Bulk to a user without academic.enrolment.manage', function (): void {
+    $f = enrolmentAdminFixture();
+    $user = enrolmentAdminUser($f);
+
+    Livewire::actingAs($user)->test(EnrolmentBulk::class, ['school' => $f['school']])
+        ->assertForbidden();
+});
+
+it('bulk-enrols many learners into one subject, reporting a per-learner outcome without aborting the batch (BR-ACA-02-017)', function (): void {
+    $f = enrolmentAdminFixture();
+    $user = enrolmentAdminUser($f, 'academic.enrolment.manage');
+
+    SubjectSelectionRule::factory()->for($f['school'])->create([
+        'framework_id' => $f['framework']->id, 'rule_type' => 'max_total', 'max_count' => 1,
+        'severity' => 'block', 'message' => 'A maximum of 1 subject may be selected.',
+    ]);
+
+    $alreadyFull = Subject::factory()->for($f['school'])->create(['framework_id' => $f['framework']->id]);
+    $newSubject = Subject::factory()->for($f['school'])->create(['framework_id' => $f['framework']->id]);
+
+    $a = enrolmentAdminStudent($f, 'FULL_TIME');
+    $b = enrolmentAdminStudent($f, 'FULL_TIME');
+    $blocked = enrolmentAdminStudent($f, 'FULL_TIME');
+
+    app(EnrolSubjectAction::class)->execute(new EnrolSubjectData(
+        studentId: $blocked->id, subjectId: $alreadyFull->id, termId: $f['term']->id, addedByUserId: $f['user']->id,
+    ));
+
+    Livewire::actingAs($user)->test(EnrolmentBulk::class, ['school' => $f['school']])
+        ->set('gradeLevelId', $f['gradeLevel']->id)
+        ->call('selectAll')
+        ->set('subjectId', $newSubject->id)
+        ->call('enrol');
+
+    expect(LearnerSubjectEnrolment::where('student_id', $a->id)->where('subject_id', $newSubject->id)->where('status', 'active')->exists())->toBeTrue()
+        ->and(LearnerSubjectEnrolment::where('student_id', $b->id)->where('subject_id', $newSubject->id)->where('status', 'active')->exists())->toBeTrue()
+        ->and(LearnerSubjectEnrolment::where('student_id', $blocked->id)->where('subject_id', $newSubject->id)->exists())->toBeFalse();
 });
 
 it('places many learners in a class in one step, skipping the wrong grade level, the already-placed and whatever exceeds capacity', function (): void {
