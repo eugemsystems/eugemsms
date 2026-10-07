@@ -500,9 +500,13 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
    `ApplyMarkAmendmentAction`. Mirrors `DiscountAward`'s own CORE-07 wiring (Book K FIN-07). Needs
    a school to configure an approval chain for the `mark_amendment` type first (existing
    chain-builder screen, no special seeding). Tests: `MarkAmendmentApprovalTest.php` (6 tests).
-4. **ACA-04 period/subject-mode attendance marking** — `Attendance\Mark` is `daily` mode only;
-   period/subject modes need an ACA-03 timetable slot the screen doesn't yet surface. Buildable
-   now that ACA-03's timetable is complete.
+4. ~~**ACA-04 period/subject-mode attendance marking**~~ — **built 2026-10-07.** The backend
+   already generated real `mode = 'period'` sessions from the published timetable
+   (`GenerateAttendanceSessionsFromTimetableAction`, Book E ACA-03) with nothing to mark them from.
+   `Attendance\Mark` now has a `daily`/`period` toggle; period mode lists sessions already
+   generated for the date (never generates one itself) and rosters from `TeachingGroupMember` or
+   `ClassAllocation` depending on what the session carries. Tests added to
+   `AttendanceAdminUiTest.php` (2 tests).
 5. **ACA-02 bulk subject enrolment** — `EnrolSubjectAction` is single-learner only; no bulk Action
    exists. Buildable, mirroring ACA-02's own `Allocation\Classes`/Boarding's bulk-allocation
    precedent.
@@ -517,7 +521,7 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
 |---|---|---|
 | ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
 | ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial — gap: bulk subject enrolment |
-| ACA-04 | Attendance | 🟡 partial — gaps: period/subject-mode marking, statutory register export |
+| ACA-04 | Attendance | 🟡 partial — gap: statutory register export (period/subject-mode marking built 2026-10-07) |
 | ACA-05 | Assessment, Grading & Report Cards | ✅ complete (moderation + per-subject comment both built 2026-10-07; see correction above) |
 
 **ACA-01 note.** Built: `Curriculum\{Frameworks,Subjects,Groups,Offerings,
@@ -543,13 +547,13 @@ billing reconciliation screen). **Deliberately not built**: Bulk subject
 enrolment (no bulk domain Action exists). See `.ai/rules/academic.md`.
 
 **ACA-04 note.** Built: `Attendance\{Mark,Daily,Compliance,Chronic,
-ReasonCodes}`. `Mark` is `daily` mode only (period/subject modes need
-an `ACA-03` timetable slot this screen doesn't surface); amendment is
-folded into `Mark` itself rather than a separate route.
+ReasonCodes}`. Amendment is folded into `Mark` itself rather than a separate route.
 Gap-closing pass: `Attendance\Reports` — class report for a range, learner heatmap (unmarked days
 blank), absence follow-up (recent absences and whether the parent was told) and a register CSV
-(`GenerateAttendanceRegisterExportAction`). **Still not built**: period/subject-mode marking in the
-admin UI, and a statutory-format register (no statutory template is specified).
+(`GenerateAttendanceRegisterExportAction`). **Built this session (2026-10-07)**: `Mark`'s
+period/subject mode, listing sessions `ACA-03`'s timetable already generates and rostering from
+`TeachingGroupMember`/`ClassAllocation`. **Still not built**: a statutory-format register (no
+statutory template is specified).
 
 **ACA-05 note.** Built (original pass): `Grading\Scales` (contiguity-validated band
 editor), `Assessment\Types`, `Assessment\Planner` (advisory live

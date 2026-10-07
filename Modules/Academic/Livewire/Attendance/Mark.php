@@ -23,6 +23,7 @@ use Modules\Academic\Models\AttendanceReasonCode;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\AttendanceSession;
 use Modules\Academic\Models\ClassAllocation;
+use Modules\Academic\Models\TeachingGroupMember;
 use Modules\Core\Domain\Exceptions\DomainException;
 use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
@@ -34,13 +35,20 @@ use Modules\People\Models\Student;
 
 /**
  * `Attendance\Mark` (Book D ACA-04 §3/§4 ⭐, `academic.attendance.mark`
- * to mark, `.amend`/`.amend_locked` to amend an existing record). One
- * screen per class per day, `daily` mode only — the spec's own
- * `period`/`subject` modes need a timetable slot to pick, which
- * `ACA-03` supplies but this pass's screen doesn't yet surface; see
- * `.ai/rules/academic.md`. Also hosts amendment inline (status change
- * + mandatory reason) rather than a separate route, since a mark worth
- * amending is always one already visible on this same roster.
+ * to mark, `.amend`/`.amend_locked` to amend an existing record). Two
+ * modes: `daily` (one screen per class per day, finds-or-generates its
+ * own session via `GenerateAttendanceSessionAction`) and `period`
+ * (built 2026-10-07 — picks from the period-mode sessions
+ * `GenerateAttendanceSessionsFromTimetableAction` already generated
+ * from the published timetable for the chosen date; this screen never
+ * generates a period/subject session itself, only daily ones, since
+ * period sessions are timetable-driven by design). A period session's
+ * roster comes from `TeachingGroupMember` when it carries a teaching
+ * group, or `ClassAllocation` otherwise — the same split
+ * `GenerateAttendanceSessionAction`'s own `expectedCount()` already
+ * makes. Also hosts amendment inline (status change + mandatory
+ * reason) rather than a separate route, since a mark worth amending is
+ * always one already visible on this same roster.
  */
 #[Title('Mark register')]
 #[Layout('layouts.app')]
@@ -51,7 +59,11 @@ final class Mark extends Component
     use InteractsWithSession;
     use Toasts;
 
+    public string $mode = 'daily';
+
     public ?int $classId = null;
+
+    public ?int $sessionId = null;
 
     public string $sessionDate = '';
 
@@ -76,7 +88,21 @@ final class Mark extends Component
         $this->sessionDate = now()->toDateString();
     }
 
+    public function updatedMode(): void
+    {
+        $this->classId = null;
+        $this->sessionId = null;
+        $this->statuses = [];
+        $this->reasonCodeIds = [];
+    }
+
     public function updatedClassId(): void
+    {
+        $this->statuses = [];
+        $this->reasonCodeIds = [];
+    }
+
+    public function updatedSessionId(): void
     {
         $this->statuses = [];
         $this->reasonCodeIds = [];
@@ -84,6 +110,7 @@ final class Mark extends Component
 
     public function updatedSessionDate(): void
     {
+        $this->sessionId = null;
         $this->statuses = [];
         $this->reasonCodeIds = [];
     }
@@ -100,7 +127,7 @@ final class Mark extends Component
         $session = $this->currentSession();
 
         if ($session === null) {
-            $this->toast(__('Select a class first.'), 'danger');
+            $this->toast($this->mode === 'period' ? __('Select a session first.') : __('Select a class first.'), 'danger');
 
             return;
         }
@@ -191,6 +218,10 @@ final class Mark extends Component
      */
     private function roster(): Collection
     {
+        if ($this->mode === 'period') {
+            return $this->rosterForSession($this->currentSession());
+        }
+
         if ($this->classId === null) {
             return collect();
         }
@@ -207,8 +238,51 @@ final class Mark extends Component
             ->values();
     }
 
+    /**
+     * @return Collection<int, Student>
+     */
+    private function rosterForSession(?AttendanceSession $session): Collection
+    {
+        if ($session === null) {
+            return collect();
+        }
+
+        if ($session->teaching_group_id !== null) {
+            return TeachingGroupMember::query()
+                ->where('teaching_group_id', $session->teaching_group_id)
+                ->where('effective_from', '<=', $session->session_date)
+                ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>', $session->session_date))
+                ->with('student')
+                ->get()
+                ->pluck('student')
+                ->filter()
+                ->values();
+        }
+
+        if ($session->class_id !== null) {
+            return ClassAllocation::query()
+                ->where('class_id', $session->class_id)
+                ->where('status', 'confirmed')
+                ->where('effective_from', '<=', $session->session_date)
+                ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>', $session->session_date))
+                ->with('student')
+                ->get()
+                ->pluck('student')
+                ->filter()
+                ->values();
+        }
+
+        return collect();
+    }
+
     private function currentSession(): ?AttendanceSession
     {
+        if ($this->mode === 'period') {
+            return $this->sessionId === null
+                ? null
+                : AttendanceSession::where('school_id', $this->school->id)->where('mode', 'period')->find($this->sessionId);
+        }
+
         if ($this->classId === null) {
             return null;
         }
@@ -241,6 +315,24 @@ final class Mark extends Component
         ));
     }
 
+    /**
+     * @return Collection<int, AttendanceSession>
+     */
+    private function periodSessions(): Collection
+    {
+        if ($this->sessionDate === '') {
+            return collect();
+        }
+
+        return AttendanceSession::query()
+            ->where('school_id', $this->school->id)
+            ->whereDate('session_date', $this->sessionDate)
+            ->where('mode', 'period')
+            ->with(['subject', 'schoolClass', 'teachingGroup'])
+            ->orderBy('period_number')
+            ->get();
+    }
+
     public function render(): View
     {
         $session = $this->currentSession();
@@ -251,6 +343,7 @@ final class Mark extends Component
 
         return view('academic::attendance.mark', [
             'classes' => SchoolClass::where('school_id', $this->school->id)->where('is_active', true)->orderBy('name')->get(),
+            'periodSessions' => $this->mode === 'period' ? $this->periodSessions() : collect(),
             'roster' => $this->roster(),
             'session' => $session,
             'existingRecords' => $existingRecords,

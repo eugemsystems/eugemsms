@@ -1,19 +1,41 @@
 <div>
     <h4 class="mb-1">{{ __('Mark register') }}</h4>
-    <p class="text-body-secondary mb-4">{{ __('Daily mode. An unmarked register is never treated as present.') }}</p>
+    <p class="text-body-secondary mb-4">{{ __('An unmarked register is never treated as present.') }}</p>
 
     <div class="row g-2 mb-3">
-        <div class="col-md-4">
-            <select class="form-select" wire:model.live="classId">
-                <option value="">{{ __('Select class') }}</option>
-                @foreach ($classes as $class)
-                    <option value="{{ $class->id }}">{{ $class->name }}</option>
-                @endforeach
+        <div class="col-md-3">
+            <select class="form-select" wire:model.live="mode">
+                <option value="daily">{{ __('Daily') }}</option>
+                <option value="period">{{ __('Period / subject') }}</option>
             </select>
         </div>
         <div class="col-md-3">
             <input type="date" class="form-control" wire:model.live="sessionDate">
         </div>
+        @if ($mode === 'daily')
+            <div class="col-md-4">
+                <select class="form-select" wire:model.live="classId">
+                    <option value="">{{ __('Select class') }}</option>
+                    @foreach ($classes as $class)
+                        <option value="{{ $class->id }}">{{ $class->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @else
+            <div class="col-md-4">
+                <select class="form-select" wire:model.live="sessionId">
+                    <option value="">{{ __('Select session') }}</option>
+                    @foreach ($periodSessions as $periodSession)
+                        <option value="{{ $periodSession->id }}">
+                            {{ __('Period') }} {{ $periodSession->period_number }} — {{ $periodSession->subject?->name }} — {{ $periodSession->teachingGroup?->name ?? $periodSession->schoolClass?->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @if ($periodSessions->isEmpty())
+                    <div class="form-text">{{ __('No period sessions were generated for this date — they come from the published timetable.') }}</div>
+                @endif
+            </div>
+        @endif
         <div class="col-md-2">
             @if ($session !== null)
                 <span class="badge text-bg-{{ $session->status === 'completed' ? 'success' : ($session->status === 'partial' ? 'warning' : 'secondary') }} py-2">{{ ucfirst($session->status) }}</span>
@@ -21,7 +43,7 @@
         </div>
     </div>
 
-    @if ($classId !== null)
+    @if (($mode === 'daily' && $classId !== null) || ($mode === 'period' && $sessionId !== null))
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 {{ __('Roster') }}

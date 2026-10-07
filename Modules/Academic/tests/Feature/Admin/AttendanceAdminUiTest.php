@@ -14,6 +14,10 @@ use Modules\Academic\Livewire\Attendance\Mark;
 use Modules\Academic\Livewire\Attendance\Reports;
 use Modules\Academic\Models\AttendanceRecord;
 use Modules\Academic\Models\ClassAllocation;
+use Modules\Academic\Models\CurriculumFramework;
+use Modules\Academic\Models\Subject;
+use Modules\Academic\Models\TeachingGroup;
+use Modules\Academic\Models\TeachingGroupMember;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
@@ -198,6 +202,52 @@ it('reports a class\'s attendance for a range, never counting an unmarked day as
 
     expect($lines)->toHaveCount(2)->and($lines[0])->toContain('Admission no')->and($lines[1])->toContain('Ndlovu')->and($lines[1])->toEndWith('"1","1","1","0"');
     expect(fn () => app(GenerateAttendanceRegisterExportAction::class)->execute(new GenerateAttendanceRegisterExportData($f['class']->id, now(), now()->subDay())))->toThrow(ValidationException::class);
+});
+
+it('marks a period-mode session from a published timetable, against a teaching-group roster (ACA-04 gap)', function (): void {
+    $f = attendanceAdminFixture();
+    $student = attendanceAdminStudent($f);
+    $user = attendanceAdminUser($f, 'academic.attendance.mark');
+
+    $framework = CurriculumFramework::factory()->for($f['school'])->create();
+    $subject = Subject::factory()->for($f['school'])->create(['framework_id' => $framework->id]);
+    $group = TeachingGroup::factory()->for($f['school'])->create([
+        'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id,
+        'subject_id' => $subject->id, 'grade_level_id' => $f['gradeLevel']->id,
+    ]);
+    TeachingGroupMember::factory()->for($f['school'])->create([
+        'teaching_group_id' => $group->id, 'student_id' => $student->id, 'effective_from' => now()->subDays(5)->toDateString(),
+    ]);
+
+    $session = app(GenerateAttendanceSessionAction::class)->execute(new GenerateAttendanceSessionData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        sessionDate: now(), mode: 'period', teachingGroupId: $group->id, subjectId: $subject->id, periodNumber: 3,
+    ));
+
+    Livewire::actingAs($user)->test(Mark::class, ['school' => $f['school']])
+        ->set('mode', 'period')
+        ->assertSee('Period 3')
+        ->set('sessionId', $session->id)
+        ->assertSee($student->first_name)
+        ->set("statuses.{$student->id}", 'present')
+        ->call('save');
+
+    expect(AttendanceRecord::where('session_id', $session->id)->where('student_id', $student->id)->value('status'))->toBe('present');
+});
+
+it('refuses to mark a period session with no class or teaching group attached', function (): void {
+    $f = attendanceAdminFixture();
+    $user = attendanceAdminUser($f, 'academic.attendance.mark');
+
+    $session = app(GenerateAttendanceSessionAction::class)->execute(new GenerateAttendanceSessionData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        sessionDate: now(), mode: 'period', periodNumber: 1,
+    ));
+
+    Livewire::actingAs($user)->test(Mark::class, ['school' => $f['school']])
+        ->set('mode', 'period')->set('sessionId', $session->id)->call('save');
+
+    expect(AttendanceRecord::where('session_id', $session->id)->exists())->toBeFalse();
 });
 
 it('draws a learner heatmap with unmarked days blank and lists recent absences with whether the parent was told', function (): void {
