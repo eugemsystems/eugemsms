@@ -17,10 +17,27 @@ directly against the code and against `Modules/People/tests/Feature/Admin/
 BookCCompletionAdminUiTest.php` (154/154 People tests pass). The specific "not built" callouts
 below are left in place as a historical record of what each pass found at the time, but don't
 trust them as current state — check `Modules/People/Livewire/` yourself first. What's genuinely
-still missing, confirmed 2026-10-07: merging duplicate learners (blocked on a design decision —
-the spec wants it to reassign financial records, which the project's append-only-ledger rule
-forbids), the structured appraisal rubric (PPL-04, still free-text), and the public
-*application* form (PPL-02, BR-PPL-02-001 — only a narrower public *enquiry* form exists).
+still missing, confirmed 2026-10-07: the public *application* form (PPL-02, BR-PPL-02-001 — only a
+narrower public *enquiry* form exists). Merging duplicate learners and the structured appraisal
+rubric were both built the same day — see their own notes below.
+
+## Learner merge deliberately does NOT reassign financial records — see MergeDuplicateStudentsAction's own docblock
+BR-PPL-01-010's literal wording ("reassigns every financial and academic record to the surviving
+learner") is NOT what `MergeDuplicateStudentsAction` does, by the project owner's own explicit
+agreement: rewriting a posted `journal_lines`/`invoices`/`receipts` row's `student_id` would
+violate CLAUDE.md's non-negotiable append-only-ledger rule and silently rewrite history a
+reconciliation already relied on. Instead, a merged-away learner's financial records stay on their
+own original `students.id` forever; `students.merged_into_id` is the forward pointer a caller
+follows to assemble "this learner's financial history across both records" without a single
+financial row ever moving. Before extending this action's own `REFERENCES` list, ask: is this
+table financial? If yes, it does not belong in `REFERENCES` — document it as deliberately excluded,
+the same way the Action's own docblock already does for FIN-*/boarding/library/etc. Also scoped
+deliberately narrow: only PPL-01/03's own core biographical tables (guardian links, siblings,
+documents, prior schools, timeline) are reassigned — academic data owned by OTHER modules
+(attendance, exam results, boarding, library, …) is not yet covered, an honest documented gap, not
+an oversight (mirrors `MergeGuardiansAction`'s own finite, incrementally-extended `REFERENCES` list).
+`student_merges` is the permanent, literally-append-only (model-level `booted()` hook, same pattern
+as `PeriodSnapshot`) record BR-PPL-01-010 asks for.
 
 ## PPL-03 is an intentionally minimal Guardian/Liability slice
 Built solely to close FIN-03's billed-party dependency (Book B FIN-03 §3/§4 explicitly needs `fee_liabilities` and the liability resolution algorithm). Built: `guardians`, `student_guardian` (the rights matrix — only `is_primary_contact`/`is_emergency_contact`/`is_fee_responsible`/`may_collect_learner`/`may_view_full_balance`/`has_court_restriction` kept), `fee_liabilities`, `LiabilityResolver` (percentage rules round independently against a shared base — never batched through `Money::allocate()`, so a genuinely partial percentage split correctly falls through to the residual guardian per BR-FIN-03-007), `CreateGuardianAction`/`LinkGuardianToStudentAction`/`DeactivateStudentGuardianAction`/`CreateFeeLiabilityAction`.

@@ -55,6 +55,9 @@ use ReflectionProperty;
  * @property string|null $pathway
  * @property int $entry_cohort_year
  * @property string $status
+ * @property int|null $merged_into_id
+ * @property Carbon|null $merged_at
+ * @property int|null $merged_by
  * @property string|null $status_reason_code
  * @property Carbon|null $status_changed_at
  * @property int|null $status_changed_by
@@ -113,6 +116,7 @@ class Student extends Model
         'national_registration_no_hash', 'birth_certificate_no', 'birth_certificate_no_hash',
         'passport_no', 'photo_file_id', 'enrolment_type', 'residency', 'section_id',
         'grade_level_id', 'class_id', 'house_id', 'pathway', 'entry_cohort_year', 'status',
+        'merged_into_id', 'merged_at', 'merged_by',
         'status_reason_code', 'status_changed_at', 'status_changed_by', 'enrolled_on',
         'exited_on', 'address_line_1', 'address_line_2', 'suburb', 'city', 'province',
         'latitude', 'longitude', 'transport_zone_id', 'has_medical_alert', 'has_allergy_alert',
@@ -129,6 +133,7 @@ class Student extends Model
             'birth_certificate_no' => 'encrypted',
             'passport_no' => 'encrypted',
             'status_changed_at' => 'datetime',
+            'merged_at' => 'datetime',
             'enrolled_on' => 'date',
             'exited_on' => 'date',
             'latitude' => 'decimal:7',
@@ -246,6 +251,24 @@ class Student extends Model
     public function attributeChanges(): HasMany
     {
         return $this->hasMany(StudentAttributeChange::class);
+    }
+
+    /**
+     * @return BelongsTo<Student, $this>
+     */
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'merged_into_id');
+    }
+
+    /**
+     * Other learner records merged away into this one — see `MergeDuplicateStudentsAction`.
+     *
+     * @return HasMany<Student, $this>
+     */
+    public function absorbedMerges(): HasMany
+    {
+        return $this->hasMany(self::class, 'merged_into_id');
     }
 
     public function fullName(): string

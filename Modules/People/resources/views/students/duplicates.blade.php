@@ -1,6 +1,6 @@
 <div>
     <h4 class="mb-1">{{ __('Duplicate learner scan') }}</h4>
-    <p class="text-body-secondary mb-4">{{ __('Checks a name, date of birth, and identifiers against existing learners. Nothing here merges records automatically.') }}</p>
+    <p class="text-body-secondary mb-4">{{ __('Checks a name, date of birth, and identifiers against existing learners. Merging folds guardian links, documents, prior schooling, siblings and timeline into whichever record you keep; financial records stay exactly where they are (see the merged record\'s profile). The merge cannot be undone.') }}</p>
 
     <div class="card mb-4">
         <div class="card-body">
@@ -57,13 +57,20 @@
                         <tbody>
                             @foreach ($results as $candidate)
                                 @php $match = $students->get($candidate['studentId']); @endphp
-                                <tr>
+                                <tr wire:key="dup-{{ $candidate['studentId'] }}">
                                     <td>{{ $candidate['admissionNumber'] }}</td>
                                     <td>{{ $match?->fullName() }}</td>
                                     <td>{{ str_replace('_', ' ', $candidate['matchedOn']) }}</td>
                                     <td class="text-end">
                                         @if ($match)
                                             <a href="{{ route('people.students.show', [$school, $match]) }}" class="btn btn-sm btn-outline-secondary" wire:navigate>{{ __('View') }}</a>
+                                            @foreach ($students->except($candidate['studentId']) as $other)
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    wire:click="merge({{ $candidate['studentId'] }}, {{ $other->id }})"
+                                                    wire:confirm="{{ __('Keep :keep and merge :other into it? This cannot be undone.', ['keep' => $match->fullName(), 'other' => $other->fullName()]) }}">
+                                                    {{ __('Keep this · merge :name', ['name' => $other->fullName()]) }}
+                                                </button>
+                                            @endforeach
                                         @endif
                                     </td>
                                 </tr>
@@ -71,6 +78,11 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label small">{{ __('Merge reason (optional, recorded permanently)') }}</label>
+                <input type="text" class="form-control form-control-sm" wire:model="mergeReason" style="max-width: 480px">
             </div>
         @endif
     @endif

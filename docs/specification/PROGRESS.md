@@ -148,10 +148,9 @@ depends on them. Status per item below; anything not listed as done is still ope
   (beneficiaries bill the sponsor through a real fee liability; budget envelope and beneficiary
   limit enforced), guardian verification, the contact-update approval queue, E.164 phone
   normalisation; the enquiry pipeline, application documents, entrance exams (seating, marks,
-  ranking), interviews and the admissions funnel. 16 new screens. Still open in Book C: merging duplicate learners (needs a design that respects
-  append-only financial records; guardian merge is built),
-  the
-  structured appraisal rubric, the public application form and `/api/v1` endpoints.
+  ranking), interviews and the admissions funnel. 16 new screens. Learner merge and the structured
+  appraisal rubric were later built 2026-10-07 (see the dated notes further down). Still open in
+  Book C: the public application form and `/api/v1` endpoints.
 
 - **Finance documents (CORE-06).** Invoices and receipts render to a stored, verifiable document when
   issued (listeners never block the invoice or receipt); statements render on demand from journal
@@ -248,9 +247,8 @@ depends on them. Status per item below; anything not listed as done is still ope
 - **PPL-03 duplicate guardian merge.** `Guardians\Duplicates` lists guardians sharing a phone or name; `MergeGuardiansAction`
   (`guardians.merge`) folds one into another: learner links move (rights OR-ed, a court restriction on either wins, the
   duplicate's overlapping link goes inactive), 18 other tables are re-pointed, the app account moves across (refused when both
-  have their own), and the duplicate is kept as `merged`. Learner merge (`ACT-MergeDuplicateStudents`) is deliberately still
-  not built: the spec asks it to reassign every financial record, which the append-only ledger rule forbids, so that needs a
-  design decision first (see the note under Book C).
+  have their own), and the duplicate is kept as `merged`. Learner merge (`ACT-MergeDuplicateStudents`) is **built 2026-10-07** —
+  see the Book C note below for the design and what is/isn't reassigned.
 - **ACA-03 drag-and-drop editor.** Class timetable grid with draggable lessons, clash-refused moves with the conflict named,
   undo of the last move, remove; double lessons move as a pair only by removing and re-placing (not yet supported).
 - **FIN-12 statements.** `Financial\BalanceSheet` (assets, liabilities, equity and current earnings from
@@ -297,13 +295,24 @@ Duplicates}`, `Households/Index`, `Sponsorships/{Index,Show}`,
 BookCCompletionAdminUiTest.php`. The full People module suite is green: **154/154 tests pass**.
 Book C's remaining gaps against the spec are real but much narrower than the notes below suggest:
 
-1. **Merging duplicate learners (PPL-01, `ACT-MergeDuplicateStudents`)** — genuinely not built, and
-   not a simple backlog item: the spec asks it to reassign every financial record to the surviving
-   student, which this project's own non-negotiable append-only-ledger rule forbids. **Needs a
-   design decision before any code is written** — e.g., financial records could stay attached to
-   the merged-away student with a `superseded_by` pointer rather than being rewritten, with new
-   Journal entries carrying the reassignment forward. Guardian merge (`MergeGuardiansAction`) has
-   no such conflict and is already built.
+1. ~~**Merging duplicate learners (PPL-01, `ACT-MergeDuplicateStudents`)**~~ — **built 2026-10-07**,
+   per the project owner's own agreed design: financial records stay exactly where they are rather
+   than being rewritten, since the spec's own literal "reassign every financial record" wording
+   would otherwise break this project's non-negotiable append-only-ledger rule. `students` gained
+   `merged_into_id`/`merged_at`/`merged_by` (same shape as guardians' own merge columns), and a new
+   append-only `student_merges` table is the permanent record BR-PPL-01-010 asks for (admission
+   number snapshotted, enforced un-updatable/undeletable at the model level, same pattern as
+   `PeriodSnapshot`). `MergeDuplicateStudentsAction` reassigns guardian links (rights OR-ed, a court
+   restriction on either wins — same logic `MergeGuardiansAction` already uses, the other direction),
+   sibling links (both directions, a resulting self-link or collision dropped rather than violating
+   the unique constraint), documents, prior schooling and the timeline (plus a new timeline entry
+   recording the merge itself, via the existing `RecordStudentTimelineEventAction`) — deliberately
+   scoped to PPL-01/03's own core biographical record, not every `student_id` reference in the whole
+   application (the same incremental, documented-gap approach `MergeGuardiansAction`'s own finite
+   `REFERENCES` list already takes). Wired into the existing `Students\Duplicates` scanner
+   (`people.students.merge` ⚠⚠, already registered, previously scan-only) rather than a new screen —
+   `merge(int $survivorId, int $duplicateId)`, the same shape `Guardians\Duplicates` already uses.
+   4 new tests, People module: 164/164 passing.
 2. ~~**The structured appraisal rubric (PPL-04)**~~ — **built 2026-10-07**. `staff_appraisal_rubrics`
    (criterion/descriptor-levels JSON, same shape as ACA-11's `observation_rubrics`) plus a
    `rubric_id` on `staff_appraisals`; `CreateStaffAppraisalRubricAction` validates it the same way
@@ -330,7 +339,7 @@ Book C's remaining gaps against the spec are real but much narrower than the not
 
 | Module | Screens | Status |
 |---|---|---|
-| PPL-01 | Student Information System | 🟡 partial — only gap: learner-merge (design decision needed) |
+| PPL-01 | Student Information System | ✅ (learner-merge built 2026-10-07) |
 | PPL-03 | Guardian, Family & Fee Liability | ✅ (no remaining gap found) |
 | PPL-02 | Admissions & Enrolment CRM | 🟡 partial — only gap: the public *application* form (enquiry-only today) |
 | PPL-04 | Staff & Human Resources | ✅ (structured appraisal rubric built 2026-10-07) |
