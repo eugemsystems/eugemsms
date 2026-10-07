@@ -3,7 +3,7 @@
     <p class="text-body-secondary mb-4">{{ $assessment->title }} — <span class="badge text-bg-secondary">{{ ucfirst($assessment->status) }}</span></p>
 
     @if ($assessment->status === 'published')
-        <div class="alert alert-warning">{{ __('This assessment is published — amending requires academic.result.amend_published, and recomputes positions for the whole class and level.') }}</div>
+        <div class="alert alert-warning">{{ __('This assessment is published — amending requires academic.result.amend_published, and routes through approval before anything changes.') }}</div>
     @endif
 
     <div class="card">
@@ -41,7 +41,32 @@
                     </div>
                 </div>
             </div>
-            <button type="button" class="btn btn-primary mt-3" wire:click="amend" wire:confirm="{{ __('Amend this mark? Positions will be recomputed for the whole class and level.') }}">{{ __('Amend mark') }}</button>
+            <button type="button" class="btn btn-primary mt-3" wire:click="amend" wire:confirm="{{ $assessment->status === 'published' ? __('Request approval to amend this mark?') : __('Amend this mark? Positions will be recomputed for the whole class and level.') }}">{{ $assessment->status === 'published' ? __('Request amendment') : __('Amend mark') }}</button>
         </div>
     </div>
+
+    @if ($amendmentRequests->isNotEmpty())
+        <div class="card mt-3">
+            <div class="card-header">{{ __('Amendment requests') }}</div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>{{ __('Student') }}</th><th>{{ __('New mark') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach ($amendmentRequests as $amendmentRequest)
+                            <tr wire:key="amend-req-{{ $amendmentRequest->id }}">
+                                <td>{{ $amendmentRequest->student?->first_name }} {{ $amendmentRequest->student?->last_name }}</td>
+                                <td>{{ $amendmentRequest->new_is_absent ? __('absent') : $amendmentRequest->new_raw_mark }}</td>
+                                <td><span class="badge text-bg-light border">{{ $amendmentRequest->status }}</span></td>
+                                <td>
+                                    @if ($amendmentRequest->approval_request_id)
+                                        <a href="{{ route('approvals.show', ['school' => $school, 'request' => $amendmentRequest->approval_request_id]) }}" class="small">{{ __('View request') }}</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 </div>

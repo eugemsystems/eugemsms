@@ -484,18 +484,31 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
    its weight totals. Optional, not a forced gate — `PublishAssessmentAction` still accepts a
    straight `submitted → published` path. `academic.result.moderate` permission (already
    registered, previously unused). Tests: `AssessmentModerationTest.php` (4 tests).
-2. **ACA-05 per-subject result comment** (`term_subject_results.teacher_comment`) — only the two
-   *term-level* comments (`class_teacher_comment`/`head_comment`, via `SetTermResultCommentsAction`)
-   are covered; nothing writes the per-subject one. Buildable.
-3. **ACA-04 period/subject-mode attendance marking** — `Attendance\Mark` is `daily` mode only;
+2. ~~**ACA-05 per-subject result comment** (`term_subject_results.teacher_comment`)~~ — **built
+   2026-10-07.** `SetTermSubjectResultCommentAction` writes it, locked by the same "owning
+   `TermResult` is published" rule as the term-level pair; folded into `Results\Review`'s existing
+   edit panel (one input per subject alongside the class/head comment textareas) rather than a
+   separate screen, since both only make sense while reviewing one learner's whole result set
+   together. Tests added to `ReportCardsAdminUiTest.php` (2 tests).
+3. ~~**CORE-07 approval workflow for amending a `published` mark**~~ — **built 2026-10-07.** Not
+   previously listed as its own numbered gap here, but genuinely one: `Marks\Amend` used to accept
+   a caller-asserted `approved: true` flag with no real approval behind it at all (a stale
+   docblock claimed otherwise — see `.ai/rules/academic.md`'s dedicated note). Now wired into
+   Core's real CORE-07 engine: `AmendMarkAction` refuses a published assessment unconditionally,
+   `RequestMarkAmendmentAction` raises a `MarkAmendmentRequest` (new `Approvable` model) through
+   `RequestApprovalAction`, and only its own `onApproved()` applies the change, via the extracted
+   `ApplyMarkAmendmentAction`. Mirrors `DiscountAward`'s own CORE-07 wiring (Book K FIN-07). Needs
+   a school to configure an approval chain for the `mark_amendment` type first (existing
+   chain-builder screen, no special seeding). Tests: `MarkAmendmentApprovalTest.php` (6 tests).
+4. **ACA-04 period/subject-mode attendance marking** — `Attendance\Mark` is `daily` mode only;
    period/subject modes need an ACA-03 timetable slot the screen doesn't yet surface. Buildable
    now that ACA-03's timetable is complete.
-4. **ACA-02 bulk subject enrolment** — `EnrolSubjectAction` is single-learner only; no bulk Action
+5. **ACA-02 bulk subject enrolment** — `EnrolSubjectAction` is single-learner only; no bulk Action
    exists. Buildable, mirroring ACA-02's own `Allocation\Classes`/Boarding's bulk-allocation
    precedent.
-5. **A statutory-format attendance register export** — no statutory template is specified
+6. **A statutory-format attendance register export** — no statutory template is specified
    anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt.
-6. **Book D's own `/api/v1` surface** (ACA-01 §6, ACA-02 §7, ACA-04 §6, ACA-05 §7) — the same
+7. **Book D's own `/api/v1` surface** (ACA-01 §6, ACA-02 §7, ACA-04 §6, ACA-05 §7) — the same
    "not Book-specific" situation Book C's 4th gap was: every book names its own endpoints, and
    only the cross-cutting guardian/mobile slice (plus what Book C's own pass just added) exists
    project-wide. Buildable the same way Book C's was.
@@ -505,7 +518,7 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
 | ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
 | ACA-02 | Class, Stream & Subject Enrolment ⭐ | 🟡 partial — gap: bulk subject enrolment |
 | ACA-04 | Attendance | 🟡 partial — gaps: period/subject-mode marking, statutory register export |
-| ACA-05 | Assessment, Grading & Report Cards | 🟡 partial — gap: per-subject comment (moderation built 2026-10-07; see correction above — most of this module's old "not built" list is now built) |
+| ACA-05 | Assessment, Grading & Report Cards | ✅ complete (moderation + per-subject comment both built 2026-10-07; see correction above) |
 
 **ACA-01 note.** Built: `Curriculum\{Frameworks,Subjects,Groups,Offerings,
 Pathways,SelectionRules,Prerequisites,Syllabi}` — all list+create.
@@ -547,10 +560,13 @@ management only). **Built in the later gap-closing pass** (corrected 2026-10-07,
 correction above): `Results\Review` (class/head comments via the real `SetTermResultCommentsAction`,
 approve), `ReportCards\{Run,Withheld,Publish}`, `Results\{Transcripts,Analytics}`; `AC-ACA-05-001`'s
 weight-shortfall block is now real and enforced by `ComputeTermSubjectResultsAction`, not just an
-advisory. **Still genuinely not built**: `Marks\Moderate` (per-assessment moderation — no Action
-exists, unlike ACA-06/07's own moderation actions) and a per-subject
-`term_subject_results.teacher_comment` (only the two term-level comments are covered).
-See `.ai/rules/academic.md` for this and the `students.status` /
+advisory. **Built this session (2026-10-07)**: `Marks\Moderate` (per-assessment moderation,
+distribution/outlier summary); a per-subject `term_subject_results.teacher_comment` via
+`SetTermSubjectResultCommentAction`, folded into `Results\Review`; and `Marks\Amend`'s amendment
+of a `published` mark now genuinely routes through Core's CORE-07 approvals engine
+(`RequestMarkAmendmentAction`/`MarkAmendmentRequest`) instead of trusting a caller-asserted
+`approved: true` flag with no real approval behind it. Nothing from ACA-05's original scope
+remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
 ### Book E — Academic Depth — 🟡 in progress

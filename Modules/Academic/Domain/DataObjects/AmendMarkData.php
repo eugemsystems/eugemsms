@@ -13,6 +13,5 @@ final readonly class AmendMarkData
         public string $changeReason,
         public ?float $rawMark = null,
         public bool $isAbsent = false,
-        public bool $approved = false,
     ) {}
 }

@@ -6,16 +6,21 @@ namespace Modules\Academic\Livewire\Results;
 
 use App\Concerns\Toasts;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Academic\Domain\Actions\ApproveTermResultsAction;
 use Modules\Academic\Domain\Actions\SetTermResultCommentsAction;
+use Modules\Academic\Domain\Actions\SetTermSubjectResultCommentAction;
 use Modules\Academic\Domain\DataObjects\ApproveTermResultsData;
 use Modules\Academic\Domain\DataObjects\SetTermResultCommentsData;
+use Modules\Academic\Domain\DataObjects\SetTermSubjectResultCommentData;
 use Modules\Academic\Livewire\Concerns\ChecksPermissions;
+use Modules\Academic\Models\Subject;
 use Modules\Academic\Models\TermResult;
+use Modules\Academic\Models\TermSubjectResult;
 use Modules\Core\Domain\Exceptions\DomainException;
 use Modules\Core\Domain\Support\SessionContext;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
@@ -29,7 +34,12 @@ use Modules\Core\Models\SchoolClass;
  * class's computed results with each learner's promotion recommendation, the
  * class and head comments (`academic.result.comment`), and the approval that
  * makes the results eligible for report card generation. A published result's
- * comments are locked.
+ * comments are locked. Folds in the per-subject comment too
+ * (`term_subject_results.teacher_comment`, via
+ * `SetTermSubjectResultCommentAction`) in the same edit panel as the
+ * term-level pair, rather than a separate screen — the natural home
+ * since both only make sense while reviewing one learner's whole set
+ * of subject results together.
  */
 #[Title('Review results')]
 #[Layout('layouts.app')]
@@ -49,6 +59,9 @@ final class Review extends Component
 
     public string $headComment = '';
 
+    /** @var array<int, string> */
+    public array $subjectComments = [];
+
     public function mount(School $school): void
     {
         $this->loadSchool($school);
@@ -58,7 +71,7 @@ final class Review extends Component
 
     public function updatedClassId(): void
     {
-        $this->reset('editingId', 'classTeacherComment', 'headComment');
+        $this->reset('editingId', 'classTeacherComment', 'headComment', 'subjectComments');
     }
 
     public function approve(): void
@@ -91,6 +104,12 @@ final class Review extends Component
         $this->editingId = $result?->id;
         $this->classTeacherComment = (string) $result?->class_teacher_comment;
         $this->headComment = (string) $result?->head_comment;
+        $this->subjectComments = $result === null ? [] : TermSubjectResult::query()
+            ->where('student_id', $result->student_id)
+            ->where('term_id', $result->term_id)
+            ->get()
+            ->mapWithKeys(fn (TermSubjectResult $r): array => [$r->id => (string) $r->teacher_comment])
+            ->all();
     }
 
     public function saveComments(): void
@@ -105,14 +124,44 @@ final class Review extends Component
 
         try {
             app(SetTermResultCommentsAction::class)->execute(new SetTermResultCommentsData($result->id, $this->classTeacherComment, $this->headComment));
+
+            foreach ($this->subjectComments as $termSubjectResultId => $comment) {
+                app(SetTermSubjectResultCommentAction::class)->execute(new SetTermSubjectResultCommentData((int) $termSubjectResultId, $comment));
+            }
         } catch (DomainException|InvalidArgumentException $exception) {
             $this->addError('classTeacherComment', $exception->getMessage());
 
             return;
         }
 
-        $this->reset('editingId', 'classTeacherComment', 'headComment');
+        $this->reset('editingId', 'classTeacherComment', 'headComment', 'subjectComments');
         $this->toast(__('Comments saved.'));
+    }
+
+    /**
+     * @return Collection<int, TermSubjectResult>
+     */
+    private function subjectResultsFor(?int $resultId): Collection
+    {
+        $result = $resultId === null ? null : TermResult::find($resultId);
+
+        if ($result === null) {
+            return collect();
+        }
+
+        $names = Subject::query()->pluck('name', 'id');
+
+        return TermSubjectResult::query()
+            ->where('student_id', $result->student_id)
+            ->where('term_id', $result->term_id)
+            ->get()
+            ->map(function (TermSubjectResult $r) use ($names): TermSubjectResult {
+                $r->setAttribute('subject_name', (string) ($names[$r->subject_id] ?? "#{$r->subject_id}"));
+
+                return $r;
+            })
+            ->sortBy('subject_name')
+            ->values();
     }
 
     public function render(): View
@@ -123,6 +172,7 @@ final class Review extends Component
             'classes' => SchoolClass::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'results' => $this->classId === null || $termId === null ? collect() : TermResult::query()->with('student')->where('term_id', $termId)->where('class_id', $this->classId)->orderBy('class_position')->get(),
             'canComment' => $this->holds('academic.result.comment'),
+            'subjectResults' => $this->subjectResultsFor($this->editingId),
         ]);
     }
 }

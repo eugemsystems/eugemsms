@@ -1,6 +1,6 @@
 <?php
 
-use Modules\Academic\Domain\Actions\AmendMarkAction;
+use App\Models\User;
 use Modules\Academic\Domain\Actions\ApproveTermResultsAction;
 use Modules\Academic\Domain\Actions\BuildResultsAnalyticsAction;
 use Modules\Academic\Domain\Actions\ComputeTermResultsAction;
@@ -13,6 +13,7 @@ use Modules\Academic\Domain\Actions\PublishAssessmentAction;
 use Modules\Academic\Domain\Actions\PublishReportCardsAction;
 use Modules\Academic\Domain\Actions\RecomputeSubjectPositionsAction;
 use Modules\Academic\Domain\Actions\RecomputeTermPositionsAction;
+use Modules\Academic\Domain\Actions\RequestMarkAmendmentAction;
 use Modules\Academic\Domain\Actions\SetTermResultCommentsAction;
 use Modules\Academic\Domain\Actions\SubmitAssessmentMarksAction;
 use Modules\Academic\Domain\DataObjects\AmendMarkData;
@@ -32,7 +33,12 @@ use Modules\Academic\Domain\DataObjects\SubmitAssessmentMarksData;
 use Modules\Academic\Domain\Exceptions\AssessmentWeightsIncompleteException;
 use Modules\Academic\Models\ReportCardRun;
 use Modules\Academic\Models\TermResult;
+use Modules\Core\Domain\Actions\Approvals\ApproveStepAction;
+use Modules\Core\Domain\Actions\Approvals\CreateApprovalChainAction;
 use Modules\Core\Domain\Actions\Settings\SetSettingValueAction;
+use Modules\Core\Domain\DataObjects\Approvals\ApprovalStepData;
+use Modules\Core\Domain\DataObjects\Approvals\ApproveStepData;
+use Modules\Core\Domain\DataObjects\Approvals\CreateApprovalChainData;
 use Modules\Core\Domain\DataObjects\Settings\SetSettingValueData;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\Settings\SettingScope;
@@ -213,10 +219,18 @@ it('regenerates a published report card as a new version when its mark is amende
     $before = TermResult::where('student_id', $f['a']->id)->firstOrFail();
     $oldDocument = $before->report_document_id;
 
-    app(AmendMarkAction::class)->execute(new AmendMarkData(
-        assessmentId: $f['exam']->id, studentId: $f['a']->id, changedByUserId: $f['user']->id,
-        changeReason: 'Marking error found on moderation.', rawMark: 20, approved: true,
+    $approver = User::factory()->create();
+    app(CreateApprovalChainAction::class)->execute(new CreateApprovalChainData(
+        schoolId: $f['school']->id, approvableType: 'mark_amendment', name: 'Mark amendment sign-off', isDefault: true,
+        steps: [new ApprovalStepData(1, 'Moderator', 'user', 'sequential', approverUserId: $approver->id)],
     ));
+
+    $pendingRequest = app(RequestMarkAmendmentAction::class)->execute(new AmendMarkData(
+        assessmentId: $f['exam']->id, studentId: $f['a']->id, changedByUserId: $f['user']->id,
+        changeReason: 'Marking error found on moderation.', rawMark: 20,
+    ));
+
+    app(ApproveStepAction::class)->execute(new ApproveStepData($pendingRequest->approval_request_id, $approver->id));
 
     $after = TermResult::where('student_id', $f['a']->id)->firstOrFail();
     $html = Storage::disk('local')->get(Document::findOrFail($after->report_document_id)->file_path);

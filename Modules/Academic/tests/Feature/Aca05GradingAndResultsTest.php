@@ -12,6 +12,7 @@ use Modules\Academic\Domain\Actions\EnterMarkAction;
 use Modules\Academic\Domain\Actions\PublishAssessmentAction;
 use Modules\Academic\Domain\Actions\RecomputeSubjectPositionsAction;
 use Modules\Academic\Domain\Actions\RecomputeTermPositionsAction;
+use Modules\Academic\Domain\Actions\RequestMarkAmendmentAction;
 use Modules\Academic\Domain\Actions\SubmitAssessmentMarksAction;
 use Modules\Academic\Domain\DataObjects\AllocateClassData;
 use Modules\Academic\Domain\DataObjects\AmendMarkData;
@@ -36,7 +37,12 @@ use Modules\Academic\Models\GradingScale;
 use Modules\Academic\Models\Subject;
 use Modules\Academic\Models\TermResult;
 use Modules\Academic\Models\TermSubjectResult;
+use Modules\Core\Domain\Actions\Approvals\ApproveStepAction;
+use Modules\Core\Domain\Actions\Approvals\CreateApprovalChainAction;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
+use Modules\Core\Domain\DataObjects\Approvals\ApprovalStepData;
+use Modules\Core\Domain\DataObjects\Approvals\ApproveStepData;
+use Modules\Core\Domain\DataObjects\Approvals\CreateApprovalChainData;
 use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
@@ -320,12 +326,26 @@ it('requires approval to amend a published mark, and recomputes positions for th
         changeReason: 'Re-marked after a moderation review found a tallying error.', rawMark: 95,
     )))->toThrow(MarkAmendmentRequiresApprovalException::class);
 
-    $version = app(AmendMarkAction::class)->execute(new AmendMarkData(
-        assessmentId: $exam->id, studentId: $studentB->id, changedByUserId: $f['user']->id,
-        changeReason: 'Re-marked after a moderation review found a tallying error.', rawMark: 95, approved: true,
+    $approver = User::factory()->create();
+    app(CreateApprovalChainAction::class)->execute(new CreateApprovalChainData(
+        schoolId: $f['school']->id, approvableType: 'mark_amendment', name: 'Mark amendment sign-off', isDefault: true,
+        steps: [new ApprovalStepData(1, 'Moderator', 'user', 'sequential', approverUserId: $approver->id)],
     ));
 
-    expect($version->was_published)->toBeTrue()
+    $pendingRequest = app(RequestMarkAmendmentAction::class)->execute(new AmendMarkData(
+        assessmentId: $exam->id, studentId: $studentB->id, changedByUserId: $f['user']->id,
+        changeReason: 'Re-marked after a moderation review found a tallying error.', rawMark: 95,
+    ));
+
+    expect($pendingRequest->status)->toBe('pending')
+        ->and(AssessmentMark::where('assessment_id', $exam->id)->where('student_id', $studentB->id)->value('raw_mark'))->toEqual(40.0);
+
+    app(ApproveStepAction::class)->execute(new ApproveStepData($pendingRequest->approval_request_id, $approver->id));
+
+    $version = AssessmentMarkVersion::where('assessment_id', $exam->id)->where('student_id', $studentB->id)->latest('id')->first();
+
+    expect($pendingRequest->fresh()->status)->toBe('approved')
+        ->and($version->was_published)->toBeTrue()
         ->and((float) $version->raw_mark)->toBe(40.0);
 
     $mark = AssessmentMark::where('assessment_id', $exam->id)->where('student_id', $studentB->id)->firstOrFail();

@@ -25,6 +25,15 @@
                         <textarea class="form-control form-control-sm mb-2" rows="2" wire:model="classTeacherComment" placeholder="{{ __('Class teacher comment') }}"></textarea>
                         <textarea class="form-control form-control-sm mb-2" rows="2" wire:model="headComment" placeholder="{{ __('Head comment') }}"></textarea>
                         @error('classTeacherComment') <div class="text-danger small mb-1">{{ $message }}</div> @enderror
+                        @if ($subjectResults->isNotEmpty())
+                            <p class="small text-body-secondary mb-1">{{ __('Per-subject comments') }}</p>
+                            @foreach ($subjectResults as $subjectResult)
+                                <div class="input-group input-group-sm mb-1">
+                                    <span class="input-group-text" style="width: 160px">{{ $subjectResult->subject_name }}</span>
+                                    <input type="text" class="form-control" maxlength="500" wire:model="subjectComments.{{ $subjectResult->id }}" placeholder="{{ __('Subject comment') }}">
+                                </div>
+                            @endforeach
+                        @endif
                         <button type="button" class="btn btn-sm btn-primary" wire:click="saveComments">{{ __('Save') }}</button>
                     </td></tr>
                 @endif

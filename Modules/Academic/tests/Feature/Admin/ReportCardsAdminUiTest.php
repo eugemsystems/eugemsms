@@ -3,7 +3,9 @@
 use App\Models\User;
 use Livewire\Livewire;
 use Modules\Academic\Domain\Actions\PublishReportCardsAction;
+use Modules\Academic\Domain\Actions\SetTermSubjectResultCommentAction;
 use Modules\Academic\Domain\DataObjects\PublishReportCardsData;
+use Modules\Academic\Domain\DataObjects\SetTermSubjectResultCommentData;
 use Modules\Academic\Livewire\ReportCards\Publish;
 use Modules\Academic\Livewire\ReportCards\Run;
 use Modules\Academic\Livewire\ReportCards\Withheld;
@@ -12,9 +14,11 @@ use Modules\Academic\Livewire\Results\Review;
 use Modules\Academic\Livewire\Results\Transcripts;
 use Modules\Academic\Models\ReportCardRun;
 use Modules\Academic\Models\TermResult;
+use Modules\Academic\Models\TermSubjectResult;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Models\Document;
 use Modules\Core\Models\Permission;
@@ -61,6 +65,33 @@ it('reviews a class, writes comments and approves its results', function (): voi
         ->call('approve');
 
     expect($result->fresh()->class_teacher_comment)->toBe('Excellent term')->and($result->fresh()->status)->toBe('approved');
+});
+
+it('writes a per-subject comment onto term_subject_results alongside the term-level pair (ACA-05 gap)', function (): void {
+    $f = rcFixture();
+    $this->actingAs(rcUser($f, 'academic.result.review', 'academic.result.comment'));
+    $result = TermResult::where('student_id', $f['a']->id)->firstOrFail();
+    $subjectResult = TermSubjectResult::where('student_id', $f['a']->id)->where('term_id', $f['term']->id)->firstOrFail();
+
+    Livewire::test(Review::class, ['school' => $f['school']])
+        ->set('classId', $f['class']->id)
+        ->call('edit', $result->id)
+        ->set("subjectComments.{$subjectResult->id}", 'Strong grasp of the material this term.')
+        ->call('saveComments')
+        ->assertHasNoErrors();
+
+    expect($subjectResult->fresh()->teacher_comment)->toBe('Strong grasp of the material this term.');
+});
+
+it('refuses to edit a subject comment once the term result is published', function (): void {
+    $f = rcFixture();
+    rcGenerate($f);
+    app(PublishReportCardsAction::class)->execute(new PublishReportCardsData($f['school']->id, $f['term']->id, $f['user']->id, classId: $f['class']->id));
+    $subjectResult = TermSubjectResult::where('student_id', $f['a']->id)->where('term_id', $f['term']->id)->firstOrFail();
+
+    expect(fn () => app(SetTermSubjectResultCommentAction::class)->execute(
+        new SetTermSubjectResultCommentData($subjectResult->id, 'Too late.'),
+    ))->toThrow(InvalidStateTransitionException::class);
 });
 
 it('will not let a reviewer without the comment permission write comments', function (): void {
