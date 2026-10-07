@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Domain\Exceptions\SerpException;
 use Modules\Core\Http\Middleware\EnsureTwoFactorIsEnrolled;
+use Modules\Core\Http\Middleware\SetApiLocale;
 use Modules\Core\Http\Middleware\SetImpersonationContext;
 use Modules\Core\Http\Support\ApiResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -36,6 +38,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // going around a specific module's own middleware list — the
         // middleware itself is what decides who it actually applies to.
         $middleware->web(append: [EnsureTwoFactorIsEnrolled::class, SetImpersonationContext::class]);
+
+        // `serp.api-locale` is declared first in the `serp.api` group (routes/api.php), but
+        // Laravel's middleware priority sorting still runs `auth:sanctum` (AuthenticatesRequests)
+        // before any unprioritized middleware, regardless of declared group order -- so an
+        // unauthenticated request's AuthenticationException used to propagate before SetApiLocale
+        // ever ran, and Content-Language was never set on a 401 response. Prepending it into the
+        // priority list, immediately before AuthenticatesRequests, makes it genuinely the
+        // outermost of the serp.api stack.
+        $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: SetApiLocale::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

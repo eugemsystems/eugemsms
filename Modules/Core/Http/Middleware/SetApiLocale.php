@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Core\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Volume 1 §9.1 — `Accept-Language` selects English, chiShona (`sn`) or isiNdebele (`nd`) for API
@@ -25,7 +27,19 @@ final class SetApiLocale
         $locale = self::negotiate((string) $request->header('Accept-Language'));
         app()->setLocale($locale);
 
-        $response = $next($request);
+        // `serp.api-locale` runs first in the `serp.api` group (before `auth:sanctum` etc.), so a
+        // later middleware's exception (401/403/422/...) propagates up through this `$next()` call
+        // rather than returning a response — the header below would never be set. Render it here,
+        // the same way Illuminate\Foundation\Http\Kernel::handle() does in its own catch block, so
+        // every API response carries Content-Language, including an error one.
+        try {
+            $response = $next($request);
+        } catch (Throwable $e) {
+            $handler = app(ExceptionHandler::class);
+            $handler->report($e);
+            $response = $handler->render($request, $e);
+        }
+
         $response->headers->set('Content-Language', $locale);
         $response->headers->set('Vary', trim($response->headers->get('Vary', '').', Accept-Language', ', '));
 

@@ -44,7 +44,7 @@ it('refuses missing, wrong and revoked keys with 401', function (): void {
     $this->postJson($url)->assertStatus(401)->assertJsonPath('error.code', 'UNAUTHENTICATED');
     $this->withToken($f['device']->apiClient->ulid.'.wrong')->postJson($url)->assertStatus(401);
 
-    app(RevokeApiClientAction::class)->execute($f['device']->api_client_id);
+    app(RevokeApiClientAction::class)->execute($f['device']->api_client_id, $f['user']->id);
     $this->withToken($f['key'])->postJson($url)->assertStatus(401);
 });
 

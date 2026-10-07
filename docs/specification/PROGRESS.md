@@ -93,7 +93,7 @@ admin-UI Pest tests → Pint → PHPStan (module, then whole-app) → full suite
 | CORE-07 | Workflow & Approvals Engine | ✅ (`Livewire/Approvals/`) — commit `396533b` |
 | CORE-08 | Audit, Activity & Data Integrity | ✅ (`Livewire/Audit/`) — commit `fe37398` |
 | CORE-09 | Notification Orchestration Bus | ✅ (`Livewire/Notifications/`) — commit `c0461b0` |
-| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9`. Disk-agnostic storage (`DOCUMENTS_DISK`/`PUBLIC_ASSETS_DISK`/`BACKUPS_DISK`, `ScanFileJob` streams) written but UNVERIFIED: tests could not run (no vendor/); only `php -l` done. |
+| CORE-10 | File Vault & Media Management | ✅ (`Livewire/Files/`) — commit `382f2a9`. Disk-agnostic storage (`DOCUMENTS_DISK`/`PUBLIC_ASSETS_DISK`/`BACKUPS_DISK`, `ScanFileJob` streams) — **verified 2026-10-07**: now that `vendor/` installs cleanly, `ConfiguredDiskTest` actually runs and passes (its own gap: the document-generation case needed a numbering series fixture, now added). **Still open, found by the same pass's whole-app PHPStan run:** `ScanFileJob.php:44-45` passes a `resource|false` (an unchecked `fopen()`) where `stream_copy_to_stream`/`fclose` expect a plain `resource` — not yet fixed. |
 | CORE-11 | Data Import & Migration Toolkit | ✅ (`Livewire/Imports/`) — commit `ae47797` |
 | CORE-12 | Jobs, Scheduling & Observability | ✅ (`Livewire/Scheduling/`) — commit `de6e637` |
 | CORE-13 | Backup, Restore & Disaster Recovery | ✅ (`Livewire/Backups/`) — commit `acefbcc` |
@@ -187,12 +187,12 @@ depends on them. Status per item below; anything not listed as done is still ope
   kept authenticating until expiry; `CoreServiceProvider` now rejects it. **Also built**: teacher register endpoints
   (`teacher/classes`, `teacher/classes/{id}/attendance` GET/POST — offline-safe per-record idempotency keys,
   conflicts reported not overwritten) and a learner reading their own report cards, attendance and
-  timetable (never a fee balance). **Also built since**: teacher marks entry, guardian exeat, student attendance/timetable (see `routes/api.php`). **Mobile/parent API gap pass (written, NOT run, NOT verified: no dependencies install in the sandbox, only `php -l` was run on each file).**
+  timetable (never a fee balance). **Also built since**: teacher marks entry, guardian exeat, student attendance/timetable (see `routes/api.php`). **Mobile/parent API gap pass — run and verified 2026-10-07** (originally written with no dependencies installed in the sandbox, only `php -l` per file; `vendor/` now installs cleanly and `GuardianPortalApiTest`/`Int04HardwareApiTest` actually run).
   (1) `X-Academic-Year-Id`/`X-Term-Id` were already resolved and validated in `SetSessionContext` (attendance, timetable, exeats, marks use them); report cards now narrow to the named term/year only when a header is sent (history otherwise).
-  (2) `serp.api-locale` (`SetApiLocale`, first in the `serp.api` group) negotiates `Accept-Language` to en/sn/nd, falls back to en, sets `Content-Language`; no sn/nd translation files exist, so strings stay English.
+  (2) `serp.api-locale` (`SetApiLocale`, declared first in the `serp.api` group) negotiates `Accept-Language` to en/sn/nd, falls back to en, sets `Content-Language`; no sn/nd translation files exist, so strings stay English. **Real bug found and fixed by the verification run**: Laravel's middleware priority sorting actually runs `auth:sanctum` *before* any undeclared-priority middleware regardless of group order, so `SetApiLocale` never ran before an `AuthenticationException` on an unauthenticated request — `Content-Language` was silently missing from every 401. Fixed with `$middleware->prependToPriorityList()` in `bootstrap/app.php` (genuinely making it outermost) plus `SetApiLocale` rendering the exception itself so the header lands on an error response too, not just a successful one.
   (3) `GET students/{student}/documents` and `.../{document}/download` (ability `documents.read`): CORE-06 documents issued against the learner plus their published report cards; withheld cards, expired documents, other learners' and other schools' are 404. Assumptions: the file is streamed through the authenticated endpoint rather than the spec's signed redirect; `StudentDocument` (identity/permit file records) and invoice documents are not exposed (invoices keep their finance endpoints).
   (4) `GET students/{student}/lms/courses` and `.../homework` (ability `homework.read`): read-only; marks/feedback shown only once marked. Assumptions: learner-scoped under `students/{student}` (not the spec's `lms/my-courses`) so guardian-to-learner authorisation is the same as every other parent endpoint; content files are listed with metadata/external URL but have no download endpoint; submit/mark/teacher LMS endpoints remain unbuilt.
-  (5) API keys/webhooks: skipped, INT-04 covers the base and no new gap was found. `docs/api/openapi.yaml` was not extended with the new routes. **Still not built:** LMS submit/mark/teacher endpoints, LMS content file download, translations. Cross-guardian and cross-school denial tests are in `GuardianPortalApiTest.php`.
+  (5) API keys/webhooks: skipped, INT-04 covers the base and no new gap was found. `docs/api/openapi.yaml` was not extended with the new routes. **Still not built:** LMS submit/mark/teacher endpoints, LMS content file download, translations. Cross-guardian and cross-school denial tests are in `GuardianPortalApiTest.php`. **Test bugs found and fixed by the verification run, not production bugs:** two of `GuardianPortalApiTest`'s own fixtures hit the same recurring factory trap this pass already warns about elsewhere — `CourseSpaceFactory`/`AssignmentFactory`/`TeachingGroupFactory` each derive FKs (`school_id`, `term_id`, `subject_id`) from their own throwaway related factory call, so overriding only the "obvious" FK (e.g. `teaching_group_id`) silently leaves the others pointing at a different school/term under `BelongsToSchool`'s own scope — plus one test creating two `term_results` rows for the same student/term/school, which the schema's own unique constraint (rightly) refuses.
 - **SAA vendor impersonation (BR-SAA-02-002).** Consent-gated by a structured grant, not a typed
   reference: the customer's own administrator (`core.support_access.manage`, screen
   `Core\Users\SupportAccess`) grants access for one named ticket for 1–72 hours and can withdraw it
@@ -1504,11 +1504,18 @@ and missing-ability refusals; per-client `rate_limit_per_minute` with 429 + `Ret
 public `GET /developers`, and the scheduled task `intelligence.retry_webhook_deliveries`
 (`RetryFailedWebhookDeliveriesAction`, 2^attempts-minute backoff capped at 6h, via
 `DispatchWebhookAction::attempt()`). Pest files: `Int04OpenApiTest`, `Int04HardwareApiTest`,
-`Int04DevelopersPageTest`, `Int04WebhookRetryTest`. **Verification status:** the authoring sandbox
-could not install composer dependencies (GitHub-hosted dist and source downloads were denied), so
-these tests and the existing suite were only `php -l` linted, never executed. Run
-`vendor/bin/pest Modules/Intelligence/tests/Feature` before treating BR-INT-04-003/010 and
-AC-INT-04-001/005 as met. Choices where the spec is ambiguous: (1) API keys are now
+`Int04DevelopersPageTest`, `Int04WebhookRetryTest`. **Verification status — run 2026-10-07** (the
+original authoring sandbox could not install composer dependencies, GitHub-hosted dist and source
+downloads were denied, so these tests and the existing suite were only `php -l` linted before now):
+`vendor/bin/pest Modules/Intelligence/tests/Feature` passes, including `Int04HardwareApiTest` (one
+test bug found and fixed: it called `RevokeApiClientAction::execute()` with only the client id,
+missing the `revokedByUserId` the Action itself has always required — the real caller,
+`Vendor\Clients\Index`, already passed both; the test alone was wrong). **Still open, found by
+this same verification pass's whole-app PHPStan run, not yet fixed:** `OpenApiDocumentBuilder.php`
+(three `is_string()` calls PHPStan now proves always true, plus a call to the non-existent
+`FormRequest::rules()` at line 215) and `AuthenticateApiClient.php:57` (an `array<int<0,
+max>|string, string>` passed where `array<int, string>` is expected) — both BR-INT-04-010-adjacent
+and worth a dedicated small fix pass. Choices where the spec is ambiguous: (1) API keys are now
 `{client ulid}.{secret}` (previously a bare random string) so the row can be found before the hash is
 checked; keys issued earlier cannot authenticate and must be rotated; (2) the scan body adds
 `target_id` (roll call or checkpoint id) and optional `direction`, which the spec's example omits but
@@ -1776,6 +1783,27 @@ Three real portability bugs surfaced only on Linux, and are fixed:
 Build note: `npm run build` fetches the "Public Sans" font from
 `fonts.bunny.net` at build time, so a build environment must allow that
 host (or the font config must be vendored locally).
+
+### Re-verified on Windows/Herd, 2026-10-07 — first run with a complete `vendor/`
+
+`composer install` had been interrupted partway (likely a prior power outage) and left `vendor/`
+incomplete — no `laravel/framework`, no `autoload.php` — so neither the full suite nor whole-app
+PHPStan had actually been run against this checkout before. Finishing the install and running both
+surfaced exactly the items several notes above already flagged as "written but never verified,"
+confirming those notes were accurate rather than optimistic:
+- **`vendor/bin/pest` — 2207 tests, 0 failed** (up from the 1758 above; the gap is every module
+  built since that Linux run). Five were failing the first time this ran and are now fixed: four
+  were test bugs (`Int04HardwareApiTest` missing an Action argument; `ConfiguredDiskTest` missing a
+  numbering-series fixture; two `GuardianPortalApiTest` cases hitting the recurring
+  derive-FKs-from-a-throwaway-factory trap plus a `term_results` unique-constraint collision — see
+  the mobile/parent API gap pass note above for detail); one was a real production bug
+  (`SetApiLocale`/`ApiLocaleTest` — see the same note).
+- **`vendor/bin/phpstan analyse` — 7 errors**, all pre-existing and none touched by the fixes above:
+  2 in `Modules/Core/Jobs/ScanFileJob.php` (CORE-10), 4 in
+  `Modules/Intelligence/Domain/Support/OpenApiDocumentBuilder.php` and 1 in
+  `Modules/Intelligence/Http/Middleware/AuthenticateApiClient.php` (both INT-04's public REST
+  surface pass) — see each module's own note above. Left open for a dedicated small pass rather
+  than fixed as a side effect of the scheduled-task/test-verification work.
 
 ## How to keep this file honest
 

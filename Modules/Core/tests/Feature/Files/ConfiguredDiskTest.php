@@ -4,6 +4,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Modules\Core\Domain\Actions\Backups\CreateBackupAction;
 use Modules\Core\Domain\Actions\Documents\CreateDocumentTemplateAction;
+use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\Actions\Documents\GenerateDocumentAction;
 use Modules\Core\Domain\Actions\Documents\RegenerateDocumentAction;
 use Modules\Core\Domain\Actions\Files\RecordScanResultAction;
@@ -11,6 +12,7 @@ use Modules\Core\Domain\Actions\Files\UploadFileAction;
 use Modules\Core\Domain\Contracts\Files\VirusScanner;
 use Modules\Core\Domain\DataObjects\Backups\CreateBackupData;
 use Modules\Core\Domain\DataObjects\Documents\CreateDocumentTemplateData;
+use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
 use Modules\Core\Domain\DataObjects\Documents\GenerateDocumentData;
 use Modules\Core\Domain\DataObjects\Documents\RegenerateDocumentData;
 use Modules\Core\Domain\DataObjects\Files\ScanResult;
@@ -69,6 +71,7 @@ it('generates and regenerates documents on the configured disk', function (): vo
     TemplateVariableRegistry::register('receipt', ['school.name']);
     $school = School::factory()->create();
     $user = User::factory()->create();
+    app(CreateNumberingSeriesAction::class)->execute(new CreateNumberingSeriesData($school->id, 'receipt', '{SCHOOL}/{TYPE}/{SEQ:6}'));
     app(CreateDocumentTemplateAction::class)->execute(new CreateDocumentTemplateData(
         schoolId: $school->id,
         templateType: 'receipt',

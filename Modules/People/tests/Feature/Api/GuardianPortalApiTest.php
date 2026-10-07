@@ -7,6 +7,7 @@ use Modules\Academic\Models\Assignment;
 use Modules\Academic\Models\AssignmentSubmission;
 use Modules\Academic\Models\ContentItem;
 use Modules\Academic\Models\CourseSpace;
+use Modules\Academic\Models\Subject;
 use Modules\Academic\Models\TeachingGroup;
 use Modules\Academic\Models\TeachingGroupMember;
 use Modules\Academic\Models\TermResult;
@@ -279,8 +280,13 @@ it('lists and downloads a linked learner\'s documents, hiding withheld cards, ot
     $f = guardianApiFixture();
     $class = SchoolClass::factory()->for($f['school'])->create();
     $stranger = Student::factory()->for($f['school'])->create();
-    $mkResult = fn (Student $student, string $status) => TermResult::unguarded(fn () => TermResult::query()->create([
-        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'student_id' => $student->id,
+    // A second term for the child's own withheld result: a student can only have one term_result
+    // per (school, term) -- `$published` already occupies $f['term'] for this child, so a withheld
+    // one for the same student/term would violate that unique constraint, not express two real
+    // report cards.
+    $otherTerm = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create(['number' => 2]);
+    $mkResult = fn (Student $student, string $status, ?Term $term = null) => TermResult::unguarded(fn () => TermResult::query()->create([
+        'school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => ($term ?? $f['term'])->id, 'student_id' => $student->id,
         'class_id' => $class->id, 'status' => $status, 'published_at' => $status === 'published' ? now() : null, 'subjects_taken' => 8, 'report_version' => 1,
     ]));
     $doc = function (string $type, $documentable, ?int $schoolId = null) use ($f) {
@@ -295,7 +301,7 @@ it('lists and downloads a linked learner\'s documents, hiding withheld cards, ot
     $transcript = $doc('transcript', $f['child']);
     $published = $doc('report_card', $mkResult($f['child'], 'published'));
     $withheld = $doc('report_card', $mkResult(Student::factory()->for($f['school'])->create(), 'withheld'));
-    $withheldOwn = $doc('report_card', $mkResult($f['child'], 'withheld'));
+    $withheldOwn = $doc('report_card', $mkResult($f['child'], 'withheld', $otherTerm));
     $strangers = $doc('transcript', $stranger);
     $foreignSchool = School::factory()->create();
     $foreign = $doc('transcript', Student::factory()->for($foreignSchool)->create(), $foreignSchool->id);
@@ -318,19 +324,33 @@ it('lists and downloads a linked learner\'s documents, hiding withheld cards, ot
 it('shows a linked learner only their own homework and course content, with marks once marked', function (): void {
     $f = guardianApiFixture();
     $stranger = Student::factory()->for($f['school'])->create();
-    $group = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id]);
-    $otherGroup = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id]);
+    // TeachingGroupFactory::definition() has the same throwaway-related-factory pattern as
+    // CourseSpaceFactory above -- subject_id defaults to a Subject on its own throwaway school,
+    // which Subject's own BelongsToSchool scope then hides under the fixture's real school
+    // context, leaving CourseSpace::subject null for the controller's `?->subject->name` read.
+    $subject = Subject::factory()->for($f['school'])->create();
+    $group = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'subject_id' => $subject->id]);
+    $otherGroup = TeachingGroup::factory()->create(['school_id' => $f['school']->id, 'academic_year_id' => $f['year']->id, 'term_id' => $f['term']->id, 'subject_id' => $subject->id]);
     TeachingGroupMember::factory()->create(['school_id' => $f['school']->id, 'teaching_group_id' => $group->id, 'student_id' => $f['child']->id]);
     TeachingGroupMember::factory()->create(['school_id' => $f['school']->id, 'teaching_group_id' => $otherGroup->id, 'student_id' => $stranger->id]);
-    $space = CourseSpace::factory()->create(['teaching_group_id' => $group->id]);
-    $otherSpace = CourseSpace::factory()->create(['teaching_group_id' => $otherGroup->id]);
-    ContentItem::factory()->create(['course_space_id' => $space->id, 'title' => 'Visible notes', 'published_at' => now()->subDay()]);
-    ContentItem::factory()->create(['course_space_id' => $space->id, 'title' => 'Draft notes', 'published_at' => null]);
-    $mine = Assignment::factory()->create(['course_space_id' => $space->id, 'title' => 'Mine']);
-    Assignment::factory()->create(['course_space_id' => $space->id, 'title' => 'Draft', 'status' => 'draft']);
-    Assignment::factory()->create(['course_space_id' => $otherSpace->id, 'title' => 'Not mine']);
+    // CourseSpaceFactory::definition() creates its own throwaway TeachingGroup to derive
+    // school/year/term/subject from, before an override array is merged on top -- overriding only
+    // teaching_group_id here would leave the space pointing at that throwaway group's term, not
+    // $group's, so GuardianLmsController::spaces()'s own `where('term_id', ...)` would never match
+    // it (see the same explicit-FK pattern in LmsAdminUiTest.php).
+    $space = CourseSpace::factory()->create(['school_id' => $group->school_id, 'academic_year_id' => $group->academic_year_id, 'term_id' => $group->term_id, 'subject_id' => $group->subject_id, 'teaching_group_id' => $group->id]);
+    $otherSpace = CourseSpace::factory()->create(['school_id' => $otherGroup->school_id, 'academic_year_id' => $otherGroup->academic_year_id, 'term_id' => $otherGroup->term_id, 'subject_id' => $otherGroup->subject_id, 'teaching_group_id' => $otherGroup->id]);
+    // ContentItem/Assignment/AssignmentSubmission factories all have the same
+    // derive-school_id-from-a-throwaway-related-factory pattern as CourseSpaceFactory above --
+    // each uses BelongsToSchool, so leaving school_id unset here would scope every one of them
+    // out of the fixture's own school context.
+    ContentItem::factory()->create(['school_id' => $space->school_id, 'course_space_id' => $space->id, 'title' => 'Visible notes', 'published_at' => now()->subDay()]);
+    ContentItem::factory()->create(['school_id' => $space->school_id, 'course_space_id' => $space->id, 'title' => 'Draft notes', 'published_at' => null]);
+    $mine = Assignment::factory()->create(['school_id' => $space->school_id, 'course_space_id' => $space->id, 'title' => 'Mine']);
+    Assignment::factory()->create(['school_id' => $space->school_id, 'course_space_id' => $space->id, 'title' => 'Draft', 'status' => 'draft']);
+    Assignment::factory()->create(['school_id' => $otherSpace->school_id, 'course_space_id' => $otherSpace->id, 'title' => 'Not mine']);
     AssignmentSubmission::factory()->create([
-        'assignment_id' => $mine->id, 'student_id' => $f['child']->id, 'status' => 'marked', 'final_mark' => '80.00', 'feedback' => 'Good',
+        'school_id' => $mine->school_id, 'assignment_id' => $mine->id, 'student_id' => $f['child']->id, 'status' => 'marked', 'final_mark' => '80.00', 'feedback' => 'Good',
     ]);
     Sanctum::actingAs($f['user'], ['*']);
     $base = '/api/v1/students/'.$f['child']->ulid;
