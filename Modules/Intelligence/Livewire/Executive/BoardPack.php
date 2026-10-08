@@ -20,14 +20,19 @@ use Modules\Intelligence\Models\BoardPack as BoardPackRecord;
 
 /**
  * `Intelligence\Executive\BoardPack` (Book J INT-02 §4,
- * `executive.board_pack.generate`). Assembles the comprehensive pack
- * for a term. The financial section is FIN-12's own income statement,
- * embedded unmodified (BR-INT-02-006, AC-INT-02-003). Only the four
- * sections the backend can resolve are offered — enrolment, financial,
- * staffing and boarding; `academic` outcomes and the INT-03 risk
- * summary have no resolver yet and are not listed, rather than
- * producing an empty section. The pack is a content-hashed JSON file
- * in the file vault (no PDF renderer exists), listed here by name.
+ * `executive.board_pack.generate` — also satisfies Book H3 FIN-12's
+ * own `Reports\Board\Pack`, the same "board pack" concept named twice
+ * across two books' specs; see `GenerateBoardPackAction`'s own
+ * docblock). Assembles the comprehensive pack for a term. The
+ * financial section is FIN-12's own income statement, embedded
+ * unmodified (BR-INT-02-006, AC-INT-02-003); `collection_rate` is
+ * likewise FIN-12's own real collection report, rolled into one
+ * whole-school figure. Only the five sections the backend can resolve
+ * are offered; `academic` outcomes, the INT-03 risk summary, and
+ * FIN-12's own undefined "key ratios" have no resolver and are not
+ * listed, rather than producing an empty section. The pack is a
+ * content-hashed JSON file in the file vault (no PDF renderer
+ * exists), listed here by name.
  */
 #[Title('Board pack')]
 #[Layout('layouts.app')]
@@ -43,12 +48,13 @@ final class BoardPack extends Component
         'financial' => 'Financial (from the income statement)',
         'staffing' => 'Staffing',
         'boarding' => 'Boarding occupancy',
+        'collection_rate' => 'Fee collection rate',
     ];
 
     public ?int $termId = null;
 
     /** @var array<int, string> */
-    public array $sections = ['enrolment', 'financial', 'staffing', 'boarding'];
+    public array $sections = ['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate'];
 
     public function mount(School $school): void
     {

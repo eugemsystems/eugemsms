@@ -116,6 +116,26 @@ it('assembles a board pack with FIN-12\'s own financial section unmodified along
         ->and($contents['sections'])->toHaveKeys(['staffing', 'boarding']);
 });
 
+it('rolls the collection rate section up from FIN-12\'s own real collection report (satisfies FIN-12\'s own Board pack too)', function (): void {
+    $f = int02Fixture();
+    $term = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create([
+        'starts_on' => now()->subMonth(), 'ends_on' => now()->addMonth(),
+    ]);
+    Invoice::factory()->for($f['school'])->create([
+        'term_id' => $term->id, 'net_minor' => 10000, 'paid_minor' => 7500, 'balance_minor' => 2500,
+    ]);
+    $user = User::factory()->create();
+
+    $pack = app(GenerateBoardPackAction::class)->execute($f['school']->id, $term->id, ['collection_rate'], $user->id);
+
+    $file = File::findOrFail($pack->document_id);
+    $contents = json_decode((string) Storage::disk($file->disk)->get($file->path), true);
+
+    expect($contents['sections']['collection_rate'])->toBe([
+        'currency' => 'USD', 'billed_minor' => 10000, 'paid_minor' => 7500, 'rate_percent' => 75,
+    ]);
+});
+
 it('refuses a board pack section with no real resolver rather than fabricating one', function (): void {
     $f = int02Fixture();
     $term = Term::factory()->for($f['school'])->for($f['year'], 'academicYear')->create();

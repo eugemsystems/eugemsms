@@ -1358,9 +1358,14 @@ gap-closing pass added `GenerateBalanceSheetAction`/`GenerateCashFlowAction`
 plus `Financial\{BalanceSheet,CashFlow}` screens, and
 `GenerateDepartmentalReportAction`/`GenerateCollectionReportAction` folded
 into one new `Financial\Management` screen (tabbed departmental/collection).
-Only **PriorPeriod** and **Board** remain genuinely unbuilt — still no
-backing Action for either, confirmed by `find`/grep across
-`Modules/Reporting/Domain/Actions/`. **A second occurrence of PPL-05's own
+**Further correction (2026-10-07):** "Board" is also not actually unbuilt —
+`Modules\Intelligence`'s `GenerateBoardPackAction`/`Executive\BoardPack` (Book J INT-02) already
+covers BR-FIN-12-015's own "board reporting pack" concept under a different module/screen path;
+rather than duplicate it, this session added FIN-12's own `collection_rate` as a new section on
+that existing action/screen instead. Only **PriorPeriod** remains genuinely unbuilt — still no
+backing Action, confirmed by `find`/grep across `Modules/Reporting/Domain/Actions/`. FIN-12's own
+"key ratios" (part of the spec's Board pack wording) is also not built — no ratio list is named in
+the spec to build against. **A second occurrence of PPL-05's own
 date-comparison bug, found and fixed the same way**:
 `GenerateAccountingExportAction`'s overlap check. Permissions
 registered under module code `REPORTING`, diverging from the spec's
@@ -1808,9 +1813,12 @@ digest" action (exceptions only, through CORE-09). The warning threshold is
 compared **directly** with the KPI's own value (the backend's reading of the
 spec's worked example), so for a non-percentage KPI such as days overdue it must
 be set deliberately — the KPI screen says so. The board pack offers only the
-four sections the backend can resolve (enrolment, financial = FIN-12's income
-statement unmodified, staffing, boarding); `academic` and the INT-03 risk
-summary are not offered. One backend hardening: `SetKpiTargetAction` now refuses
+five sections the backend can resolve (enrolment, financial = FIN-12's income
+statement unmodified, staffing, boarding, and — **built 2026-10-07** —
+`collection_rate`, rolled up from FIN-12's own real `GenerateCollectionReportAction`, closing
+Book H3 FIN-12's own "Board pack" requirement under this screen rather than a duplicate
+`Reports\Board\Pack`); `academic` and the INT-03 risk summary are not offered.
+One backend hardening: `SetKpiTargetAction` now refuses
 an unregistered KPI key. **Deliberately not built:** the `/api/v1/executive/*`
 endpoints, the daily digest *scheduling* (the Action exists; the cron wiring is
 the backend's deferred gap). **Correction (2026-10-07):** the warehouse-snapshot

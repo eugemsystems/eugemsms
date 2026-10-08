@@ -29,9 +29,17 @@ plus `Financial\BalanceSheet`/`Financial\CashFlow` screens, and
 folded into one new `Financial\Management` screen (tabbed
 departmental/collection, per its own docblock) — all confirmed present
 in `Modules/Reporting/Domain/Actions/` and `Modules/Reporting/Livewire/Financial/`.
-Only **PriorPeriod** and **Board** remain genuinely unbuilt — still no
-backing Action for either (confirmed, no match for `PriorPeriod`/`Board`
-anywhere in `Modules/Reporting/Domain/Actions/`).
+**Further correction (2026-10-07):** "Board" was never actually unbuilt in the sense the line
+above implied — `Modules\Intelligence\Domain\Actions\GenerateBoardPackAction`/
+`Executive\BoardPack` (Book J INT-02) already assembles "standard statements plus enrolment... in
+one document", the same concept BR-FIN-12-015 names under a different module/screen path. Rather
+than build a second `Reports\Board\Pack` screen, this session added the one genuinely missing
+piece instead — a `collection_rate` section, rolled up from this module's own real
+`GenerateCollectionReportAction` — to that existing action/screen. FIN-12's own "key ratios" line
+is still not built: the spec names no specific ratio list, and inventing one would be guessing at
+a figure a school's board would actually rely on. Only **PriorPeriod** remains genuinely
+unbuilt — still no backing Action (confirmed, no match for `PriorPeriod` anywhere in
+`Modules/Reporting/Domain/Actions/`).
 
 ## `Financial\IncomeStatement` folds in Point-in-time
 

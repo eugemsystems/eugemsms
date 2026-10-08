@@ -204,9 +204,10 @@ it('generates a board pack with the financial section alongside the others (AC-I
     $file = File::findOrFail($pack->document_id);
     $contents = json_decode((string) Storage::disk($file->disk)->get($file->path), true);
 
-    expect($pack->sections_included)->toBe(['enrolment', 'financial', 'staffing', 'boarding'])
+    expect($pack->sections_included)->toBe(['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate'])
         ->and($contents['sections']['enrolment']['active_students'])->toBe(3)
-        ->and($contents['sections']['financial'])->toHaveKeys(['lines', 'net_minor']);
+        ->and($contents['sections']['financial'])->toHaveKeys(['lines', 'net_minor'])
+        ->and($contents['sections']['collection_rate'])->toHaveKeys(['currency', 'billed_minor', 'paid_minor', 'rate_percent']);
 });
 
 it('refuses a section with no resolver and a term from another school', function (): void {
