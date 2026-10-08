@@ -464,7 +464,7 @@ reasonable cut. **The structured appraisal rubric was built 2026-10-07**
 — see the correction above for detail; `Appraisal\{Index,Show}` take a
 free-text note only for an appraisal with no rubric now.
 
-### Book D — Academic Core — 🟡 in progress (one gap left: the statutory attendance register export — see below)
+### Book D — Academic Core — ✅ all 4 modules shipped, nothing deferred (correction 2026-10-08: the attendance register export was already built — see ACA-04's note below)
 
 **Correction (2026-10-07).** The ACA-05 note below said report card generation/withholding/
 publication/transcripts, applying a comment to a result, and the weight-shortfall block all "do
@@ -512,9 +512,11 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
    lighter path) and reports a per-learner outcome; `Enrolment\Bulk` mirrors `Allocation\Bulk`'s
    own "tick learners, apply, see who moved" shape. Tests added to `EnrolmentAdminUiTest.php` (3
    tests).
-6. **A statutory-format attendance register export** — no statutory template is specified
-   anywhere in the spec or codebase; genuinely blocked on a missing input, not just unbuilt. The
-   one remaining Book D gap.
+6. ~~**A statutory-format attendance register export**~~ — **correction (2026-10-08): already
+   built, this note was stale.** `GenerateAttendanceRegisterExportAction` (verified in the code,
+   not just the docblock) produces exactly this — a learner × day grid with P/A/L/E marks and
+   totals — live behind `Attendance\Reports`' "Download register (CSV)" button, with a passing
+   test. No Ministry-specific layout is prescribed anywhere to build a different one against.
 7. ~~**Book D's own `/api/v1` surface**~~ — **built 2026-10-07.** `CurriculumController` (ACA-01
    §6 catalogue reads + a learner-scoped `validate` preview), `StudentAcademicsController`/
    `LearnerSelfController` subjects/subject-history/performance-trend/me-shortcuts,
@@ -528,9 +530,9 @@ own matching correction for detail. Book D's real remaining gaps, confirmed agai
 
 | Module | Screens | Status |
 |---|---|---|
-| ACA-01 | Curriculum, Learning Areas & Pathways | 🟡 partial (see note) |
+| ACA-01 | Curriculum, Learning Areas & Pathways | ✅ complete (see note) |
 | ACA-02 | Class, Stream & Subject Enrolment ⭐ | ✅ complete (bulk subject enrolment built 2026-10-07) |
-| ACA-04 | Attendance | 🟡 partial — gap: statutory register export (period/subject-mode marking built 2026-10-07) |
+| ACA-04 | Attendance | ✅ complete (register export confirmed already built, correction 2026-10-08; period/subject-mode marking built 2026-10-07) |
 | ACA-05 | Assessment, Grading & Report Cards | ✅ complete (moderation + per-subject comment both built 2026-10-07; see correction above) |
 
 **ACA-01 note.** Built: `Curriculum\{Frameworks,Subjects,Groups,Offerings,
@@ -562,8 +564,20 @@ Gap-closing pass: `Attendance\Reports` — class report for a range, learner hea
 blank), absence follow-up (recent absences and whether the parent was told) and a register CSV
 (`GenerateAttendanceRegisterExportAction`). **Built this session (2026-10-07)**: `Mark`'s
 period/subject mode, listing sessions `ACA-03`'s timetable already generates and rostering from
-`TeachingGroupMember`/`ClassAllocation`. **Still not built**: a statutory-format register (no
-statutory template is specified).
+`TeachingGroupMember`/`ClassAllocation`. **Correction (2026-10-08)**: this note used to say "a
+statutory-format register" was still not built, reading as an open gap. Re-verified against the
+code: `GenerateAttendanceRegisterExportAction` already produces exactly that — one row per
+learner, one column per day a register was taken in the date range, a letter mark (P/A/L/E,
+blank when never marked — BR-ACA-04-018), and present/late/absent/excused totals, CSV-injection-
+neutralised, range capped at a year. It is live behind `Attendance\Reports`' own "Download
+register (CSV)" button and covered by a passing test
+(`AttendanceAdminUiTest.php`, "reports a class's attendance for a range... and exports the
+register as CSV"). No Ministry-specific physical layout is prescribed anywhere in the spec or
+by MoPSE guidance available to this project, so a standard learner × day present/absent/late/
+excused grid — the universal shape of a paper attendance register, and the same per-learner
+shape `BR-CMP-02-005`'s inspection pack separately aggregates to session-level counts for its own
+different purpose — is the correct, complete artefact here, not a placeholder standing in for
+a missing one. There is no remaining gap in this module.
 
 **ACA-05 note.** Built (original pass): `Grading\Scales` (contiguity-validated band
 editor), `Assessment\Types`, `Assessment\Planner` (advisory live
@@ -640,10 +654,12 @@ breakdown, and the marker/moderator comments into one
 every compile, the same `GenerateTranscriptAction` pattern Book D's
 transcript uses; `ProjectPortfolio` just records when and by whom.
 **Still genuinely blocked**: the national submission export
-(BR-ACA-06-018) — the spec states outright that "the format required
-by the Ministry... is a configurable template, not code," and supplies
-no concrete format anywhere to build against, the same standard
-already held for Book D's attendance-register export gap. Learner-facing
+(BR-ACA-06-018) — unlike Book D's attendance register (which turned out
+to already be built against a reasonable standard grid, no stale gap
+after all — see ACA-04's own correction), the spec here is explicit that
+"the format required by the Ministry... is a configurable template, not
+code," a direct instruction not to hardcode one, and supplies no
+concrete format anywhere to build a default against either. Learner-facing
 milestone/evidence submission still has no admin screen, since the
 spec itself places that interaction on the mobile app/portal, not the
 staff console.
