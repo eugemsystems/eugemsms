@@ -1,6 +1,6 @@
 <div>
     <h4 class="mb-1">{{ __('Timetable views') }}</h4>
-    <p class="text-body-secondary mb-4">{{ __('By class, teacher, or venue — printable via your browser\'s print dialog.') }}</p>
+    <p class="text-body-secondary mb-4">{{ __('By class, teacher, or venue — printable via your browser\'s print dialog, or export as PDF.') }}</p>
 
     <div class="row g-2 mb-3">
         <div class="col-md-3">
@@ -39,7 +39,12 @@
     </div>
 
     <div class="card">
-        <div class="card-header">{{ __('Schedule') }}</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>{{ __('Schedule') }}</span>
+            @if ($timetableId !== null && $targetId !== null)
+                <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="export">{{ __('Export PDF') }}</button>
+            @endif
+        </div>
         <div class="table-responsive">
             <table class="table table-sm mb-0">
                 <thead><tr><th>{{ __('Day') }}</th><th>{{ __('Period') }}</th><th>{{ __('Subject') }}</th><th>{{ __('Teacher') }}</th><th>{{ __('Class') }}</th><th>{{ __('Venue') }}</th></tr></thead>

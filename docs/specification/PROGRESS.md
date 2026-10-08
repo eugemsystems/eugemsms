@@ -597,13 +597,13 @@ of a `published` mark now genuinely routes through Core's CORE-07 approvals engi
 remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — 🟡 three narrow gaps remain, all deliberately deferred (see each module's own note): ACA-03's live-drag clash panel/timetable export, ACA-06's national submission format (no Ministry format specified anywhere to build against), ACA-07's paper encryption-at-rest/visible watermarking
+### Book E — Academic Depth — 🟡 three narrow items remain, each needing either real new-infrastructure work or a dependency decision (see each module's own note): ACA-03's live mid-drag clash panel (timetable PDF export built 2026-10-08), ACA-06's national submission format (no Ministry format specified anywhere to build against), ACA-07's visible watermarking (encryption at rest built 2026-10-08, no new dependency needed; watermarking does)
 
 | Module | Screens | Status |
 |---|---|---|
-| ACA-03 | Timetable & Scheduling Engine | 🟡 partial (see note) |
+| ACA-03 | Timetable & Scheduling Engine | 🟡 partial — only the live mid-drag clash panel remains deferred (timetable view PDF export built 2026-10-08; see note) |
 | ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial — one statutory-format gap (see note) |
-| ACA-07 | Examinations Administration | 🟡 partial — encryption-at-rest/watermarking only (see note) |
+| ACA-07 | Examinations Administration | 🟡 partial — only visible watermarking remains (encryption at rest built 2026-10-08; see note) |
 
 **ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
 (create-only, bundles the slot set, like `CreatePeriodStructureAction`
@@ -618,8 +618,10 @@ simplified greedy pass, not a queued annealing job), `Editor` (a class grid you 
 `MoveTimetableSlotAction`/`RemoveTimetableSlotAction` run the same four-level clash check and refuse
 with the conflict named; last move can be undone; locked, double and published lessons do not move), `Clashes` (runs the real `TimetableClashDetector`),
 `Views` (one filtered table standing in for the spec's five separate
-by-class/teacher/venue/learner/department views; "printable" stops at
-the browser's own print dialog — no export Action exists), `Publish`
+by-class/teacher/venue/learner/department views; printable via the browser's
+own print dialog, or as a PDF — **gap closed 2026-10-08**:
+`ExportTimetableViewAction` renders the same table through `Pdf::loadHTML()`,
+now that `barryvdh/laravel-dompdf` is a dependency), `Publish`
 (blocked while hard violations exist, then a separate explicit
 attendance-session-generation call), `Cover` (daily substitutions,
 `SuggestCoverAction`'s ranked suggestions, one-click assign),
@@ -629,10 +631,11 @@ anywhere created the parent `Timetable` row before this pass (every
 test fixture used the factory directly); added create-only, mirroring
 the ACA-01 catalogue precedent from the Book D pass.
 **Deliberately not built**: a clash panel that updates *during* the drag (a refused drop names the
-conflict instead), queued generation with a cancellable
-progress bar and a real simulated-annealing score curve (the backend
-action itself doesn't implement these — see its own docblock), and any
-PDF/export generation for timetable views. See `.ai/rules/academic.md`.
+conflict instead — a true mid-drag panel needs either a Livewire round-trip per drag-over cell or
+duplicating `TimetableClashDetector`'s own logic in JS, real new work this pass does not take on),
+and queued generation with a cancellable progress bar and a real simulated-annealing score curve
+(the backend action itself doesn't implement these — see its own docblock). See
+`.ai/rules/academic.md`.
 
 **ACA-06 note.** Built (`Livewire/Projects/`, 11 screens):
 `Instruments`, `Briefs` (folds the spec's separate library+editor
@@ -669,9 +672,23 @@ See `.ai/rules/academic.md`.
 (+ the new gap-filling `AdvanceExaminationSessionStatusAction`, below),
 `Papers` (live weight-% advisory), `PaperVault` (vet → seal → release
 lifecycle + access log — `ReleaseExaminationPaperAction`'s own
-no-override-for-anyone gate is exactly what AC-ACA-07-001 tests;
-encryption-at-rest and visible watermarking are backend-documented
-gaps, not built), `Candidates` (derive from enrolments, confirm),
+no-override-for-anyone gate is exactly what AC-ACA-07-001 tests).
+**Gap closed (2026-10-08): encryption at rest.** `UploadExaminationPaperFileAction`
+deliberately bypasses the generic `UploadFileAction` (that pipeline writes
+plaintext and dispatches `ScanFileJob`/`GenerateImageVariantsJob` against the
+stored bytes, neither sensible against ciphertext) and instead mirrors
+`CreateBackupAction`'s own `Crypt::encryptString()` cycle — the one other place
+in this codebase that already needed exactly this. Content locks the moment a
+paper is sealed, matching `SealExaminationPaperAction`'s "one-way, cannot
+return to draft" doctrine. `DownloadExaminationPaperFileAction` wraps the real
+`ReleaseExaminationPaperAction` gate (so a download attempt is checked exactly
+the same way whether it is the first one or the hundredth) and only then
+decrypts and streams the bytes. New registered `File` categories:
+`examination_paper`/`examination_marking_scheme` (PDF only, sensitive).
+**Still deferred**: visible watermarking naming the downloading user — needs
+an image/PDF-stamping library (e.g. `intervention/image` or a PDF-specific
+stamping package) that is not yet a dependency, a separate decision from
+encryption, which needed none. `Candidates` (derive from enrolments, confirm),
 `Seating` (auto-allocate; also stands in for the spec's separate
 "Attendance sheets" screen — same seating + special-arrangement data,
 one more column), `Invigilation` (subject-teacher exclusion, override

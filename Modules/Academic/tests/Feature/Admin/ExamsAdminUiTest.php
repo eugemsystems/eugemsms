@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Modules\Academic\Domain\Actions\CreateExaminationPaperAction;
@@ -191,6 +192,63 @@ it('refuses a paper download before its release_at, with no override for any rol
     // Refused — release_at is tomorrow. No override exists for any role.
     expect(ExaminationPaper::find($paper->id)->status)->toBe('sealed')
         ->and(ExaminationPaper::find($paper->id)->released_at)->toBeNull();
+});
+
+it('uploads and encrypts a paper file, then only serves it back once release_at has passed (encryption-at-rest gap closed)', function (): void {
+    $f = examsAdminFixture();
+    ['staff' => $setter] = examsAdminStaffUser($f, 'academic.exams.paper_manage');
+    ['staff' => $vetter, 'user' => $vetterUser] = examsAdminStaffUser($f, 'academic.exams.paper_manage');
+    $paper = examsAdminPaper($f, $setter->id);
+    $pdf = UploadedFile::fake()->createWithContent('paper-1.pdf', "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])
+        ->set('uploadingPaperId', $paper->id)
+        ->set('paperFile', $pdf)
+        ->call('upload', 'paper')
+        ->assertHasNoErrors();
+
+    expect(ExaminationPaper::find($paper->id)->paper_file_id)->not->toBeNull();
+
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])->call('vet', $paper->id);
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])
+        ->set("releaseAt.{$paper->id}", now()->addDay()->format('Y-m-d\TH:i'))
+        ->call('seal', $paper->id);
+
+    // release_at is tomorrow — the download gate refuses, same as a straight release() call does.
+    Livewire::actingAs($vetterUser);
+    $component = new PaperVault;
+    $component->mount($f['school']);
+    expect($component->download($paper->id, 'paper'))->toBeNull();
+    expect(ExaminationPaper::find($paper->id)->released_at)->toBeNull();
+
+    ExaminationPaper::find($paper->id)->update(['release_at' => now()->subMinute()]);
+
+    $response = $component->download($paper->id, 'paper');
+
+    expect($response)->not->toBeNull()
+        ->and($response->headers->get('Content-Type'))->toBe('application/pdf')
+        ->and($response->getContent())->toContain('%PDF-1.4');
+});
+
+it('refuses to attach a replacement file once a paper is sealed', function (): void {
+    $f = examsAdminFixture();
+    ['staff' => $setter] = examsAdminStaffUser($f, 'academic.exams.paper_manage');
+    ['staff' => $vetter, 'user' => $vetterUser] = examsAdminStaffUser($f, 'academic.exams.paper_manage');
+    $paper = examsAdminPaper($f, $setter->id);
+
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])->call('vet', $paper->id);
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])
+        ->set("releaseAt.{$paper->id}", now()->addDay()->format('Y-m-d\TH:i'))
+        ->call('seal', $paper->id);
+
+    $pdf = UploadedFile::fake()->createWithContent('too-late.pdf', "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+
+    Livewire::actingAs($vetterUser)->test(PaperVault::class, ['school' => $f['school']])
+        ->set('uploadingPaperId', $paper->id)
+        ->set('paperFile', $pdf)
+        ->call('upload', 'paper');
+
+    expect(ExaminationPaper::find($paper->id)->paper_file_id)->toBeNull();
 });
 
 it('refuses a paper\'s setter from vetting their own paper (AC-ACA-07-003)', function (): void {

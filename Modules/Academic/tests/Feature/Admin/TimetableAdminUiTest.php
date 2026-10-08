@@ -5,6 +5,7 @@ use Livewire\Livewire;
 use Modules\Academic\Livewire\Timetable\Cover;
 use Modules\Academic\Livewire\Timetable\Editor;
 use Modules\Academic\Livewire\Timetable\Structures;
+use Modules\Academic\Livewire\Timetable\Views;
 use Modules\Academic\Models\AttendanceSession;
 use Modules\Academic\Models\LessonSubstitution;
 use Modules\Academic\Models\PeriodSlot;
@@ -12,6 +13,7 @@ use Modules\Academic\Models\PeriodStructure;
 use Modules\Academic\Models\Subject;
 use Modules\Academic\Models\Timetable;
 use Modules\Academic\Models\TimetableSlot;
+use Modules\Academic\Models\Venue;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
@@ -218,4 +220,34 @@ it('moves a lesson to another cell by drag, refuses a clash with the conflict na
     expect(TimetableSlot::find($clashing->id))->toBeNull();
 
     Livewire::actingAs(timetableAdminUser($f, 'academic.timetable.view'))->test(Editor::class, ['school' => $f['school'], 'timetable' => $timetable])->call('moveSlot', $lesson->id, 1, 2)->assertForbidden();
+});
+
+it('exports a class\'s timetable view as a PDF (BR-ACA-03-022)', function (): void {
+    $f = timetableAdminFixture();
+    $timetable = timetableAdminTimetable($f);
+    $periodSlot = PeriodSlot::factory()->for($f['school'])->create(['structure_id' => $f['structure']->id, 'cycle_day' => 1, 'period_number' => 1, 'is_teachable' => true]);
+    $teacher = Staff::factory()->for($f['school'])->create();
+    $class = SchoolClass::factory()->for($f['school'])->create();
+    $subject = Subject::factory()->for($f['school'])->create();
+    $venue = Venue::factory()->for($f['school'])->create();
+    TimetableSlot::factory()->create([
+        'school_id' => $f['school']->id, 'timetable_id' => $timetable->id, 'term_id' => $f['term']->id,
+        'cycle_day' => 1, 'period_number' => 1, 'period_slot_id' => $periodSlot->id,
+        'staff_id' => $teacher->id, 'subject_id' => $subject->id, 'class_id' => $class->id, 'venue_id' => $venue->id,
+    ]);
+
+    $user = timetableAdminUser($f, 'academic.timetable.view');
+
+    Livewire::actingAs($user);
+    $component = new Views;
+    $component->mount($f['school']);
+    $component->timetableId = $timetable->id;
+    $component->mode = 'class';
+    $component->targetId = $class->id;
+
+    $response = $component->export();
+
+    expect($response)->not->toBeNull()
+        ->and($response->headers->get('Content-Type'))->toBe('application/pdf')
+        ->and($response->getContent())->toStartWith('%PDF');
 });

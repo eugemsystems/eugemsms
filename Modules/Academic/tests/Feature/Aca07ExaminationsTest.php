@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Modules\Academic\Domain\Actions\CreateExaminationPaperAction;
 use Modules\Academic\Domain\Actions\CreateExaminationSessionAction;
 use Modules\Academic\Domain\Actions\DecideMalpracticeOutcomeAction;
+use Modules\Academic\Domain\Actions\DownloadExaminationPaperFileAction;
 use Modules\Academic\Domain\Actions\EnterExamMarkAction;
 use Modules\Academic\Domain\Actions\EnterThirdExamMarkAction;
 use Modules\Academic\Domain\Actions\HandoverScriptBatchAction;
@@ -12,6 +14,7 @@ use Modules\Academic\Domain\Actions\PublishExaminationResultsAction;
 use Modules\Academic\Domain\Actions\ReleaseExaminationPaperAction;
 use Modules\Academic\Domain\Actions\ReportMalpracticeIncidentAction;
 use Modules\Academic\Domain\Actions\SealExaminationPaperAction;
+use Modules\Academic\Domain\Actions\UploadExaminationPaperFileAction;
 use Modules\Academic\Domain\Actions\VetExaminationPaperAction;
 use Modules\Academic\Domain\DataObjects\CreateExaminationPaperData;
 use Modules\Academic\Domain\DataObjects\CreateExaminationSessionData;
@@ -24,6 +27,7 @@ use Modules\Academic\Domain\DataObjects\PublishExaminationResultsData;
 use Modules\Academic\Domain\DataObjects\ReleaseExaminationPaperData;
 use Modules\Academic\Domain\DataObjects\ReportMalpracticeIncidentData;
 use Modules\Academic\Domain\DataObjects\SealExaminationPaperData;
+use Modules\Academic\Domain\DataObjects\UploadExaminationPaperFileData;
 use Modules\Academic\Domain\DataObjects\VetExaminationPaperData;
 use Modules\Academic\Domain\Exceptions\PaperComponentWeightMismatchException;
 use Modules\Academic\Domain\Exceptions\PaperReleaseNotYetDueException;
@@ -38,10 +42,12 @@ use Modules\Academic\Models\ScriptBatch;
 use Modules\Academic\Models\Subject;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
 use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
+use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Domain\Support\Settings\SettingScope;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\DataAccessLogEntry;
+use Modules\Core\Models\File;
 use Modules\Core\Models\GradeLevel;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolSection;
@@ -138,6 +144,46 @@ it('releases a paper once release_at has passed and logs the access', function (
     expect($released->status)->toBe('released')
         ->and($released->released_at)->not->toBeNull()
         ->and(DataAccessLogEntry::where('resource_type', 'examination_paper')->where('resource_id', $paper->id)->exists())->toBeTrue();
+});
+
+it('encrypts an examination paper file at rest and decrypts it again on a gated download (encryption-at-rest gap closed)', function (): void {
+    $f = aca07Fixture();
+    $paper = aca07Paper($f);
+    $plaintext = "%PDF-1.4\n%some exam paper content\n";
+
+    $uploaded = app(UploadExaminationPaperFileAction::class)->execute(new UploadExaminationPaperFileData(
+        paperId: $paper->id, fileType: 'paper', contents: $plaintext, originalName: 'paper-1.pdf', uploadedByUserId: $f['user']->id,
+    ));
+
+    $file = File::findOrFail($uploaded->paper_file_id);
+    $onDisk = Storage::disk($file->disk)->get($file->path);
+
+    expect($onDisk)->not->toBeNull()->not->toContain('exam paper content')
+        ->and($file->mime_type)->toBe('application/pdf')
+        ->and($file->scan_status)->toBe('skipped');
+
+    app(VetExaminationPaperAction::class)->execute(new VetExaminationPaperData(paperId: $paper->id, vettedByStaffId: $f['vetter']->id));
+    app(SealExaminationPaperAction::class)->execute(new SealExaminationPaperData(paperId: $paper->id, releaseAt: now()->subMinute()));
+
+    $downloaded = app(DownloadExaminationPaperFileAction::class)->execute(new ReleaseExaminationPaperData(
+        paperId: $paper->id, requestedByUserId: $f['user']->id,
+    ), 'paper');
+
+    expect($downloaded->contents)->toBe($plaintext)
+        ->and($downloaded->filename)->toBe('paper-1.pdf')
+        ->and($downloaded->mimeType)->toBe('application/pdf');
+});
+
+it('refuses to replace an examination paper\'s file once sealed', function (): void {
+    $f = aca07Fixture();
+    $paper = aca07Paper($f);
+
+    app(VetExaminationPaperAction::class)->execute(new VetExaminationPaperData(paperId: $paper->id, vettedByStaffId: $f['vetter']->id));
+    app(SealExaminationPaperAction::class)->execute(new SealExaminationPaperData(paperId: $paper->id, releaseAt: now()->addDay()));
+
+    expect(fn () => app(UploadExaminationPaperFileAction::class)->execute(new UploadExaminationPaperFileData(
+        paperId: $paper->id, fileType: 'paper', contents: "%PDF-1.4\ntoo late\n", originalName: 'paper-1.pdf', uploadedByUserId: $f['user']->id,
+    )))->toThrow(InvalidStateTransitionException::class);
 });
 
 it('refuses a paper setter from vetting their own paper', function (): void {

@@ -8,14 +8,20 @@ use App\Concerns\Toasts;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
+use Modules\Academic\Domain\Actions\DownloadExaminationPaperFileAction;
 use Modules\Academic\Domain\Actions\ReleaseExaminationPaperAction;
 use Modules\Academic\Domain\Actions\SealExaminationPaperAction;
+use Modules\Academic\Domain\Actions\UploadExaminationPaperFileAction;
 use Modules\Academic\Domain\Actions\VetExaminationPaperAction;
 use Modules\Academic\Domain\DataObjects\ReleaseExaminationPaperData;
 use Modules\Academic\Domain\DataObjects\SealExaminationPaperData;
+use Modules\Academic\Domain\DataObjects\UploadExaminationPaperFileData;
 use Modules\Academic\Domain\DataObjects\VetExaminationPaperData;
 use Modules\Academic\Models\ExaminationPaper;
 use Modules\Academic\Models\ExaminationSession;
@@ -25,6 +31,7 @@ use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\DataAccessLogEntry;
 use Modules\Core\Models\School;
 use Modules\People\Models\Staff;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * `Exams\PaperVault` (Book E ACA-07 §3 ⭐⭐, `academic.exams.paper_manage`
@@ -33,10 +40,18 @@ use Modules\People\Models\Staff;
  * `ReleaseExaminationPaperAction`'s own docblock: `release_at` is
  * checked server-side with no override path for anyone, including a
  * Super Admin — this screen has no override control to offer because
- * none exists in the Action it calls. Per-session encryption at rest and
- * visible watermarking are deliberately deferred (no `CORE-10` capability
- * exists yet for either) — downloading here only proves the gate; it
- * does not stream a watermarked file.
+ * none exists in the Action it calls.
+ *
+ * **Gap closed (2026-10-08): encryption at rest.** `upload()` reads a
+ * draft/vetted paper's file and its marking scheme, encrypting each
+ * with `Crypt::encryptString()` before it ever touches disk
+ * (`UploadExaminationPaperFileAction`) — content is locked the moment
+ * the paper is sealed, same as every other field on it. `download()`
+ * re-runs the real release gate every time (`DownloadExaminationPaperFileAction`
+ * wraps `ReleaseExaminationPaperAction`) and only then decrypts and
+ * streams the bytes. **Still deferred**: visible watermarking naming
+ * the downloading user — needs an image/PDF-stamping library not yet a
+ * dependency, a separate decision from encryption.
  */
 #[Title('Secure paper vault')]
 #[Layout('layouts.app')]
@@ -45,11 +60,18 @@ final class PaperVault extends Component
     use AuthorizesPermissions;
     use InteractsWithSchool;
     use Toasts;
+    use WithFileUploads;
 
     public ?int $sessionId = null;
 
     /** @var array<int, string> */
     public array $releaseAt = [];
+
+    public ?int $uploadingPaperId = null;
+
+    public ?TemporaryUploadedFile $paperFile = null;
+
+    public ?TemporaryUploadedFile $markingSchemeFile = null;
 
     public function mount(School $school): void
     {
@@ -120,6 +142,66 @@ final class PaperVault extends Component
         }
 
         $this->toast(__('Paper released — access logged.'));
+    }
+
+    public function upload(string $fileType): void
+    {
+        $paperId = $this->uploadingPaperId;
+
+        if ($paperId === null) {
+            return;
+        }
+
+        $property = $fileType === 'marking_scheme' ? 'markingSchemeFile' : 'paperFile';
+        $this->resetErrorBag($property);
+        $this->validate([$property => ['required', 'file', 'max:20480']]);
+
+        /** @var TemporaryUploadedFile $upload */
+        $upload = $this->{$property};
+        $contents = $upload->get();
+
+        if ($contents === false) {
+            $this->addError($property, __('The uploaded file could not be read — please try again.'));
+
+            return;
+        }
+
+        try {
+            app(UploadExaminationPaperFileAction::class)->execute(new UploadExaminationPaperFileData(
+                paperId: $paperId,
+                fileType: $fileType,
+                contents: $contents,
+                originalName: $upload->getClientOriginalName(),
+                uploadedByUserId: (int) Auth::id(),
+            ));
+        } catch (DomainException|InvalidArgumentException $e) {
+            $this->addError($property, $e->getMessage());
+
+            return;
+        }
+
+        $this->reset($property);
+        $this->toast(__('File uploaded and encrypted at rest.'));
+    }
+
+    public function download(int $paperId, string $fileType): ?Response
+    {
+        try {
+            $file = app(DownloadExaminationPaperFileAction::class)->execute(new ReleaseExaminationPaperData(
+                paperId: $paperId,
+                requestedByUserId: (int) Auth::id(),
+                ip: request()->ip(),
+            ), $fileType);
+        } catch (DomainException|InvalidArgumentException $e) {
+            $this->toast($e->getMessage(), 'danger');
+
+            return null;
+        }
+
+        return response($file->contents, 200, [
+            'Content-Type' => $file->mimeType,
+            'Content-Disposition' => 'attachment; filename="'.$file->filename.'"',
+        ]);
     }
 
     public function render(): View

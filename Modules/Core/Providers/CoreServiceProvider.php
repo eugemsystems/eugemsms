@@ -379,6 +379,8 @@ class CoreServiceProvider extends ModuleServiceProvider
             new FileCategoryDefinition('statutory_return_export', 'Statutory School Return Export', 'CMP-02', ['application/json', 'text/plain'], 10 * 1024 * 1024),
             new FileCategoryDefinition('inspection_pack', 'Inspection Pack', 'CMP-02', ['application/json', 'text/plain'], 20 * 1024 * 1024, isSensitive: true),
             new FileCategoryDefinition('contract_exit_export', 'Contract-Exit Export', 'CORE-13', ['application/zip'], 500 * 1024 * 1024, isSensitive: true),
+            new FileCategoryDefinition('examination_paper', 'Examination Paper', 'ACA-07', $document, 20 * 1024 * 1024, isSensitive: true),
+            new FileCategoryDefinition('examination_marking_scheme', 'Examination Marking Scheme', 'ACA-07', $document, 20 * 1024 * 1024, isSensitive: true),
         ];
 
         foreach ($categories as $category) {
