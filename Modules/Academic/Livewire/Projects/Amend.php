@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Modules\Academic\Domain\Actions\AmendVerifiedProjectAction;
+use Modules\Academic\Domain\Actions\RequestVerifiedProjectAmendmentAction;
 use Modules\Academic\Domain\DataObjects\AmendVerifiedProjectData;
 use Modules\Academic\Domain\DataObjects\CriterionMarkInput;
 use Modules\Academic\Models\LearnerProject;
+use Modules\Academic\Models\ProjectAmendmentRequest;
 use Modules\Academic\Models\ProjectBrief;
 use Modules\Academic\Models\ProjectRubric;
 use Modules\Core\Domain\Exceptions\DomainException;
@@ -24,11 +25,11 @@ use Modules\Core\Models\School;
 /**
  * `Projects\Amend` (Book E ACA-06 §6, `academic.projects.amend_verified`
  * ⚠, mirroring `Marks\Amend` — Book D). The only sanctioned way a
- * verified project's mark changes. `AmendVerifiedProjectAction` requires
- * `$data->approved`, the caller's proof that CORE-07 approval has
- * already run; this screen has no approval workflow wired up, matching
- * `Marks\Amend`'s own documented boundary — it passes `approved: true`
- * directly rather than faking a workflow that doesn't exist.
+ * verified project's mark changes. This screen used to pass a
+ * caller-asserted `approved: true` straight through with no real
+ * approval behind it at all; it now genuinely routes through Core's
+ * CORE-07 approvals engine via `RequestVerifiedProjectAmendmentAction`,
+ * mirroring `Marks\Amend`'s own fix.
  */
 #[Title('Amend verified project')]
 #[Layout('layouts.app')]
@@ -77,12 +78,11 @@ final class Amend extends Component
         }
 
         try {
-            app(AmendVerifiedProjectAction::class)->execute(new AmendVerifiedProjectData(
+            app(RequestVerifiedProjectAmendmentAction::class)->execute(new AmendVerifiedProjectData(
                 learnerProjectId: $this->learnerProject->id,
                 changedByUserId: (int) Auth::id(),
                 changeReason: $this->changeReason,
                 criterionMarks: $criterionMarks,
-                approved: true,
             ));
         } catch (DomainException $e) {
             $this->toast($e->getMessage(), 'danger');
@@ -90,14 +90,15 @@ final class Amend extends Component
             return;
         }
 
-        $this->learnerProject = $this->learnerProject->fresh();
-        $this->toast(__('Verified project amended — an append-only mark version was recorded.'));
+        $this->reset(['changeReason']);
+        $this->toast(__('Amendment requested — awaiting approval before it takes effect.'));
     }
 
     public function render(): View
     {
         return view('academic::projects.amend', [
             'rubric' => ProjectRubric::with('criteria')->find(ProjectBrief::find($this->learnerProject->brief_id)?->rubric_id),
+            'amendmentRequests' => ProjectAmendmentRequest::where('learner_project_id', $this->learnerProject->id)->latest('id')->get(),
         ]);
     }
 }

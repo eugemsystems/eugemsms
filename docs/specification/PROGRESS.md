@@ -628,8 +628,9 @@ HOD approve and issue), `Tracker` (progress grid + chase list +
 `ExemptLearnerProjectAction`'s exemption action), `Mark` (marking queue,
 criterion-by-criterion, no evidence viewer alongside the rubric — this
 pass's screens are staff-marking-focused, not a document viewer),
-`Moderate`, `Verify`, `Amend` (mirrors `Marks\Amend`'s own
-`approved: true` boundary — no CORE-07 workflow wired up here either),
+`Moderate`, `Verify`, `Amend` — **correction (2026-10-07)**: `Amend` used to mirror `Marks\Amend`'s
+old `approved: true` boundary (no CORE-07 workflow wired up); it now genuinely routes through
+Core's approvals engine the same way `Marks\Amend` was fixed — see the dedicated note below.
 `CalaArchive` (read-only). **Deliberately not built**: Portfolio
 compilation and the national submission export — no Action exists for
 either (confirmed by grep); learner-facing milestone/evidence
@@ -673,6 +674,17 @@ are plain `int`. **Deliberately not built**: `CMP-01`'s candidate-set
 export interface, performance analysis/distributions (no Action
 computes one), and `FIN-02` entry-fee billing — all confirmed backend
 gaps. See `.ai/rules/academic.md`.
+
+**Built 2026-10-07: `Projects\Amend`'s own CORE-07 wiring.** `AmendVerifiedProjectAction` used to
+accept a caller-asserted `approved: true` with no real approval behind it — the same gap `Marks\Amend`
+had and was fixed first. Since a project (unlike a mark) has no "not yet verified, amend directly"
+path at all, `AmendVerifiedProjectAction` was removed entirely rather than kept as a gate that
+always throws: `RequestVerifiedProjectAmendmentAction` is now the only entry point, raising a new
+`ProjectAmendmentRequest` (`Approvable`, `approvable_type` = `project_amendment`) through
+`RequestApprovalAction`; `ApplyVerifiedProjectAmendmentAction` holds the actual write, called only
+from the request's own `onApproved()`. A school must configure an approval chain for the
+`project_amendment` type first (existing chain-builder screen). Tests:
+`ProjectAmendmentApprovalTest.php` (5 tests).
 
 ### Book F — Boarding & Welfare — 🟡 in progress
 

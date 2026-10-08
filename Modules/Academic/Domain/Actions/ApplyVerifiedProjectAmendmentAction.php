@@ -7,7 +7,6 @@ namespace Modules\Academic\Domain\Actions;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use Modules\Academic\Domain\DataObjects\AmendVerifiedProjectData;
-use Modules\Academic\Domain\Exceptions\ProjectAmendmentRequiresApprovalException;
 use Modules\Academic\Models\GradingScale;
 use Modules\Academic\Models\LearnerProject;
 use Modules\Academic\Models\ProjectBrief;
@@ -16,28 +15,21 @@ use Modules\Academic\Models\Subject;
 use Modules\Core\Domain\Actions\Action;
 
 /**
- * ACT-AmendVerifiedProject (Book E ACA-06 §6, mirroring `AmendMarkAction`
- * from Book D ACA-05). The only sanctioned way a verified project's
- * mark changes — requires `$data->approved`, the caller's proof that
- * Core's CORE-07 approval workflow has already run; this action makes
- * no approval-routing call of its own, matching `AmendMarkAction`'s
- * own documented boundary.
+ * ACT-ApplyVerifiedProjectAmendment (Book E ACA-06 §6, mirroring
+ * `ApplyMarkAmendmentAction` from Book D ACA-05). The actual write a
+ * verified project's amendment ends in — writes the append-only
+ * version row, then updates the project's current mark/grade. Has no
+ * gate of its own (not even a "must be verified" check — the caller
+ * owns that): the only sanctioned caller is
+ * `ProjectAmendmentRequest::onApproved()`, once Core's CORE-07
+ * approval has actually completed. Never call this directly from a
+ * screen or controller.
  */
-final class AmendVerifiedProjectAction extends Action
+final class ApplyVerifiedProjectAmendmentAction extends Action
 {
     public function execute(AmendVerifiedProjectData $data): ProjectMarkVersion
     {
         $learnerProject = LearnerProject::findOrFail($data->learnerProjectId);
-
-        if ($learnerProject->status !== 'verified') {
-            throw new InvalidArgumentException(
-                "A project must be verified before it can be amended via AmendVerifiedProjectAction (currently {$learnerProject->status}).",
-            );
-        }
-
-        if (! $data->approved) {
-            throw ProjectAmendmentRequiresApprovalException::forProject($learnerProject->id);
-        }
 
         if (mb_strlen($data->changeReason) < 15) {
             throw new InvalidArgumentException('An amendment reason must be at least 15 characters.');

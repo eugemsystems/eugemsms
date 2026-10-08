@@ -14,6 +14,5 @@ final readonly class AmendVerifiedProjectData
         public int $changedByUserId,
         public string $changeReason,
         public array $criterionMarks,
-        public bool $approved = false,
     ) {}
 }
