@@ -17,18 +17,18 @@ use Modules\Intelligence\Models\ApiClient;
  * issuance, not silently narrows, when a requested ability isn't on
  * the real allow-list (BR-INT-04-001) — currently `{purpose}:write`
  * for every purpose `HardwareScanRouteRegistry` actually knows how to
- * route, plus `usage:read` (the one generic, already-real capability
- * this pass builds — reading a client's own `api_usage_log`). No
- * other third-party REST surface exists yet in this codebase to scope
- * an ability to; expanding this list is future work as more of the
- * public API is actually built, not a placeholder abstraction now.
+ * route, plus `usage:read` (reading a client's own `api_usage_log`)
+ * and `reports:read` (Book J INT-01 §5's `/api/v1/reports/*`, added
+ * once that surface existed to scope an ability to). Expanding this
+ * list is future work as more of the public API is actually built,
+ * not a placeholder abstraction now.
  *
  * The plaintext key is returned once, here, and never stored — only
  * `api_key_hash` persists (BR-INT-04-002).
  */
 final class IssueApiClientAction extends Action
 {
-    private const array GENERIC_ABILITIES = ['usage:read'];
+    private const array GENERIC_ABILITIES = ['usage:read', 'reports:read'];
 
     /**
      * @param  array<int, string>  $scopedAbilities

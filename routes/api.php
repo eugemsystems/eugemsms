@@ -23,6 +23,7 @@ use Modules\Finance\Http\Controllers\Api\V1\GuardianFinanceController;
 use Modules\Finance\Http\Controllers\Api\V1\GuardianPaymentsController;
 use Modules\Intelligence\Http\Controllers\Api\V1\HardwareController;
 use Modules\Intelligence\Http\Controllers\Api\V1\OpenApiController;
+use Modules\Intelligence\Http\Controllers\Api\V1\ReportsController;
 use Modules\People\Http\Controllers\Api\V1\GuardianChildrenController;
 use Modules\People\Http\Controllers\Api\V1\GuardianDocumentsController;
 use Modules\People\Http\Controllers\Api\V1\GuardianProfileController;
@@ -55,6 +56,14 @@ Route::get('openapi.json', OpenApiController::class)->middleware('throttle:60,1'
 Route::prefix('hardware')->middleware(['serp.api-client'])->group(function (): void {
     Route::post('scan', [HardwareController::class, 'scan']);
     Route::post('{ulid}/heartbeat', [HardwareController::class, 'heartbeat']);
+});
+
+// Third-party reporting access (Book J INT-01 §5): an integration client acts as its own
+// `created_by` user, so a key can only run/export what the person who issued it could see.
+Route::prefix('reports')->middleware(['serp.api-client:reports:read'])->group(function (): void {
+    Route::get('entities', [ReportsController::class, 'entities']);
+    Route::post('{ulid}/run', [ReportsController::class, 'run']);
+    Route::get('{ulid}/export', [ReportsController::class, 'export']);
 });
 
 Route::prefix('auth')->middleware(['serp.resolve-tenant', 'throttle:20,1'])->group(function (): void {

@@ -24,6 +24,14 @@
                                 <button type="button" class="btn btn-xs btn-outline-primary" wire:click="run({{ $report->id }})">{{ __('Run') }}</button>
                                 <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="$set('shareReportId', {{ $report->id }})">{{ __('Share') }}</button>
                                 <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="editStart({{ $report->id }})">{{ __('Edit') }}</button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">{{ __('Export') }}</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" wire:click.prevent="export({{ $report->id }}, 'csv')">CSV</a></li>
+                                        <li><a class="dropdown-item" href="#" wire:click.prevent="export({{ $report->id }}, 'excel')">Excel</a></li>
+                                        <li><a class="dropdown-item" href="#" wire:click.prevent="export({{ $report->id }}, 'pdf')">PDF</a></li>
+                                    </ul>
+                                </div>
                                 <button type="button" class="btn btn-xs btn-outline-danger" wire:click="delete({{ $report->id }})" wire:confirm="{{ __('Delete this report? Its schedules and shares go with it.') }}">{{ __('Delete') }}</button>
                             </td>
                         </tr>

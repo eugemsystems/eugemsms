@@ -1929,14 +1929,32 @@ already) are offered from `Reports\Index`, author-only. `SetCustomReportSchedule
 pause/resume shape. The `intelligence.run_scheduled_reports` per-school cron
 task now actually calls `RunScheduledReportsAction` for every due schedule —
 the Action existed and worked, it was simply never registered with
-`ScheduledTaskHandlerRegistry` until now. **Still deliberately not built:** the
-chart preview (the chart type is stored for a later renderer), PDF/Excel/CSV
-export and the `/api/v1/reports/*` endpoints (both require a spreadsheet/PDF
-package not currently a dependency — see note below), and an attached file on
-scheduled delivery (the recipient is notified a report is ready; no file is
-rendered, since CORE-09's own channel drivers are text-only). The warehouse is
-row-count tracking only, as its own Action documents.
-Intelligence module: 152 tests, all green; PHPStan clean.
+`ScheduledTaskHandlerRegistry` until now.
+
+**Gap closed (2026-10-08, user-approved new dependencies):** PDF/Excel/CSV
+export and `/api/v1/reports/*`. Added `barryvdh/laravel-dompdf` and
+`maatwebsite/excel` to `composer.json` — the user explicitly approved both
+before they were added, per CLAUDE.md's dependency-change rule; this is the
+only mid-stream Composer addition across the whole build. `GenerateReportExportAction`
+renders an already-run `ReportResult` to csv/excel (`Excel::raw()` +
+a generic `ReportResultExport`) or pdf (`Pdf::loadHTML()->output()`), offered
+from `Reports\Index` (author-only) and from the new `ReportsController`
+(`GET /api/v1/reports/entities`, `POST /api/v1/reports/{ulid}/run`,
+`GET /api/v1/reports/{ulid}/export?format=pdf|excel|csv`), gated by a new
+`reports:read` ability — the first ability actually enforced through the
+`serp.api-client:{ability}` middleware mechanism (`usage:read` is issuable
+but no route checks it yet). An API key acts as its own `created_by` user,
+so it can only run/export what that person could already see, re-evaluated
+through the exact same `RunSavedReportAction`/`GetAvailableFieldsForUserAction`
+path a human viewer gets (BR-INT-01-005) — no separate API-only privilege
+path. **Still deliberately not built:** the chart preview (the chart type is
+stored for a later renderer) and an attached file on scheduled delivery (the
+recipient is notified a report is ready; no file is rendered, since CORE-09's
+own channel drivers are text-only — `RunScheduledReportsAction` could now
+attach one with `GenerateReportExportAction`, but doing that is a deliberate
+choice about CORE-09's own channel contract, not assumed here). The warehouse
+is row-count tracking only, as its own Action documents.
+Intelligence module: 158 tests, all green; PHPStan clean.
 
 ### Book K — Closing the Catalogue — ✅ admin UI complete
 FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in

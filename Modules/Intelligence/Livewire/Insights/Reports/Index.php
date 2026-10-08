@@ -16,6 +16,7 @@ use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
 use Modules\Intelligence\Domain\Actions\DeleteCustomReportAction;
+use Modules\Intelligence\Domain\Actions\GenerateReportExportAction;
 use Modules\Intelligence\Domain\Actions\RunSavedReportAction;
 use Modules\Intelligence\Domain\Actions\ShareReportAction;
 use Modules\Intelligence\Domain\Actions\UpdateCustomReportAction;
@@ -23,6 +24,7 @@ use Modules\Intelligence\Domain\DataObjects\UpdateCustomReportData;
 use Modules\Intelligence\Livewire\Concerns\PresentsReportResults;
 use Modules\Intelligence\Models\CustomReport;
 use Modules\Intelligence\Models\ReportShare;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * `Intelligence\Reports\Index` (Book J INT-01 §5, `report.build`) — the
@@ -82,6 +84,27 @@ final class Index extends Component
             $this->result = null;
             $this->toast($exception->getMessage(), 'danger');
         }
+    }
+
+    public function export(int $reportId, string $format): ?Response
+    {
+        $this->authorizePermission('report.build');
+
+        $report = $this->ownReport($reportId);
+
+        try {
+            $result = app(RunSavedReportAction::class)->execute($report->id, $this->user());
+            $file = app(GenerateReportExportAction::class)->execute($result, $format, $report->name);
+        } catch (InsufficientScopeException|InvalidArgumentException $exception) {
+            $this->toast($exception->getMessage(), 'danger');
+
+            return null;
+        }
+
+        return response($file->content, 200, [
+            'Content-Type' => $file->mimeType,
+            'Content-Disposition' => 'attachment; filename="'.$file->filename.'"',
+        ]);
     }
 
     public function editStart(int $reportId): void

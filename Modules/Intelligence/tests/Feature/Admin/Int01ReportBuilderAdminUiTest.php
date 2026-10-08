@@ -328,6 +328,31 @@ it('lets only the author edit or delete their own report', function (): void {
     expect(CustomReport::find($report->id))->toBeNull();
 });
 
+it('exports a saved report as csv, excel and pdf from the Index screen, author-only', function (): void {
+    $f = int01AdminFixture();
+    $author = int01AdminUser($f, 'report.build');
+    $other = int01AdminUser($f, 'report.build');
+    Student::factory()->for($f['school'])->create(['first_name' => 'Fungai']);
+    $report = int01AdminReport($f, $author);
+    SchoolContext::set($f['school']);
+
+    Livewire::actingAs($author);
+    $component = new Index;
+    $component->mount($f['school']);
+
+    $csv = $component->export($report->id, 'csv');
+    expect($csv)->not->toBeNull()->and($csv->headers->get('Content-Type'))->toContain('csv');
+
+    $excel = $component->export($report->id, 'excel');
+    expect($excel)->not->toBeNull()->and($excel->headers->get('Content-Type'))->toContain('spreadsheetml');
+
+    $pdf = $component->export($report->id, 'pdf');
+    expect($pdf)->not->toBeNull()->and($pdf->headers->get('Content-Type'))->toBe('application/pdf');
+
+    expect(fn () => Livewire::actingAs($other)->test(Index::class, ['school' => $f['school']])->call('export', $report->id, 'csv'))
+        ->toThrow(ModelNotFoundException::class);
+});
+
 it('deleting a report cascades its schedules and shares', function (): void {
     $f = int01AdminFixture();
     $author = int01AdminUser($f, 'report.build', 'report.schedule');
