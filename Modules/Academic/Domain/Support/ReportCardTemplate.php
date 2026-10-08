@@ -19,6 +19,8 @@ final class ReportCardTemplate
 
     public const PROJECT_PORTFOLIO_TYPE = 'project_portfolio';
 
+    public const PROJECT_NATIONAL_SUBMISSION_TYPE = 'project_national_submission';
+
     public static function registerVariables(): void
     {
         TemplateVariableRegistry::register(self::REPORT_TYPE, [
@@ -37,6 +39,10 @@ final class ReportCardTemplate
             'brief.title', 'brief.description', 'brief.deliverables', 'brief.starts_on', 'brief.due_on', 'brief.max_mark',
             'milestones.*', 'evidence.*', 'rubric.*',
             'raw_mark', 'percent', 'grade', 'marker_comment', 'moderation_note', 'compiled_on',
+        ]);
+
+        TemplateVariableRegistry::register(self::PROJECT_NATIONAL_SUBMISSION_TYPE, [
+            'school.name', 'instrument.code', 'instrument.name', 'year.name', 'generated_on', 'candidates.*',
         ]);
     }
 
@@ -115,6 +121,22 @@ final class ReportCardTemplate
             <p>Marker comment: {{ marker_comment }}</p>
             <p>Moderation note: {{ moderation_note }}</p>
             <p>Compiled {{ compiled_on }}</p>
+            TPL;
+    }
+
+    public static function nationalSubmissionContent(): string
+    {
+        return <<<'TPL'
+            <h1>{{ school.name }}</h1>
+            <h2>School-Based Project national submission</h2>
+            <p>{{ instrument.code }} — {{ instrument.name }} — {{ year.name }}</p>
+            <table>
+            <tr><th>Admission no</th><th>Learner</th><th>Subject</th><th>Project title</th><th>Mark</th><th>%</th><th>Grade</th></tr>
+            @foreach(candidates as candidate)
+            <tr><td>{{ candidate.admission_number }}</td><td>{{ candidate.student_name }}</td><td>{{ candidate.subject }}</td><td>{{ candidate.project_title }}</td><td>{{ candidate.raw_mark }}</td><td>{{ candidate.percent }}</td><td>{{ candidate.grade }}</td></tr>
+            @endforeach
+            </table>
+            <p>Generated {{ generated_on }}</p>
             TPL;
     }
 }

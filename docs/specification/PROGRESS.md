@@ -597,12 +597,12 @@ of a `published` mark now genuinely routes through Core's CORE-07 approvals engi
 remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — 🟡 three narrow items remain, each needing either real new-infrastructure work or a dependency decision (see each module's own note): ACA-03's live mid-drag clash panel (timetable PDF export built 2026-10-08), ACA-06's national submission format (no Ministry format specified anywhere to build against), ACA-07's visible watermarking (encryption at rest built 2026-10-08, no new dependency needed; watermarking does)
+### Book E — Academic Depth — 🟡 two narrow items remain, each needing real new-infrastructure work this pass does not take on (see each module's own note): ACA-03's live mid-drag clash panel (timetable PDF export built 2026-10-08), ACA-07's visible watermarking (encryption at rest and ACA-06's national submission export both built 2026-10-08)
 
 | Module | Screens | Status |
 |---|---|---|
 | ACA-03 | Timetable & Scheduling Engine | 🟡 partial — only the live mid-drag clash panel remains deferred (timetable view PDF export built 2026-10-08; see note) |
-| ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial — one statutory-format gap (see note) |
+| ACA-06 | School-Based Projects & Legacy CALA | ✅ complete (national submission export built 2026-10-08; see note) |
 | ACA-07 | Examinations Administration | 🟡 partial — only visible watermarking remains (encryption at rest built 2026-10-08; see note) |
 
 **ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
@@ -637,7 +637,7 @@ and queued generation with a cancellable progress bar and a real simulated-annea
 (the backend action itself doesn't implement these — see its own docblock). See
 `.ai/rules/academic.md`.
 
-**ACA-06 note.** Built (`Livewire/Projects/`, 11 screens):
+**ACA-06 note.** Built (`Livewire/Projects/`, 12 screens):
 `Instruments`, `Briefs` (folds the spec's separate library+editor
 screens into one, like `Curriculum\Frameworks`), `Rubrics` (criteria
 weight-sum-to-100% guard), `Approve` (one lifecycle screen hosting both
@@ -656,14 +656,29 @@ breakdown, and the marker/moderator comments into one
 `project_portfolio`-type `Document` — generated fresh from source on
 every compile, the same `GenerateTranscriptAction` pattern Book D's
 transcript uses; `ProjectPortfolio` just records when and by whom.
-**Still genuinely blocked**: the national submission export
-(BR-ACA-06-018) — unlike Book D's attendance register (which turned out
-to already be built against a reasonable standard grid, no stale gap
-after all — see ACA-04's own correction), the spec here is explicit that
-"the format required by the Ministry... is a configurable template, not
-code," a direct instruction not to hardcode one, and supplies no
-concrete format anywhere to build a default against either. Learner-facing
-milestone/evidence submission still has no admin screen, since the
+**Gap closed (2026-10-08, BR-ACA-06-018): the national submission export.**
+`Export` + `GenerateProjectNationalSubmissionExportAction` satisfy "the
+format required by the Ministry... is a configurable template, not
+code" literally: the output renders through the exact same
+`DocumentTemplate` mechanism `Portfolio`/`GenerateTranscriptAction`
+already use (a school's own default template, lazily created, never a
+hard-coded Ministry layout — none is specified anywhere to build one
+against). `ValidateProjectNationalSubmissionAction` runs first,
+mirroring Book H3 CMP-01's own `ValidateZimsecCandidatesAction`
+per-candidate-issue shape without its ZIMSEC-specific configurable-rule
+table; export refuses server-side (`ProjectSubmissionExportBlockedException`)
+while any `error`-severity issue remains. **Real bug caught by this
+pass's own tests**: `learner_projects.outcome` is never written
+anywhere in the domain layer — `VerifyProjectAction` sets `status`, and
+`EloquentContinuousAssessmentProvider::outcomeFor()` derives "outcome"
+from that same `status` column, never reading the `outcome` column
+itself. A first draft of both new Actions checked `outcome === 'verified'`
+(always false, since nothing ever sets it) and failed every test;
+fixed to check `status === 'verified'`, the real signal
+BR-ACA-06-014 means. `ProjectNationalSubmission` is the audit-trail
+row (candidate count, exporter, timestamp), same shape as
+`ProjectPortfolio`/`BoardPack` — the document itself is the source of
+truth. Learner-facing milestone/evidence submission still has no admin screen, since the
 spec itself places that interaction on the mobile app/portal, not the
 staff console.
 See `.ai/rules/academic.md`.

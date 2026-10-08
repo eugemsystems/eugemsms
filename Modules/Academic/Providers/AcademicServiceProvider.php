@@ -332,6 +332,7 @@ class AcademicServiceProvider extends ModuleServiceProvider
             'projects.moderate' => ['description' => 'Moderate a marked project.'],
             'projects.verify' => ['description' => 'HOD-verify a marked or moderated project.'],
             'projects.amend_verified' => ['description' => 'Amend a verified project\'s mark — requires a recorded CORE-07 approval.', 'dangerous' => true],
+            'projects.export' => ['description' => 'Run the national submission validation report and export the confirmed candidate set.', 'dangerous' => true],
 
             // Book E ACA-07 — Examinations Administration.
             'exams.view' => ['description' => 'View examination sessions, papers, and published results.'],
