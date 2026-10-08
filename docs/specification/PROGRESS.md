@@ -589,7 +589,7 @@ remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `stud
 |---|---|---|
 | ACA-03 | Timetable & Scheduling Engine | 🟡 partial (see note) |
 | ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial — one statutory-format gap (see note) |
-| ACA-07 | Examinations Administration | 🟡 partial (see note) |
+| ACA-07 | Examinations Administration | 🟡 partial — encryption-at-rest/watermarking only (see note) |
 
 **ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
 (create-only, bundles the slot set, like `CreatePeriodStructureAction`
@@ -649,7 +649,7 @@ spec itself places that interaction on the mobile app/portal, not the
 staff console.
 See `.ai/rules/academic.md`.
 
-**ACA-07 note.** Built (`Livewire/Exams/`, 13 screens): `Sessions`
+**ACA-07 note.** Built (`Livewire/Exams/`, 14 screens): `Sessions`
 (+ the new gap-filling `AdvanceExaminationSessionStatusAction`, below),
 `Papers` (live weight-% advisory), `PaperVault` (vet → seal → release
 lifecycle + access log — `ReleaseExaminationPaperAction`'s own
@@ -669,6 +669,24 @@ never returns the other marker's value), `Variance` (third marking),
 small, forward-only status transition; nothing in the domain layer
 ever moved a fresh session from `planning` to `in_progress`, which
 `ProcessExaminationResultsAction` requires before it will run.
+**Correction (2026-10-08)**: this note used to list `CMP-01`'s
+candidate-set export and `FIN-02` entry-fee billing as deferred gaps.
+Both were already closed by Book H3's `CMP-01` work
+(`DeriveZimsecCandidatesAction` consumes the `ExaminationCandidateSet`
+interface this book opens, BR-ACA-07-021; `BillZimsecEntryFeesAction`
+raises the `FIN-02` ad hoc charge per BR-ACA-07-003), confirmed by
+`Modules/Compliance/Livewire/Zimsec/{Fees,Registrations}/Index.php`
+wiring both — stale notes, not real gaps, the same situation as the
+FIN-12 Board-pack/PriorPeriod corrections. **Gap closed**: `Analysis`
+(`AnalyseExaminationSessionAction`) computes grade distribution,
+subject comparison, and a year-on-year trend from marks
+`ProcessExaminationResultsAction` already settles into `ExaminationMark`
+— session-scoped, deliberately not a duplicate of `ACA-05`'s own
+term-level subject aggregation (a candidate's combined percent per
+subject is a weight-renormalised average across that subject's papers
+in-session, not the authoritative report-card mark). Reuses the
+existing `academic.exams.view` permission rather than minting a
+near-duplicate `results_view`.
 **Real bug found and fixed during this pass, not just documented**:
 seven screens across all three ACA-07/06 modules originally passed
 `Auth::id()` (a `users.id`) into an Action parameter documented and

@@ -1,6 +1,6 @@
 <div>
     <h4 class="mb-1">{{ __('Examination results') }}</h4>
-    <p class="text-body-secondary mb-4">{{ __('Process aggregates paper marks into the ACA-05 pipeline; publish is a separate, staged step.') }}</p>
+    <p class="text-body-secondary mb-4">{{ __('Process aggregates paper marks into the ACA-05 pipeline; publish is a separate, staged step.') }} <a href="{{ route('academic.exams.analysis', $school) }}" wire:navigate>{{ __('View analysis') }}</a></p>
 
     <div class="card">
         <div class="table-responsive">

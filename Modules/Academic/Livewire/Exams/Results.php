@@ -27,8 +27,8 @@ use Modules\Core\Models\School;
  * naming the subject and shortfall, when component weights don't total
  * 100% (`AC-ACA-07-011`) — then the separate, staged publish step
  * (`results_ready` → `published`) makes them visible to learners and
- * guardians. "Analysis" (distributions, year-on-year) is deliberately
- * not built — no Action computes it.
+ * guardians. "Analysis" (distributions, year-on-year) is now built —
+ * see `Exams\Analysis`/`AnalyseExaminationSessionAction`.
  */
 #[Title('Examination results')]
 #[Layout('layouts.app')]
