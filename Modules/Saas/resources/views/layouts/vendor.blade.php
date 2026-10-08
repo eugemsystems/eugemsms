@@ -19,6 +19,7 @@
                 'vendor.support' => 'Support queue',
                 'vendor.adoption' => 'Adoption',
                 'vendor.churn' => 'Churn risk',
+                'vendor.usage' => 'API usage',
             ];
         @endphp
         <nav class="navbar navbar-expand-lg border-bottom mb-4">

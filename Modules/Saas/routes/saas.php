@@ -24,6 +24,7 @@ use Modules\Saas\Livewire\Vendor\Subscription\Plans as VendorPlans;
 use Modules\Saas\Livewire\Vendor\Support\Queue as VendorSupportQueue;
 use Modules\Saas\Livewire\Vendor\Tenants\Index as VendorTenants;
 use Modules\Saas\Livewire\Vendor\Tenants\Show as VendorTenantShow;
+use Modules\Saas\Livewire\Vendor\Usage\Index as VendorUsage;
 
 /**
  * School-facing screens: scoped to one school and its own tenant, like
@@ -63,6 +64,7 @@ Route::middleware('serp.vendor')->prefix('vendor')->name('vendor.')->group(funct
     Route::livewire('support', VendorSupportQueue::class)->name('support');
     Route::livewire('adoption', VendorAdoption::class)->name('adoption');
     Route::livewire('churn', VendorChurn::class)->name('churn');
+    Route::livewire('usage', VendorUsage::class)->name('usage');
 });
 
 /**

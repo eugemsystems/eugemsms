@@ -1675,7 +1675,7 @@ in this panel's sidebar, routes or permissions (Book J §0.2).
 | INT-01 | Reporting Engine & Data Warehouse | ✅ (`Livewire/Insights/Reports/`) |
 | INT-02 | Executive Dashboards | ✅ (`Livewire/Executive/`) |
 | INT-03 | Early Warning & Predictive Analytics | ✅ (`Livewire/EarlyWarning/`) |
-| INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/`); 🟡 public REST surface written but **its Pest tests have not been run** (see INT-04 note) |
+| INT-04 | Public API, Webhooks & Integrations | ✅ admin screens (`Livewire/Integrations/` + vendor's own `Saas\Vendor\Usage`); public REST surface has a running, green Pest suite (`Int04HardwareApiTest`, confirmed 2026-10-08) — see INT-04 note for what's still deliberately open |
 | SAA-01 | Licensing, Subscription & Entitlement | ✅ admin screens (`Livewire/Tenant/Subscription/`, `Livewire/Vendor/{Subscription,Billing,Licensing}/`); `/api/v1/subscription/*` ⬜ (no such route in `routes/api.php`; correct) |
 | SAA-02 | Vendor Control Centre | ✅ admin screens (`Livewire/Vendor/{Tenants,Rollouts,Releases,Broadcasts,Incidents}/`, public `/status`) |
 | SAA-03 | Onboarding, Support & Customer Success | ✅ admin screens (`Livewire/Vendor/{Onboarding,Support,Adoption,ChurnRisk}/`, `Livewire/Tenant/Support/`, public `/help`) |
@@ -1817,10 +1817,22 @@ calling key); (4) rate limiting is a per-client one-minute window via the cache 
 document, not hand-written prose; (6) the usage dashboard needs no change but is untested against live
 rows. **Still open:** `INT-04` ability allow-list still has only `usage:read` and `{purpose}:write`
 (no payroll or other third-party REST endpoints exist, so AC-INT-04-001 is only exercised against the
-hardware routes); `attendance` (`ACA-04`) is still not a registered hardware route; webhook dispatch is
-not yet hooked to domain events (`TriggerWebhooksForEventAction` has no listeners); the vendor-side
-aggregate of usage (BR-INT-04-011) is not built; the manual "flag silent devices" button remains
-alongside `intelligence.mark_offline_hardware`.
+hardware routes); `attendance` (`ACA-04`) is still not a registered hardware route — deliberately: it
+needs a timetable-aware "which session is live right now" resolution this pass does not build, and
+`HardwareScanRouteRegistry`'s own docblock says a guessed resolver would be worse than the documented
+gap; webhook dispatch is not yet hooked to domain events (`TriggerWebhooksForEventAction` has no
+listeners) — also deliberate, per the Action's own docblock: wiring a generic mechanism to the
+application's ~100+ domain events is deployment-level listener registration with no established
+wildcard-listener pattern anywhere else in this codebase (every other module wires one specific
+`Event::listen(SpecificEvent::class, SpecificListener::class)` at a time), so it is flagged here rather
+than built unilaterally; the manual "flag silent devices" button remains alongside
+`intelligence.mark_offline_hardware`.
+**Gap closed (2026-10-08, BR-INT-04-011)**: the vendor-side aggregate of usage is now built —
+`Saas\Vendor\Usage\Index` (`Modules/Saas/Livewire/Vendor/Usage/`, vendor console), platform-wide
+totals plus a per-tenant breakdown read straight from `api_usage_log` across every school
+(`withoutGlobalScope(SchoolScope::class)`, the one place in the codebase meant to cross tenants this
+way). The school-scoped `Integrations\Usage\Dashboard` is untouched and still only ever shows a
+school its own clients.
 `ProvisionSsoStaffAccountAction`
 takes a free-text role name and is deliberately not exposed on any screen until
 an IdP sync exists to drive it and the role is restricted.
