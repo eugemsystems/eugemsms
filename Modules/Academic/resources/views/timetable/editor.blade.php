@@ -15,13 +15,21 @@
                 @endif
             </div>
         </div>
-        @if ($clashMessage)
+        @if ($preview !== null)
+            <div class="alert {{ $preview['clear'] ? 'alert-success' : 'alert-warning' }} rounded-0 mb-0 py-2 small" role="alert">
+                @if ($preview['clear'])
+                    {{ __('This cell is clear — drop to move the lesson here.') }}
+                @else
+                    {{ __('Would clash here: :message', ['message' => $preview['message']]) }}
+                @endif
+            </div>
+        @elseif ($clashMessage)
             <div class="alert alert-danger rounded-0 mb-0 py-2 small" role="alert">{{ $clashMessage }}</div>
         @endif
         @if ($gridClassId)
             @php($days = $periods->pluck('cycle_day')->unique()->sort()->values())
             @php($numbers = $periods->pluck('period_number')->unique()->sort()->values())
-            <div class="table-responsive" x-data="{ dragging: null }">
+            <div class="table-responsive" x-data="{ dragging: null, hoverCell: null }">
                 <table class="table table-bordered table-sm mb-0 text-center align-middle">
                     <thead><tr><th></th>@foreach ($days as $day)<th>{{ __('Day :n', ['n' => $day]) }}</th>@endforeach</tr></thead>
                     <tbody>
@@ -32,11 +40,12 @@
                                     @php($cell = $gridSlots->get($day.'-'.$number, collect()))
                                     @if ($periods->contains(fn ($p) => $p->cycle_day === $day && $p->period_number === $number))
                                         <td style="min-width:7rem;height:3.2rem" wire:key="cell-{{ $day }}-{{ $number }}"
-                                            x-on:dragover.prevent
-                                            x-on:drop.prevent="if (dragging) { $wire.moveSlot(dragging, {{ $day }}, {{ $number }}); dragging = null }">
+                                            @class(['table-success' => $preview && $preview['day'] === $day && $preview['period'] === $number && $preview['clear'], 'table-danger' => $preview && $preview['day'] === $day && $preview['period'] === $number && ! $preview['clear']])
+                                            x-on:dragover.prevent="if (dragging && hoverCell !== '{{ $day }}-{{ $number }}') { hoverCell = '{{ $day }}-{{ $number }}'; $wire.previewMove(dragging, {{ $day }}, {{ $number }}) }"
+                                            x-on:drop.prevent="if (dragging) { $wire.moveSlot(dragging, {{ $day }}, {{ $number }}); dragging = null; hoverCell = null }">
                                             @foreach ($cell as $tile)
                                                 <div class="badge text-bg-{{ $tile->is_locked ? 'secondary' : 'primary' }} w-100 py-2" wire:key="tile-{{ $tile->id }}"
-                                                     @if (! $tile->is_locked) draggable="true" x-on:dragstart="dragging = {{ $tile->id }}" style="cursor:grab" @endif>
+                                                     @if (! $tile->is_locked) draggable="true" x-on:dragstart="dragging = {{ $tile->id }}" x-on:dragend="dragging = null; hoverCell = null; $wire.cancelPreview()" style="cursor:grab" @endif>
                                                     {{ $tile->subject?->name }}@if ($tile->is_locked) 🔒@endif
                                                 </div>
                                             @endforeach

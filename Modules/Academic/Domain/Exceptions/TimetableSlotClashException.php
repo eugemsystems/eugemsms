@@ -24,6 +24,18 @@ class TimetableSlotClashException extends DomainException
      */
     public static function forClashes(Collection $clashes): self
     {
+        return new self(self::describe($clashes), ['clashes' => $clashes->toArray()]);
+    }
+
+    /**
+     * The same human-readable, conflict-naming message `forClashes()`
+     * throws with — exposed standalone so a live preview (the editor's
+     * drag-over clash panel) can show it without throwing anything.
+     *
+     * @param  Collection<int, TimetableClash>  $clashes
+     */
+    public static function describe(Collection $clashes): string
+    {
         $existingSlots = TimetableSlot::withoutGlobalScopes()
             ->whereIn('id', $clashes->pluck('slotIdB')->unique())
             ->get()
@@ -36,7 +48,7 @@ class TimetableSlotClashException extends DomainException
             $messages[] = self::messageFor($clash, $existing);
         }
 
-        return new self(implode(' ', array_unique($messages)), ['clashes' => $clashes->toArray()]);
+        return implode(' ', array_unique($messages));
     }
 
     private static function messageFor(TimetableClash $clash, ?TimetableSlot $existing): string

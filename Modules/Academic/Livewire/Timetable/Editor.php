@@ -13,6 +13,7 @@ use Modules\Academic\Domain\Actions\CreateTimetableSlotAction;
 use Modules\Academic\Domain\Actions\MoveTimetableSlotAction;
 use Modules\Academic\Domain\Actions\RemoveTimetableSlotAction;
 use Modules\Academic\Domain\DataObjects\CreateTimetableSlotData;
+use Modules\Academic\Domain\Exceptions\TimetableSlotClashException;
 use Modules\Academic\Models\PeriodSlot;
 use Modules\Academic\Models\Subject;
 use Modules\Academic\Models\Timetable;
@@ -31,6 +32,15 @@ use Modules\People\Models\Staff;
  * move it (`MoveTimetableSlotAction`), or use the add-one-lesson form. A move runs the same four
  * clash levels as placing a lesson and is refused with the conflict named, leaving the lesson where
  * it was; the last move can be undone. Locked, double and published lessons do not move.
+ *
+ * **Gap closed (2026-10-08): the live drag-over clash panel.** `previewMove()`
+ * calls `MoveTimetableSlotAction::preview()` — the same check `moveSlot()`'s
+ * own `execute()` runs, just without writing anything — once per cell the
+ * dragged tile enters (the view's own Alpine `hoverCell` guard keeps this to
+ * one round trip per cell, not one per `dragover` event). The target cell
+ * highlights green/red and names the conflict (reusing
+ * `TimetableSlotClashException::describe()`, the exact wording a refused drop
+ * already used) before the lesson is ever dropped.
  */
 #[Title('Timetable editor')]
 #[Layout('layouts.app')]
@@ -73,10 +83,41 @@ final class Editor extends Component
 
     public ?string $clashMessage = null;
 
+    /** @var array{day: int, period: int, clear: bool, message: ?string}|null */
+    public ?array $preview = null;
+
+    public function previewMove(int $slotId, int $cycleDay, int $periodNumber): void
+    {
+        $this->authorizePermission('academic.timetable.edit');
+
+        $slot = TimetableSlot::query()->where('timetable_id', $this->timetable->id)->find($slotId);
+
+        if ($slot === null) {
+            $this->preview = null;
+
+            return;
+        }
+
+        $result = app(MoveTimetableSlotAction::class)->preview($slot->id, $cycleDay, $periodNumber);
+
+        $this->preview = [
+            'day' => $cycleDay,
+            'period' => $periodNumber,
+            'clear' => $result->isClear(),
+            'message' => $result->blockedReason ?? ($result->clashes->isEmpty() ? null : TimetableSlotClashException::describe($result->clashes)),
+        ];
+    }
+
+    public function cancelPreview(): void
+    {
+        $this->preview = null;
+    }
+
     public function moveSlot(int $slotId, int $cycleDay, int $periodNumber): void
     {
         $this->authorizePermission('academic.timetable.edit');
         $this->clashMessage = null;
+        $this->preview = null;
 
         $slot = TimetableSlot::query()->where('timetable_id', $this->timetable->id)->find($slotId);
 

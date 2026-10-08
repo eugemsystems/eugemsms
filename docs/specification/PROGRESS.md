@@ -597,11 +597,11 @@ of a `published` mark now genuinely routes through Core's CORE-07 approvals engi
 remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — 🟡 one narrow item remains, genuinely bounded by the stack, not a quick fix (see ACA-03's own note): the live mid-drag clash panel. Everything else — timetable PDF export, ACA-06's national submission export, ACA-07's encryption at rest and visible watermarking — is built (2026-10-08)
+### Book E — Academic Depth — ✅ complete. Every previously-deferred item is now built (2026-10-08): timetable PDF export, the live mid-drag clash panel, ACA-06's national submission export, and ACA-07's encryption at rest and visible watermarking
 
 | Module | Screens | Status |
 |---|---|---|
-| ACA-03 | Timetable & Scheduling Engine | 🟡 partial — only the live mid-drag clash panel remains deferred (timetable view PDF export built 2026-10-08; see note) |
+| ACA-03 | Timetable & Scheduling Engine | ✅ complete (timetable view PDF export and the live drag-over clash panel both built 2026-10-08; see note) |
 | ACA-06 | School-Based Projects & Legacy CALA | ✅ complete (national submission export built 2026-10-08; see note) |
 | ACA-07 | Examinations Administration | ✅ complete (encryption at rest and visible watermarking both built 2026-10-08; see note) |
 
@@ -630,12 +630,24 @@ attendance-session-generation call), `Cover` (daily substitutions,
 anywhere created the parent `Timetable` row before this pass (every
 test fixture used the factory directly); added create-only, mirroring
 the ACA-01 catalogue precedent from the Book D pass.
-**Deliberately not built**: a clash panel that updates *during* the drag (a refused drop names the
-conflict instead — a true mid-drag panel needs either a Livewire round-trip per drag-over cell or
-duplicating `TimetableClashDetector`'s own logic in JS, real new work this pass does not take on),
-and queued generation with a cancellable progress bar and a real simulated-annealing score curve
-(the backend action itself doesn't implement these — see its own docblock). See
-`.ai/rules/academic.md`.
+
+**Gap closed (2026-10-08): the live drag-over clash panel.** `MoveTimetableSlotAction`'s
+own pre-write check is now `preview()` — exactly the same lock/double/published/
+not-teachable guards and four clash levels `execute()` always ran, just split out so
+it can run without writing anything. `Editor::previewMove()` calls it once per cell
+the dragged tile enters (the Alpine-side `hoverCell` guard in the view keeps this to
+one round trip per cell, not one per raw `dragover` event) and the target cell
+highlights green (clear) or red (clash), naming the conflict via
+`TimetableSlotClashException::describe()` — a small refactor pulling the exact
+message-building logic a refused drop already used out of the exception so a preview
+can show the identical wording without throwing anything. Chosen over duplicating
+`TimetableClashDetector`'s own logic in JS, which would have needed shipping full
+class/teaching-group roster membership to the browser for the learner-clash level —
+real new exposure, not just new code. Nothing from ACA-03's original scope remains
+deferred.
+**Deliberately not built**: queued generation with a cancellable progress bar and a real
+simulated-annealing score curve (the backend action itself doesn't implement these — see its own
+docblock) — real new infrastructure, not a UI gap. See `.ai/rules/academic.md`.
 
 **ACA-06 note.** Built (`Livewire/Projects/`, 12 screens):
 `Instruments`, `Briefs` (folds the spec's separate library+editor
