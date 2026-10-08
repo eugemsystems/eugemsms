@@ -1,11 +1,16 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
+use Modules\Core\Domain\Actions\Notifications\CreateNotificationTemplateAction;
 use Modules\Core\Domain\Actions\Settings\SetSettingValueAction;
+use Modules\Core\Domain\DataObjects\Notifications\CreateNotificationTemplateData;
 use Modules\Core\Domain\DataObjects\Settings\SetSettingValueData;
 use Modules\Core\Domain\Exceptions\InsufficientScopeException;
+use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Domain\Support\Settings\SettingScope;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Tenant;
@@ -13,6 +18,8 @@ use Modules\Intelligence\Domain\Actions\CreateCustomReportAction;
 use Modules\Intelligence\Domain\Actions\ExecuteCustomReportAction;
 use Modules\Intelligence\Domain\Actions\GetAvailableFieldsForUserAction;
 use Modules\Intelligence\Domain\Actions\RunSavedReportAction;
+use Modules\Intelligence\Domain\Actions\ScheduleCustomReportAction;
+use Modules\Intelligence\Domain\Actions\SetCustomReportScheduleActiveAction;
 use Modules\Intelligence\Domain\Actions\ShareReportAction;
 use Modules\Intelligence\Domain\DataObjects\CreateCustomReportData;
 use Modules\Intelligence\Domain\DataObjects\ExecuteReportSpec;
@@ -188,4 +195,57 @@ it('shares a report without copying the sharer\'s own access', function (): void
 
     expect($share->isSharedWithUser($viewer->id))->toBeTrue()
         ->and($share->can_edit)->toBeFalse();
+});
+
+it('registers the scheduled report run as a per-school scheduled task run by serp:run-task', function (): void {
+    expect(ScheduledTaskHandlerRegistry::all())->toHaveKey('intelligence.run_scheduled_reports');
+});
+
+it('delivers a due scheduled report and advances its next run, closing the cron-wiring gap', function (): void {
+    $f = int01Fixture();
+    int01GivePermission($f['user'], 'people.student.view');
+    app(CreateNotificationTemplateAction::class)->execute(new CreateNotificationTemplateData(
+        key: 'intelligence.scheduled_report_ready', channel: 'email', body: 'Your report {{ report.name }} is ready ({{ row_count }} rows).',
+    ));
+
+    $report = app(CreateCustomReportAction::class)->execute(new CreateCustomReportData(
+        schoolId: $f['school']->id, name: 'Weekly Roll', primaryEntityKey: 'student',
+        selectedFields: [['entity' => 'student', 'field' => 'first_name']],
+        createdByUserId: $f['user']->id,
+    ));
+
+    $schedule = app(ScheduleCustomReportAction::class)->execute(
+        $report->id, 'weekly', [['recipientType' => 'user', 'recipientId' => $f['user']->id, 'channel' => 'email']], 'csv',
+        nextRunAt: Carbon::now()->subMinute(),
+    );
+
+    $this->artisan('serp:run-task', ['key' => 'intelligence.run_scheduled_reports'])->assertSuccessful();
+
+    expect(Notification::where('notification_key', 'intelligence.scheduled_report_ready')->where('channel', 'email')->count())->toBe(1)
+        ->and($schedule->fresh()->next_run_at->isFuture())->toBeTrue();
+
+    // Not due again immediately after running.
+    $this->artisan('serp:run-task', ['key' => 'intelligence.run_scheduled_reports'])->assertSuccessful();
+    expect(Notification::where('notification_key', 'intelligence.scheduled_report_ready')->where('channel', 'email')->count())->toBe(1);
+});
+
+it('does not deliver a paused schedule', function (): void {
+    $f = int01Fixture();
+    int01GivePermission($f['user'], 'people.student.view');
+
+    $report = app(CreateCustomReportAction::class)->execute(new CreateCustomReportData(
+        schoolId: $f['school']->id, name: 'Paused Roll', primaryEntityKey: 'student',
+        selectedFields: [['entity' => 'student', 'field' => 'first_name']],
+        createdByUserId: $f['user']->id,
+    ));
+
+    $schedule = app(ScheduleCustomReportAction::class)->execute(
+        $report->id, 'weekly', [['recipientType' => 'user', 'recipientId' => $f['user']->id, 'channel' => 'email']], 'csv',
+        nextRunAt: Carbon::now()->subMinute(),
+    );
+    app(SetCustomReportScheduleActiveAction::class)->execute($schedule->id, false);
+
+    $this->artisan('serp:run-task', ['key' => 'intelligence.run_scheduled_reports'])->assertSuccessful();
+
+    expect(Notification::where('notification_key', 'intelligence.scheduled_report_ready')->count())->toBe(0);
 });

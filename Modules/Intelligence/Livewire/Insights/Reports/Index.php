@@ -15,20 +15,27 @@ use Modules\Core\Domain\Exceptions\InsufficientScopeException;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Models\School;
+use Modules\Intelligence\Domain\Actions\DeleteCustomReportAction;
 use Modules\Intelligence\Domain\Actions\RunSavedReportAction;
 use Modules\Intelligence\Domain\Actions\ShareReportAction;
+use Modules\Intelligence\Domain\Actions\UpdateCustomReportAction;
+use Modules\Intelligence\Domain\DataObjects\UpdateCustomReportData;
 use Modules\Intelligence\Livewire\Concerns\PresentsReportResults;
 use Modules\Intelligence\Models\CustomReport;
 use Modules\Intelligence\Models\ReportShare;
 
 /**
  * `Intelligence\Reports\Index` (Book J INT-01 §5, `report.build`) — the
- * signed-in user's own reports: run, and share with a colleague.
- * Sharing only names *who may run* a report; what each person gets back
- * is re-evaluated against their own permissions every time
- * (BR-INT-01-005), which the Action does and the share form says. Only
- * the author may share. There is no edit or delete Action in the
- * backend, so none is offered.
+ * signed-in user's own reports: run, edit, delete, and share with a
+ * colleague. Sharing only names *who may run* a report; what each
+ * person gets back is re-evaluated against their own permissions
+ * every time (BR-INT-01-005), which the Action does and the share
+ * form says. Only the author may edit, delete, or share.
+ * **Gap closed**: edit renames/re-describes a report via
+ * `UpdateCustomReportAction` (the underlying query itself is not
+ * re-opened here — a different query is a new report, built again in
+ * `Reports\Builder`); delete is a real `DeleteCustomReportAction` hard
+ * delete, cascading its schedules and shares.
  */
 #[Title('My reports')]
 #[Layout('layouts.app')]
@@ -44,6 +51,14 @@ final class Index extends Component
     public ?int $shareWithUserId = null;
 
     public ?int $ranReportId = null;
+
+    public ?int $editReportId = null;
+
+    public string $editName = '';
+
+    public string $editDescription = '';
+
+    public string $editChartType = '';
 
     /** @var array{rows: array<int, array<string, mixed>>, rowCount: int, durationMs: int, wasRedirected: bool, redirectReason: ?string, truncated: bool}|null */
     public ?array $result = null;
@@ -67,6 +82,50 @@ final class Index extends Component
             $this->result = null;
             $this->toast($exception->getMessage(), 'danger');
         }
+    }
+
+    public function editStart(int $reportId): void
+    {
+        $report = $this->ownReport($reportId);
+
+        $this->editReportId = $report->id;
+        $this->editName = $report->name;
+        $this->editDescription = (string) $report->description;
+        $this->editChartType = (string) $report->chart_type;
+    }
+
+    public function saveEdit(): void
+    {
+        $this->authorizePermission('report.build');
+
+        $this->validate([
+            'editName' => ['required', 'string', 'max:150'],
+            'editDescription' => ['nullable', 'string', 'max:1000'],
+            'editChartType' => ['nullable', 'in:,bar,line,pie,table'],
+        ]);
+
+        $report = $this->ownReport((int) $this->editReportId);
+
+        app(UpdateCustomReportAction::class)->execute(new UpdateCustomReportData(
+            reportId: $report->id,
+            name: $this->editName,
+            description: $this->editDescription !== '' ? $this->editDescription : null,
+            chartType: $this->editChartType !== '' ? $this->editChartType : null,
+        ));
+
+        $this->reset(['editReportId', 'editName', 'editDescription', 'editChartType']);
+        $this->toast(__('Report updated.'));
+    }
+
+    public function delete(int $reportId): void
+    {
+        $this->authorizePermission('report.build');
+
+        $report = $this->ownReport($reportId);
+
+        app(DeleteCustomReportAction::class)->execute($report->id);
+
+        $this->toast(__('Report deleted.'));
     }
 
     public function share(): void

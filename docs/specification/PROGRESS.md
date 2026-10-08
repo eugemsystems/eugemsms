@@ -1908,13 +1908,23 @@ permitted" (spatie otherwise throws and the builder 500s). One existing test
 ("re-evaluates a **shared** report…") never actually shared the report and only
 passed because of gap (3); it now shares it.
 
-**Deliberately not built:** the chart preview (the chart type is stored for a
-later renderer), report edit/delete and schedule pause/delete (no backend
-Action), PDF/Excel/CSV export and the `/api/v1/reports/*` endpoints, and
-attached files on scheduled delivery (the recipient is notified a report is
-ready; no file is rendered, and the cron wiring is still the backend's deferred
-gap). The warehouse is row-count tracking only, as its own Action documents.
-Intelligence module: 63 tests, all green; PHPStan clean.
+**Gap closed (2026-10-08):** report edit/delete, schedule pause/delete, and the
+schedule cron wiring, all previously "no backend Action"/"still the backend's
+deferred gap." `UpdateCustomReportAction`/`DeleteCustomReportAction` (hard
+delete; `custom_report_schedules`/`report_shares` cascade on `report_id`
+already) are offered from `Reports\Index`, author-only. `SetCustomReportScheduleActiveAction`/`DeleteCustomReportScheduleAction` are offered from
+`Reports\Schedule`, mirroring `SetWebhookSubscriptionActiveAction`'s own
+pause/resume shape. The `intelligence.run_scheduled_reports` per-school cron
+task now actually calls `RunScheduledReportsAction` for every due schedule —
+the Action existed and worked, it was simply never registered with
+`ScheduledTaskHandlerRegistry` until now. **Still deliberately not built:** the
+chart preview (the chart type is stored for a later renderer), PDF/Excel/CSV
+export and the `/api/v1/reports/*` endpoints (both require a spreadsheet/PDF
+package not currently a dependency — see note below), and an attached file on
+scheduled delivery (the recipient is notified a report is ready; no file is
+rendered, since CORE-09's own channel drivers are text-only). The warehouse is
+row-count tracking only, as its own Action documents.
+Intelligence module: 152 tests, all green; PHPStan clean.
 
 ### Book K — Closing the Catalogue — ✅ admin UI complete
 FIN-07 (lives in `Modules/Finance`, alongside FIN-01–06), PPL-06 (lives in

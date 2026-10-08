@@ -14,6 +14,8 @@ use Modules\Core\Domain\Support\Settings\SettingScope;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Intelligence\Domain\Actions\CreateCustomReportAction;
+use Modules\Intelligence\Domain\Actions\ScheduleCustomReportAction;
+use Modules\Intelligence\Domain\Actions\ShareReportAction;
 use Modules\Intelligence\Domain\DataObjects\CreateCustomReportData;
 use Modules\Intelligence\Livewire\Insights\Reports\Builder;
 use Modules\Intelligence\Livewire\Insights\Reports\ExecutionLog;
@@ -298,6 +300,72 @@ it('schedules one of my own reports for school colleagues only (BR-INT-01-010)',
 
     $component->set('reportId', $report->id)->set('recipientIds', [$outsider->id])->call('schedule')->assertHasErrors(['recipientIds']);
     expect(fn () => $component->set('reportId', $foreign->id)->set('recipientIds', [$colleague->id])->call('schedule'))->toThrow(ModelNotFoundException::class);
+});
+
+it('lets only the author edit or delete their own report', function (): void {
+    $f = int01AdminFixture();
+    $author = int01AdminUser($f, 'report.build');
+    $other = int01AdminUser($f, 'report.build');
+    $report = int01AdminReport($f, $author);
+    SchoolContext::set($f['school']);
+
+    $asOther = Livewire::actingAs($other)->test(Index::class, ['school' => $f['school']]);
+    expect(fn () => $asOther->call('editStart', $report->id))->toThrow(ModelNotFoundException::class);
+    expect(fn () => $asOther->call('delete', $report->id))->toThrow(ModelNotFoundException::class);
+
+    $asAuthor = Livewire::actingAs($author)->test(Index::class, ['school' => $f['school']]);
+    $asAuthor->call('editStart', $report->id)
+        ->assertSet('editName', $report->name)
+        ->set('editName', 'Renamed Roll')
+        ->set('editChartType', 'bar')
+        ->call('saveEdit')
+        ->assertHasNoErrors();
+
+    expect($report->fresh()->name)->toBe('Renamed Roll')
+        ->and($report->fresh()->chart_type)->toBe('bar');
+
+    $asAuthor->call('delete', $report->id);
+    expect(CustomReport::find($report->id))->toBeNull();
+});
+
+it('deleting a report cascades its schedules and shares', function (): void {
+    $f = int01AdminFixture();
+    $author = int01AdminUser($f, 'report.build', 'report.schedule');
+    $colleague = int01AdminUser($f);
+    $report = int01AdminReport($f, $author);
+    SchoolContext::set($f['school']);
+
+    app(ShareReportAction::class)->execute($report->id, 'user', $colleague->id, $author->id);
+    app(ScheduleCustomReportAction::class)->execute($report->id, 'weekly', [['recipientType' => 'user', 'recipientId' => $colleague->id, 'channel' => 'email']], 'csv');
+
+    Livewire::actingAs($author)->test(Index::class, ['school' => $f['school']])->call('delete', $report->id);
+
+    expect(ReportShare::where('report_id', $report->id)->count())->toBe(0)
+        ->and(CustomReportSchedule::where('report_id', $report->id)->count())->toBe(0);
+});
+
+it('pauses, resumes, and deletes a report schedule, only for its own author', function (): void {
+    $f = int01AdminFixture();
+    $author = int01AdminUser($f, 'report.schedule', 'report.build');
+    $report = int01AdminReport($f, $author);
+    SchoolContext::set($f['school']);
+
+    $schedule = app(ScheduleCustomReportAction::class)->execute(
+        $report->id, 'weekly', [['recipientType' => 'user', 'recipientId' => $author->id, 'channel' => 'email']], 'csv',
+    );
+
+    $stranger = int01AdminUser($f, 'report.schedule');
+    expect(fn () => Livewire::actingAs($stranger)->test(Schedule::class, ['school' => $f['school']])->call('pause', $schedule->id))->toThrow(ModelNotFoundException::class);
+
+    $component = Livewire::actingAs($author)->test(Schedule::class, ['school' => $f['school']]);
+    $component->call('pause', $schedule->id);
+    expect($schedule->fresh()->is_active)->toBeFalse();
+
+    $component->call('pause', $schedule->id);
+    expect($schedule->fresh()->is_active)->toBeTrue();
+
+    $component->call('delete', $schedule->id);
+    expect(CustomReportSchedule::find($schedule->id))->toBeNull();
 });
 
 it('lists executions without ever showing a report’s results (BR-INT-01-009)', function (): void {

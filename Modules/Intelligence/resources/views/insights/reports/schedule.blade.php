@@ -5,7 +5,7 @@
         </a>
         <div>
             <h4 class="mb-0">{{ __('Schedule a report') }}</h4>
-            <p class="text-body-secondary small mb-0">{{ __('Recipients are told by email when the report is ready; no file is attached yet. Schedules only run once the platform’s scheduler is switched on, and cannot be edited or paused from here.') }}</p>
+            <p class="text-body-secondary small mb-0">{{ __('Recipients are told by email when the report is ready; no file is attached yet.') }}</p>
         </div>
     </div>
 
@@ -14,7 +14,7 @@
             <div class="card">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>{{ __('Report') }}</th><th>{{ __('Frequency') }}</th><th>{{ __('Format') }}</th><th class="text-end">{{ __('Recipients') }}</th><th>{{ __('Next run') }}</th></tr></thead>
+                        <thead><tr><th>{{ __('Report') }}</th><th>{{ __('Frequency') }}</th><th>{{ __('Format') }}</th><th class="text-end">{{ __('Recipients') }}</th><th>{{ __('Next run') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
                         <tbody>
                             @forelse ($schedules as $schedule)
                                 <tr wire:key="sch-{{ $schedule->id }}">
@@ -23,9 +23,14 @@
                                     <td>{{ $schedule->format }}</td>
                                     <td class="text-end">{{ count($schedule->recipients ?? []) }}</td>
                                     <td class="small">{{ $schedule->next_run_at?->toDayDateTimeString() ?? '—' }}</td>
+                                    <td><span class="badge text-bg-{{ $schedule->is_active ? 'success' : 'secondary' }}">{{ $schedule->is_active ? __('Active') : __('Paused') }}</span></td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="pause({{ $schedule->id }})">{{ $schedule->is_active ? __('Pause') : __('Resume') }}</button>
+                                        <button type="button" class="btn btn-xs btn-outline-danger" wire:click="delete({{ $schedule->id }})" wire:confirm="{{ __('Delete this schedule?') }}">{{ __('Delete') }}</button>
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-body-secondary py-3">{{ __('No schedules yet.') }}</td></tr>
+                                <tr><td colspan="7" class="text-center text-body-secondary py-3">{{ __('No schedules yet.') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>

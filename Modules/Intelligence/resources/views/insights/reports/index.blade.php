@@ -23,6 +23,8 @@
                             <td class="text-end text-nowrap">
                                 <button type="button" class="btn btn-xs btn-outline-primary" wire:click="run({{ $report->id }})">{{ __('Run') }}</button>
                                 <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="$set('shareReportId', {{ $report->id }})">{{ __('Share') }}</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary" wire:click="editStart({{ $report->id }})">{{ __('Edit') }}</button>
+                                <button type="button" class="btn btn-xs btn-outline-danger" wire:click="delete({{ $report->id }})" wire:confirm="{{ __('Delete this report? Its schedules and shares go with it.') }}">{{ __('Delete') }}</button>
                             </td>
                         </tr>
                     @empty
@@ -32,6 +34,26 @@
             </table>
         </div>
     </div>
+
+    @if ($editReportId)
+        <div class="card mt-3">
+            <div class="card-header">{{ __('Edit report') }}</div>
+            <div class="card-body">
+                <input type="text" class="form-control mb-2 @error('editName') is-invalid @enderror" wire:model="editName" placeholder="{{ __('Name') }}">
+                @error('editName') <div class="invalid-feedback mb-2">{{ $message }}</div> @enderror
+                <textarea class="form-control mb-2" wire:model="editDescription" placeholder="{{ __('Description') }}" style="height: 60px"></textarea>
+                <select class="form-select mb-2" wire:model="editChartType">
+                    <option value="">{{ __('No chart') }}</option>
+                    <option value="bar">{{ __('Bar') }}</option>
+                    <option value="line">{{ __('Line') }}</option>
+                    <option value="pie">{{ __('Pie') }}</option>
+                    <option value="table">{{ __('Table') }}</option>
+                </select>
+                <button type="button" class="btn btn-primary btn-sm" wire:click="saveEdit">{{ __('Save') }}</button>
+                <button type="button" class="btn btn-link btn-sm" wire:click="$set('editReportId', null)">{{ __('Cancel') }}</button>
+            </div>
+        </div>
+    @endif
 
     @if ($shareReportId)
         <div class="card mt-3">

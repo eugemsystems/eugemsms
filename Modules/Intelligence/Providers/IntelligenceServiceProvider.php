@@ -36,6 +36,7 @@ use Modules\Intelligence\Domain\Actions\MarkOfflineHardwareDevicesAction;
 use Modules\Intelligence\Domain\Actions\RebuildWarehouseSnapshotAction;
 use Modules\Intelligence\Domain\Actions\RecalculateStaffWellbeingIndicatorAction;
 use Modules\Intelligence\Domain\Actions\RetryFailedWebhookDeliveriesAction;
+use Modules\Intelligence\Domain\Actions\RunScheduledReportsAction;
 use Modules\Intelligence\Domain\DataObjects\HardwareScanRouteDefinition;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
 use Modules\Intelligence\Domain\DataObjects\ReportEntityDefinition;
@@ -722,6 +723,30 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
                 return count($r).' snapshot(s) rebuilt';
             },
             description: 'Rebuilds the nightly warehouse snapshots after every other nightly job has run.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.run_scheduled_reports',
+            moduleCode: 'INT-01',
+            name: 'Run Scheduled Reports',
+            cron: '0 * * * *',
+            handler: static function (School $school): string {
+                $dueIds = CustomReportSchedule::where('school_id', $school->id)
+                    ->where('is_active', true)
+                    ->whereNotNull('next_run_at')
+                    ->where('next_run_at', '<=', now())
+                    ->pluck('id');
+
+                $delivered = 0;
+
+                foreach ($dueIds as $scheduleId) {
+                    $delivered += app(RunScheduledReportsAction::class)->execute((int) $scheduleId);
+                }
+
+                return $delivered.' scheduled report delivery notification(s) sent';
+            },
+            description: 'Runs every due CustomReportSchedule and notifies its recipients that the report is ready (BR-INT-01-010). Closes the cron wiring Schedule\'s own docblock used to flag as a deferred step.',
             alertIfNotRunWithinMinutes: 1560,
         );
     }
