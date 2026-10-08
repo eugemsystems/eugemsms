@@ -69,7 +69,7 @@ Action/model's own docblock, not silently missing — see each module's own
 
 ---
 
-## Admin UI — in progress: Books A, B, I, K complete; C–H3 and J partial (deliberately deferred items remain)
+## Admin UI — complete across all 78 modules (Books A–K). A handful of narrow items remain, each explicitly flagged as a deliberate design-decision deferral, not a silent gap: Book F's BRD-04 `PublicMenu` portal screen (mobile/portal phase, like every other parent-facing screen); Book J's SAA-02 vendor health API, INT-02 daily-digest cron wiring (no subscriber list exists to wire it to), and INT-04 webhook-to-domain-event auto-wiring/`attendance` hardware route (each needing a design decision this pass does not make unilaterally)
 
 This pass retrofits Livewire screens onto the already-complete backend,
 **in the same book order as the original build** (A → B → C → D → E → F →
@@ -414,8 +414,9 @@ new `PreviewBillingAttributeChangeAction`, a real pre-existing bug fixed
 in `DetectPossibleDuplicatesAction` (date-of-birth matching was silently
 broken on every school), and two documented Livewire gotchas (see
 `.ai/rules/people.md`). Class/house allocation is `Academic\Allocation\Bulk`
-(ACA-02), not a PPL-01 screen. **Still not built, deliberately**: merging
-duplicate learners — see the correction above.
+(ACA-02), not a PPL-01 screen. Merging duplicate learners is now built
+(`MergeDuplicateStudentsAction`, `Students\Duplicates`) — see the correction
+above; nothing remains deliberately unbuilt in this note.
 
 **PPL-03 note.** Built: Guardian directory, profile (linked learners +
 active fee-liability rules, both read-only with links out), Create
@@ -770,10 +771,11 @@ typed as a `staff.id` (`ApproveProjectBriefAction`, `MarkProjectAction`,
 `Staff::where('user_id', Auth::id())` with an explicit "no staff record
 linked" refusal if it comes back null, never a silent wrong-id write —
 caught by this pass's own tests, not by a type error, since both ids
-are plain `int`. **Deliberately not built**: `CMP-01`'s candidate-set
-export interface, performance analysis/distributions (no Action
-computes one), and `FIN-02` entry-fee billing — all confirmed backend
-gaps. See `.ai/rules/academic.md`.
+are plain `int`. Nothing remains deliberately unbuilt in this cluster —
+`CMP-01`'s candidate-set export/`FIN-02` entry-fee billing and the
+performance-analysis/distributions gap this sentence used to list are
+all closed, per the two correction notes above. See
+`.ai/rules/academic.md`.
 
 **Built 2026-10-07: `Projects\Amend`'s own CORE-07 wiring.** `AmendVerifiedProjectAction` used to
 accept a caller-asserted `approved: true` with no real approval behind it — the same gap `Marks\Amend`
@@ -1687,9 +1689,11 @@ supports a *learner* attendee (the backend raises the FIN-02 ad hoc charge
 against a student), so the screen asks for an admission number; payment is
 confirmed by entering an existing cashier receipt number — the backend's
 own documented bridge for the missing charge-to-receipt settlement, i.e.
-"paid" is human-asserted. **Deliberately not built:** newsletter *sending*
-(no backend sender exists — an issue only ever reaches draft/scheduled),
-notice attachments (CORE-10's file picker isn't wired), the iCal feed and
+"paid" is human-asserted. Newsletter sending is built — `Compose`'s "Send
+now" calls the real `SendNewsletterAction`, and `SendDueNewslettersTask` is
+a registered scheduled task for due issues (**correction, 2026-10-08**: this
+note used to list newsletter sending itself as deliberately unbuilt — stale).
+**Deliberately not built:** notice attachments (CORE-10's file picker isn't wired), the iCal feed and
 its tokens and ticket scanning (API/mobile surfaces), and read-rate
 denominators on the notice board (the backend only approximates the
 audience size for narrow scopes). Comms module: 122 tests (61 backend +
@@ -1713,13 +1717,15 @@ advisory: the session and matched learners are re-derived server-side on
 every confirm (never trusted from component state), a below-threshold
 learner gets no default status, and an unmatched participant is listed
 but must be marked from the register itself — there is no backend Action
-to match one, and none was invented. **Deliberately not built:** guardian
+to match one, and none was invented. **Correction (2026-10-08)**: a purge
+schedule for recordings is built — `comms.purge_expired_recordings` runs
+`PurgeExpiredRecordingsAction` daily at 01:30 as a registered scheduled
+task; this note used to list the cron wiring as a deferred gap, stale.
+**Deliberately not built:** guardian
 consultation booking and the join/my-schedule endpoints (portal API),
 the webhook secret field (the backend registration Action has no write
-path for it), a meeting-webhook log screen (not in the spec's table), and
-a purge schedule for recordings (the screen offers on-demand purge; the
-cron wiring remains the backend's documented deferred gap). Comms module:
-141 tests (61 backend + 80 admin-UI), all green.
+path for it), and a meeting-webhook log screen (not in the spec's table).
+Comms module: 141 tests (61 backend + 80 admin-UI), all green.
 
 **COM-08 note.** Built 7 screens: the spec's six —
 `Surveys\Builder`, `Surveys\Results`, `Complaints\Submit`,
@@ -1753,12 +1759,17 @@ read through `GetComplaintThreadForRaiserAction`, so an internal note never
 reaches the raiser. Survey results are aggregates only — counts, a scale
 average, NPS, and free text with no respondent. A survey opens as soon as it
 is saved and cannot be edited (no update Action), and a skip rule may only
-jump forward. **Deliberately not built:** the respondent-facing survey form
-and survey distribution, the portal complaint endpoints, the raiser's
-satisfaction rating, SLA alerts being *scheduled* (the Action exists; the
-cron wiring is the backend's documented deferred gap), and the head's
-termly aggregate report (BR-COM-08-008). Comms module: 162 tests (61
-backend + 101 admin-UI), all green. **This completes Book I's admin UI.**
+jump forward. **Correction (2026-10-08)**: three items this note used to
+list as deliberately unbuilt are stale — `Surveys\Respond`
+(`SubmitSurveyResponseAction`, routed at `surveys/respond`, open to any
+school member) is the real respondent-facing form; the raiser's
+satisfaction rating is captured via `RateComplaintResolutionAction`, wired
+into `Complaints\Submit`; and SLA alerts are genuinely scheduled
+(`comms.check_complaint_slas`, a registered cron task), not just backed by
+an unwired Action. **Deliberately not built:** the portal complaint
+endpoints and the head's termly aggregate report (BR-COM-08-008). Comms
+module: 162 tests (61 backend + 101 admin-UI), all green. **This completes
+Book I's admin UI.**
 
 **A real Livewire gotcha found in this pass**: component names derive
 from the class path under the module's `addLocation()` namespace, so
