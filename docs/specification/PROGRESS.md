@@ -583,7 +583,7 @@ of a `published` mark now genuinely routes through Core's CORE-07 approvals engi
 remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — 🟡 in progress
+### Book E — Academic Depth — 🟡 three narrow gaps remain, all deliberately deferred (see each module's own note): ACA-03's live-drag clash panel/timetable export, ACA-06's national submission format (no Ministry format specified anywhere to build against), ACA-07's paper encryption-at-rest/visible watermarking
 
 | Module | Screens | Status |
 |---|---|---|
@@ -1663,7 +1663,7 @@ from the class path under the module's `addLocation()` namespace, so
 update request then re-hydrated the *Finance* component. See
 `.ai/rules/comms.md`.
 
-### Book J — Intelligence & SaaS Control — 🟡 in progress
+### Book J — Intelligence & SaaS Control — ✅ all 7 modules shipped (2026-10-08: INT-01's report edit/delete/schedule-pause/PDF-Excel-CSV-export/`/api/v1/reports/*` and INT-04's vendor usage aggregate closed this pass — see each module's own note; a handful of narrow items remain, each explicitly flagged as deliberate rather than silently unbuilt: SAA-02's `GET /api/v1/vendor/tenants/{id}/health`, INT-02's daily-digest cron wiring (no subscriber list exists to wire it to), and INT-04's webhook-to-domain-event auto-wiring/`attendance` hardware route, both of which need a design decision this pass does not make unilaterally)
 
 Build order from the spec: INT-01 → INT-02 → INT-03 → INT-04 → SAA-01 →
 SAA-02 / SAA-03. INT screens are **school-facing** (this panel); SAA-01/02/03
