@@ -20,6 +20,7 @@ use Modules\Finance\Models\Journal;
 use Modules\Intelligence\Domain\DataObjects\RiskIndicatorResult;
 use Modules\Saas\Domain\Actions\CheckSupportTicketSlaAction;
 use Modules\Saas\Domain\Actions\ComputeTenantHealthSnapshotAction;
+use Modules\Saas\Domain\Actions\ListStalledOnboardingChecklistsAction;
 use Modules\Saas\Domain\Actions\RecordModuleAdoptionAction;
 use Modules\Saas\Domain\Actions\RenewSubscriptionAction;
 use Modules\Saas\Domain\DataObjects\ChurnRiskIndicatorDefinition;
@@ -353,6 +354,21 @@ class SaasServiceProvider extends ModuleServiceProvider
             description: 'Warns of approaching and breached vendor support SLAs.',
             alertIfNotRunWithinMinutes: 120,
         );
+
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.list_stalled_onboarding_checklists',
+            moduleCode: 'SAA-03',
+            name: 'Check Stalled Onboarding Checklists',
+            cron: '0 5 * * *',
+            handler: static function (): string {
+                $stalled = app(ListStalledOnboardingChecklistsAction::class)->execute();
+
+                return count($stalled).' checklist(s) stalled';
+            },
+            description: 'Alerts a success manager when an onboarding checklist has had no activity past the stall threshold.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
         ScheduledTaskHandlerRegistry::register(
             key: 'saas.record_module_adoption',
             moduleCode: 'SAA-03',

@@ -30,9 +30,11 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Invoice;
 use Modules\Intelligence\Domain\Actions\ComputeFeeDefaultRiskAction;
+use Modules\Intelligence\Domain\Actions\ComputeLearnerRiskScoreAction;
 use Modules\Intelligence\Domain\Actions\GetKpiValueAction;
 use Modules\Intelligence\Domain\Actions\MarkOfflineHardwareDevicesAction;
 use Modules\Intelligence\Domain\Actions\RebuildWarehouseSnapshotAction;
+use Modules\Intelligence\Domain\Actions\RecalculateStaffWellbeingIndicatorAction;
 use Modules\Intelligence\Domain\Actions\RetryFailedWebhookDeliveriesAction;
 use Modules\Intelligence\Domain\DataObjects\HardwareScanRouteDefinition;
 use Modules\Intelligence\Domain\DataObjects\KpiDefinitionEntry;
@@ -66,7 +68,9 @@ use Modules\Intelligence\Models\WebhookDelivery;
 use Modules\Intelligence\Models\WebhookSubscription;
 use Modules\Intelligence\Models\WithdrawalRiskFlag;
 use Modules\Payroll\Models\PayGradeNotch;
+use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
+use Modules\People\Models\StudentEnrolment;
 use Modules\Welfare\Models\BehaviourRecord;
 use Modules\Welfare\Models\SickBayAdmission;
 use Nwidart\Modules\Support\ModuleServiceProvider;
@@ -628,6 +632,54 @@ class IntelligenceServiceProvider extends ModuleServiceProvider
                 return count($r).' household(s) scored';
             },
             description: 'Recomputes which households are at risk of defaulting on fees.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.compute_learner_risk_scores',
+            moduleCode: 'INT-03',
+            name: 'Compute Learner Risk Scores',
+            cron: '0 4 * * *',
+            handler: static function (School $school): string {
+                $term = Term::where('school_id', $school->id)->where('starts_on', '<=', now())->orderByDesc('starts_on')->first();
+
+                if ($term === null) {
+                    return '0 learner(s) scored (no current term)';
+                }
+
+                $studentIds = StudentEnrolment::where('school_id', $school->id)->where('term_id', $term->id)->where('status', 'active')->pluck('student_id')->unique();
+
+                foreach ($studentIds as $studentId) {
+                    app(ComputeLearnerRiskScoreAction::class)->execute($school->id, (int) $studentId, $term->id);
+                }
+
+                return $studentIds->count().' learner(s) scored';
+            },
+            description: 'Recomputes each enrolled learner\'s withdrawal risk score for the current term.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'intelligence.recalculate_staff_wellbeing',
+            moduleCode: 'INT-03',
+            name: 'Recalculate Staff Wellbeing',
+            cron: '15 4 * * *',
+            handler: static function (School $school): string {
+                $term = Term::where('school_id', $school->id)->where('starts_on', '<=', now())->orderByDesc('starts_on')->first();
+
+                if ($term === null) {
+                    return '0 staff member(s) recalculated (no current term)';
+                }
+
+                $staffIds = Staff::where('school_id', $school->id)->where('status', 'active')->pluck('id');
+
+                foreach ($staffIds as $staffId) {
+                    app(RecalculateStaffWellbeingIndicatorAction::class)->execute($school->id, (int) $staffId, $term->id);
+                }
+
+                return $staffIds->count().' staff member(s) recalculated';
+            },
+            description: 'Recalculates each active staff member\'s wellbeing indicator for the current term.',
             alertIfNotRunWithinMinutes: 1560,
         );
 

@@ -1637,9 +1637,9 @@ genuinely scheduled — `saas.record_module_adoption` (`RecordModuleAdoptionActi
 `saas.check_support_ticket_slas` (`CheckSupportTicketSlaAction`, via
 `ScheduledTaskHandlerRegistry::registerGlobal`) are both registered and given real cron
 entries by `routes/console.php`'s generic loop, closed in the project-wide scheduled-jobs
-gap-closing pass. Onboarding-checklist stall alerts remain genuinely unscheduled
-(`ListStalledOnboardingChecklistsAction` has a registered notification key but no
-matching scheduled-task key) — still on-demand buttons only.
+gap-closing pass. **Built 2026-10-07**: onboarding-checklist stall alerts are now also
+scheduled — `saas.list_stalled_onboarding_checklists` (`ListStalledOnboardingChecklistsAction`,
+a global, cross-tenant scan with no per-school argument) via `registerGlobal`.
 
 **SAA-02 note.** Vendor screens `Tenants\Index`, `Tenants\Show`, `Rollouts\Index`,
 `Releases\Index`, `Broadcasts\Compose`, `Incidents\Manage` (routes `vendor.*`), the
@@ -1770,11 +1770,14 @@ no longer overdue (the table is one current row per guardian);
 partially true — `intelligence.compute_fee_default_risk` (`ComputeFeeDefaultRiskAction`)
 is genuinely scheduled, registered with `ScheduledTaskHandlerRegistry` and given a
 real cron entry by `routes/console.php`'s generic loop, closed in the project-wide
-scheduled-jobs gap-closing pass. `ComputeLearnerRiskScoreAction` (withdrawal risk) and
-`RecalculateStaffWellbeingIndicatorAction` (staff wellbeing) remain genuinely
-unscheduled — confirmed, neither key is registered — still on demand from their own
-screens. Likewise the three `/api/v1/risk/*` endpoints are not built (API surface is
-INT-04's pass).
+scheduled-jobs gap-closing pass. **Built 2026-10-07**: `ComputeLearnerRiskScoreAction`
+(withdrawal risk, `intelligence.compute_learner_risk_scores`) and
+`RecalculateStaffWellbeingIndicatorAction` (staff wellbeing,
+`intelligence.recalculate_staff_wellbeing`) are now also scheduled, each looping the
+school's actively-enrolled learners/active staff for the current term — mirroring
+`EarlyWarning\Queue::recomputeTerm()`'s/`StaffWellbeing`'s own existing per-learner/
+per-staff loop, not a new computation. Likewise the three `/api/v1/risk/*` endpoints are
+not built (API surface is INT-04's pass).
 
 **INT-02 note.** Built the spec's 4 screens — `Executive\HeadDashboard`,
 `Executive\BursarDashboard`, `Executive\Kpis`, `Executive\BoardPack` — under
