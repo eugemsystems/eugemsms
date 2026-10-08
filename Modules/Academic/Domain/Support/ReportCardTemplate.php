@@ -17,6 +17,8 @@ final class ReportCardTemplate
 
     public const TRANSCRIPT_TYPE = 'transcript';
 
+    public const PROJECT_PORTFOLIO_TYPE = 'project_portfolio';
+
     public static function registerVariables(): void
     {
         TemplateVariableRegistry::register(self::REPORT_TYPE, [
@@ -28,6 +30,13 @@ final class ReportCardTemplate
 
         TemplateVariableRegistry::register(self::TRANSCRIPT_TYPE, [
             'school.name', 'student.name', 'student.admission_number', 'student.date_of_birth', 'issued_on', 'terms.*',
+        ]);
+
+        TemplateVariableRegistry::register(self::PROJECT_PORTFOLIO_TYPE, [
+            'school.name', 'student.name', 'student.admission_number', 'subject.name',
+            'brief.title', 'brief.description', 'brief.deliverables', 'brief.starts_on', 'brief.due_on', 'brief.max_mark',
+            'milestones.*', 'evidence.*', 'rubric.*',
+            'raw_mark', 'percent', 'grade', 'marker_comment', 'moderation_note', 'compiled_on',
         ]);
     }
 
@@ -69,6 +78,43 @@ final class ReportCardTemplate
             <p>Average {{ term.average_percent }}% — {{ term.promotion }}</p>
             @endforeach
             <p>Issued {{ issued_on }}</p>
+            TPL;
+    }
+
+    public static function portfolioContent(): string
+    {
+        return <<<'TPL'
+            <h1>{{ school.name }}</h1>
+            <h2>Project portfolio — {{ subject.name }}</h2>
+            <p><strong>{{ student.name }}</strong> ({{ student.admission_number }})</p>
+            <h3>{{ brief.title }}</h3>
+            <p>{{ brief.description }}</p>
+            <p>{{ brief.starts_on }} — {{ brief.due_on }} — Max mark {{ brief.max_mark }}</p>
+            <h4>Milestones</h4>
+            <table>
+            <tr><th>Milestone</th><th>Due</th><th>Status</th><th>Mark</th><th>Feedback</th></tr>
+            @foreach(milestones as milestone)
+            <tr><td>{{ milestone.title }}</td><td>{{ milestone.due_on }}</td><td>{{ milestone.status }}</td><td>{{ milestone.mark }}</td><td>{{ milestone.feedback }}</td></tr>
+            @endforeach
+            </table>
+            <h4>Evidence</h4>
+            <table>
+            <tr><th>Type</th><th>Reference</th><th>Caption</th><th>Uploaded</th><th>Final submission</th></tr>
+            @foreach(evidence as item)
+            <tr><td>{{ item.type }}</td><td>{{ item.reference }}</td><td>{{ item.caption }}</td><td>{{ item.uploaded_at }}</td><td>{{ item.is_final_submission }}</td></tr>
+            @endforeach
+            </table>
+            <h4>Rubric</h4>
+            <table>
+            <tr><th>Criterion</th><th>Max mark</th><th>Weight %</th><th>Awarded</th></tr>
+            @foreach(rubric as row)
+            <tr><td>{{ row.criterion }}</td><td>{{ row.max_mark }}</td><td>{{ row.weight_percent }}</td><td>{{ row.awarded }}</td></tr>
+            @endforeach
+            </table>
+            <p>Mark: {{ raw_mark }} ({{ percent }}%, grade {{ grade }})</p>
+            <p>Marker comment: {{ marker_comment }}</p>
+            <p>Moderation note: {{ moderation_note }}</p>
+            <p>Compiled {{ compiled_on }}</p>
             TPL;
     }
 }

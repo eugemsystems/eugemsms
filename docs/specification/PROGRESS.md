@@ -588,7 +588,7 @@ remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `stud
 | Module | Screens | Status |
 |---|---|---|
 | ACA-03 | Timetable & Scheduling Engine | 🟡 partial (see note) |
-| ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial (see note) |
+| ACA-06 | School-Based Projects & Legacy CALA | 🟡 partial — one statutory-format gap (see note) |
 | ACA-07 | Examinations Administration | 🟡 partial (see note) |
 
 **ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
@@ -620,22 +620,33 @@ progress bar and a real simulated-annealing score curve (the backend
 action itself doesn't implement these — see its own docblock), and any
 PDF/export generation for timetable views. See `.ai/rules/academic.md`.
 
-**ACA-06 note.** Built (`Livewire/Projects/`, 10 screens):
+**ACA-06 note.** Built (`Livewire/Projects/`, 11 screens):
 `Instruments`, `Briefs` (folds the spec's separate library+editor
 screens into one, like `Curriculum\Frameworks`), `Rubrics` (criteria
 weight-sum-to-100% guard), `Approve` (one lifecycle screen hosting both
 HOD approve and issue), `Tracker` (progress grid + chase list +
-`ExemptLearnerProjectAction`'s exemption action), `Mark` (marking queue,
+`ExemptLearnerProjectAction`'s exemption action, now also linking to
+`Portfolio` per row), `Mark` (marking queue,
 criterion-by-criterion, no evidence viewer alongside the rubric — this
 pass's screens are staff-marking-focused, not a document viewer),
 `Moderate`, `Verify`, `Amend` — **correction (2026-10-07)**: `Amend` used to mirror `Marks\Amend`'s
 old `approved: true` boundary (no CORE-07 workflow wired up); it now genuinely routes through
 Core's approvals engine the same way `Marks\Amend` was fixed — see the dedicated note below.
-`CalaArchive` (read-only). **Deliberately not built**: Portfolio
-compilation and the national submission export — no Action exists for
-either (confirmed by grep); learner-facing milestone/evidence
-submission has no admin screen since the spec itself places that
-interaction on the mobile app/portal, not the staff console.
+`CalaArchive` (read-only). **Gap closed (2026-10-08, BR-ACA-06-017)**:
+`Portfolio` + the new `CompileProjectPortfolioAction`/`ProjectPortfolio`
+model compile the brief, every milestone, all evidence, the rubric
+breakdown, and the marker/moderator comments into one
+`project_portfolio`-type `Document` — generated fresh from source on
+every compile, the same `GenerateTranscriptAction` pattern Book D's
+transcript uses; `ProjectPortfolio` just records when and by whom.
+**Still genuinely blocked**: the national submission export
+(BR-ACA-06-018) — the spec states outright that "the format required
+by the Ministry... is a configurable template, not code," and supplies
+no concrete format anywhere to build against, the same standard
+already held for Book D's attendance-register export gap. Learner-facing
+milestone/evidence submission still has no admin screen, since the
+spec itself places that interaction on the mobile app/portal, not the
+staff console.
 See `.ai/rules/academic.md`.
 
 **ACA-07 note.** Built (`Livewire/Exams/`, 13 screens): `Sessions`

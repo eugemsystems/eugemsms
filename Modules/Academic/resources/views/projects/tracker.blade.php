@@ -29,6 +29,7 @@
                                         <input type="text" class="form-control form-control-sm d-inline-block mb-1" style="width: 200px" wire:model="exemptionReasons.{{ $project->id }}" placeholder="{{ __('Exemption reason') }}">
                                         <button type="button" class="btn btn-sm btn-outline-warning" wire:click="exempt({{ $project->id }})">{{ __('Exempt') }}</button>
                                     @endif
+                                    <a href="{{ route('academic.projects.portfolio', ['school' => $school, 'learnerProject' => $project->id]) }}" class="small" wire:navigate>{{ __('Portfolio') }}</a>
                                 </td>
                             </tr>
                         @empty
