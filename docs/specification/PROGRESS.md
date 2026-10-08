@@ -715,15 +715,15 @@ from the request's own `onApproved()`. A school must configure an approval chain
 `project_amendment` type first (existing chain-builder screen). Tests:
 `ProjectAmendmentApprovalTest.php` (5 tests).
 
-### Book F — Boarding & Welfare — 🟡 in progress
+### Book F — Boarding & Welfare — 🟡 two narrow items remain (BRD-04's portal/hardware-capture screens, BRD-05's unmade withdrawal-blocking policy decision); BRD-01/02/03 are fully done — see each module's own note
 
 | Module | Screens | Status |
 |---|---|---|
-| BRD-01 | Hostel, Room & Bed Allocation | 🟡 partial (see note) |
-| BRD-02 | Roll Call & Movement ⭐ | 🟡 partial (see note) |
-| BRD-03 | Exeat, Leave & Visitor Management ⭐ | 🟡 partial (see note) |
-| BRD-04 | Catering, Menus & Kitchen | 🟡 partial (see note) |
-| BRD-05 | Laundry & Linen | 🟡 partial (see note) |
+| BRD-01 | Hostel, Room & Bed Allocation | ✅ (the board is a plain table rather than a drag grid — a deliberate simplification, not a gap; see note) |
+| BRD-02 | Roll Call & Movement ⭐ | ✅ (see note) |
+| BRD-03 | Exeat, Leave & Visitor Management ⭐ | ✅ (see note) |
+| BRD-04 | Catering, Menus & Kitchen | 🟡 partial — `PublicMenu` portal screen and meal-attendance capture UI, both deferred to the mobile/portal phase like every other parent-facing screen (see note) |
+| BRD-05 | Laundry & Linen | 🟡 partial — `CheckLinenClearanceAction` deliberately not wired into `WithdrawStudentAction`, an unmade policy decision (see note) |
 
 **BRD-01 note.** Built (`Livewire/Hostels/`, `Allocation/`, `Inspections/`,
 `Damages/` — 9 screens): `Hostels\{Structure,Show}`, `Allocation\{Board,
@@ -842,13 +842,13 @@ every case the model/migration/factory existed but only
 one. See `.ai/rules/boarding.md` for the full list of what was built,
 deferred, and found.
 
-### Book G — Welfare & Pastoral — 🟡 in progress
+### Book G — Welfare & Pastoral — ✅ all 3 modules shipped, nothing deferred (see each module's own note for the judgment calls made along the way)
 
 | Module | Screens | Status |
 |---|---|---|
-| BRD-06 | Health, Clinic & Sanatorium 🔒 | 🟡 partial (see note) |
-| BRD-07 | Discipline, Conduct & Behaviour | 🟡 partial (see note) |
-| BRD-08 | Counselling & Safeguarding 🔒🔒 | 🟡 partial (see note) |
+| BRD-06 | Health, Clinic & Sanatorium 🔒 | ✅ (see note) |
+| BRD-07 | Discipline, Conduct & Behaviour | ✅ (see note) |
+| BRD-08 | Counselling & Safeguarding 🔒🔒 | ✅ (see note) |
 
 **BRD-06 note 🔒.** Built (`Livewire/Health/`, 13 screens): `Record`
 (folds "Clinical record" + "Condition register" — Tier 3, gated through
@@ -941,16 +941,16 @@ since no per-entry read Action exists — if ever judged too loose, add
 a per-entry audit call, don't loosen the case-level check. See
 `.ai/rules/welfare.md` for the full reasoning on both.
 
-### Book H1 — Procurement, Stores, Assets, Budgets — 🟡 in progress
+### Book H1 — Procurement, Stores, Assets, Budgets — ✅ all 4 modules shipped, nothing deferred (see each module's own note)
 FIN-08–FIN-11 all live in **`Modules/Stores`** (verified: every FIN-08–11
 migration's own docblock attributes to it), not `Modules/Finance`.
 
 | Module | Screens | Status |
 |---|---|---|
-| FIN-09 | Inventory, Stores & Requisitions ⭐ | 🟡 partial (see note) |
-| FIN-08 | Procurement, Suppliers & AP 🇿🇼 | 🟡 partial (see note) |
-| FIN-10 | Fixed Assets & Depreciation | 🟡 partial (see note) |
-| FIN-11 | Budgeting & Commitment Accounting ⭐ | 🟡 partial (see note) |
+| FIN-09 | Inventory, Stores & Requisitions ⭐ | ✅ (see note) |
+| FIN-08 | Procurement, Suppliers & AP 🇿🇼 | ✅ (see note) |
+| FIN-10 | Fixed Assets & Depreciation | ✅ (see note — capitalisation without a category stays manual, a documented design limit, not a gap) |
+| FIN-11 | Budgeting & Commitment Accounting ⭐ | ✅ (see note) |
 
 **FIN-09 note ⭐.** Built (`Livewire/{Stores,Items,Stock,Receipts,
 Requisitions,Transfers,StockTake,Anomalies,Reports}/`, 16 screens):
