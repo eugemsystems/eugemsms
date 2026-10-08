@@ -21,6 +21,8 @@
         "livewire/livewire": "^4.1",
         "maatwebsite/excel": "^4.0",
         "nwidart/laravel-modules": "^13.0",
+        "setasign/fpdf": "^1.9",
+        "setasign/fpdi": "^2.6",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {

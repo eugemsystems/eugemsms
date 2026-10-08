@@ -28,14 +28,12 @@ use Modules\Core\Models\DataAccessLogEntry;
  * (`data_access_log`/BR-CORE-08-009), and a caller over
  * `exams.paper_max_downloads_per_user` raises a security event.
  *
- * Deliberately deferred — real infrastructure this pass does not
- * build: per-session file encryption at rest, and visible watermarking
- * of the downloaded file naming the requesting user. Both need
- * `CORE-10` file-storage capabilities (an encryption-at-rest key
- * scheme, a PDF/image watermarking library) that do not exist yet in
- * this codebase. The access-logged, time-locked gate below is real
- * and is what `AC-ACA-07-001` actually tests; watermarking is a
- * rendering step downstream of it.
+ * Encryption at rest and visible watermarking (both originally
+ * deferred here) are now built downstream of this gate, in
+ * `UploadExaminationPaperFileAction`/`DownloadExaminationPaperFileAction`
+ * — this action stays exactly what it always was: the access-logged,
+ * time-locked release gate `AC-ACA-07-001` tests, with no knowledge of
+ * encryption or watermarking at all.
  */
 final class ReleaseExaminationPaperAction extends Action
 {

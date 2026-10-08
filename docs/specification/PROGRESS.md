@@ -597,13 +597,13 @@ of a `published` mark now genuinely routes through Core's CORE-07 approvals engi
 remains deliberately unbuilt. See `.ai/rules/academic.md` for this and the `students.status` /
 `CurriculumFrameworkFactory` default-code traps found along the way.
 
-### Book E — Academic Depth — 🟡 two narrow items remain, each needing real new-infrastructure work this pass does not take on (see each module's own note): ACA-03's live mid-drag clash panel (timetable PDF export built 2026-10-08), ACA-07's visible watermarking (encryption at rest and ACA-06's national submission export both built 2026-10-08)
+### Book E — Academic Depth — 🟡 one narrow item remains, genuinely bounded by the stack, not a quick fix (see ACA-03's own note): the live mid-drag clash panel. Everything else — timetable PDF export, ACA-06's national submission export, ACA-07's encryption at rest and visible watermarking — is built (2026-10-08)
 
 | Module | Screens | Status |
 |---|---|---|
 | ACA-03 | Timetable & Scheduling Engine | 🟡 partial — only the live mid-drag clash panel remains deferred (timetable view PDF export built 2026-10-08; see note) |
 | ACA-06 | School-Based Projects & Legacy CALA | ✅ complete (national submission export built 2026-10-08; see note) |
-| ACA-07 | Examinations Administration | 🟡 partial — only visible watermarking remains (encryption at rest built 2026-10-08; see note) |
+| ACA-07 | Examinations Administration | ✅ complete (encryption at rest and visible watermarking both built 2026-10-08; see note) |
 
 **ACA-03 note.** Built (`Livewire/Timetable/`, 12 screens): `Structures`
 (create-only, bundles the slot set, like `CreatePeriodStructureAction`
@@ -700,10 +700,21 @@ return to draft" doctrine. `DownloadExaminationPaperFileAction` wraps the real
 the same way whether it is the first one or the hundredth) and only then
 decrypts and streams the bytes. New registered `File` categories:
 `examination_paper`/`examination_marking_scheme` (PDF only, sensitive).
-**Still deferred**: visible watermarking naming the downloading user — needs
-an image/PDF-stamping library (e.g. `intervention/image` or a PDF-specific
-stamping package) that is not yet a dependency, a separate decision from
-encryption, which needed none. `Candidates` (derive from enrolments, confirm),
+**Gap closed (2026-10-08): visible watermarking.** `DownloadExaminationPaperFileAction`
+stamps every served PDF with the downloading user's own name and the download
+timestamp via a new `PdfWatermarker` (`setasign/fpdi` + `setasign/fpdf` — pure
+PHP, imports each original page as-is rather than rasterising it). The
+originally user-picked `intervention/image` turned out unable to open a PDF at
+all in this environment (no `imagick` PHP extension; Ghostscript present only
+as an unreliable system binary) — surfaced to the user before writing any
+code, who then said to pick whatever's actually correct ("do what's best"),
+hence FPDI/FPDF instead. The stamp is applied to the decrypted bytes on every
+call, never baked into the stored ciphertext — two different users
+downloading the same paper each get a copy naming themselves. A stored file
+that isn't a parseable PDF is served unstamped rather than failing the
+download (`FpdiException` caught, falls back to the original bytes) — the
+release gate's own guarantees (time-lock, access log, download-limit alert)
+must hold even if the file behind it is malformed. `Candidates` (derive from enrolments, confirm),
 `Seating` (auto-allocate; also stands in for the spec's separate
 "Attendance sheets" screen — same seating + special-arrangement data,
 one more column), `Invigilation` (subject-teacher exclusion, override

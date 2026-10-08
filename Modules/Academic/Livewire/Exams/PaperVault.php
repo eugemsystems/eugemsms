@@ -49,9 +49,13 @@ use Symfony\Component\HttpFoundation\Response;
  * the paper is sealed, same as every other field on it. `download()`
  * re-runs the real release gate every time (`DownloadExaminationPaperFileAction`
  * wraps `ReleaseExaminationPaperAction`) and only then decrypts and
- * streams the bytes. **Still deferred**: visible watermarking naming
- * the downloading user — needs an image/PDF-stamping library not yet a
- * dependency, a separate decision from encryption.
+ * streams the bytes.
+ *
+ * **Gap closed (2026-10-08): visible watermarking.** The bytes
+ * `download()` streams are stamped with the downloading user's own
+ * name and the download timestamp (`PdfWatermarker`, FPDI/FPDF) —
+ * naming the actual requester every time, never baked into the stored
+ * ciphertext.
  */
 #[Title('Secure paper vault')]
 #[Layout('layouts.app')]

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Modules\Academic\Domain\Actions\CreateExaminationPaperAction;
 use Modules\Academic\Domain\Actions\CreateExaminationSessionAction;
@@ -57,6 +58,7 @@ use Modules\People\Domain\Actions\CreateStudentAction;
 use Modules\People\Domain\DataObjects\CreateStudentData;
 use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
+use setasign\Fpdi\Fpdi;
 
 /**
  * @return array{school: School, year: AcademicYear, term: Term, gradeLevel: GradeLevel, framework: CurriculumFramework, subject: Subject, user: User, setter: Staff, vetter: Staff}
@@ -115,6 +117,19 @@ function aca07Paper(array $f, float $weightPercent = 100.0): ExaminationPaper
     ));
 }
 
+function aca07RealPdf(string $text): string
+{
+    $pdf = new Fpdi;
+    $pdf->AddPage();
+    $pdf->SetFont('Helvetica', '', 12);
+    $pdf->Cell(0, 10, $text);
+
+    /** @var string $output */
+    $output = $pdf->Output('S');
+
+    return $output;
+}
+
 it('refuses release before release_at with no override path', function (): void {
     $f = aca07Fixture();
     $paper = aca07Paper($f);
@@ -149,7 +164,7 @@ it('releases a paper once release_at has passed and logs the access', function (
 it('encrypts an examination paper file at rest and decrypts it again on a gated download (encryption-at-rest gap closed)', function (): void {
     $f = aca07Fixture();
     $paper = aca07Paper($f);
-    $plaintext = "%PDF-1.4\n%some exam paper content\n";
+    $plaintext = aca07RealPdf('some exam paper content');
 
     $uploaded = app(UploadExaminationPaperFileAction::class)->execute(new UploadExaminationPaperFileData(
         paperId: $paper->id, fileType: 'paper', contents: $plaintext, originalName: 'paper-1.pdf', uploadedByUserId: $f['user']->id,
@@ -169,9 +184,34 @@ it('encrypts an examination paper file at rest and decrypts it again on a gated 
         paperId: $paper->id, requestedByUserId: $f['user']->id,
     ), 'paper');
 
-    expect($downloaded->contents)->toBe($plaintext)
+    // Re-fetch the stored (encrypted) bytes: watermarking happens on every
+    // served copy, never on what's persisted — the ciphertext is untouched.
+    $stillEncrypted = Storage::disk($file->disk)->get($file->path);
+
+    expect($downloaded->contents)->not->toBe($plaintext)
+        ->toContain('%PDF-1.4')
+        ->toContain('Downloaded by '.$f['user']->name)
         ->and($downloaded->filename)->toBe('paper-1.pdf')
-        ->and($downloaded->mimeType)->toBe('application/pdf');
+        ->and($downloaded->mimeType)->toBe('application/pdf')
+        ->and(Crypt::decryptString($stillEncrypted))->toBe($plaintext);
+});
+
+it('serves the original bytes unstamped when the stored file is not a parseable PDF (watermarking never blocks a gated download)', function (): void {
+    $f = aca07Fixture();
+    $paper = aca07Paper($f);
+    $plaintext = "%PDF-1.4\n%not a real structured pdf\n";
+
+    app(UploadExaminationPaperFileAction::class)->execute(new UploadExaminationPaperFileData(
+        paperId: $paper->id, fileType: 'paper', contents: $plaintext, originalName: 'paper-1.pdf', uploadedByUserId: $f['user']->id,
+    ));
+    app(VetExaminationPaperAction::class)->execute(new VetExaminationPaperData(paperId: $paper->id, vettedByStaffId: $f['vetter']->id));
+    app(SealExaminationPaperAction::class)->execute(new SealExaminationPaperData(paperId: $paper->id, releaseAt: now()->subMinute()));
+
+    $downloaded = app(DownloadExaminationPaperFileAction::class)->execute(new ReleaseExaminationPaperData(
+        paperId: $paper->id, requestedByUserId: $f['user']->id,
+    ), 'paper');
+
+    expect($downloaded->contents)->toBe($plaintext);
 });
 
 it('refuses to replace an examination paper\'s file once sealed', function (): void {
