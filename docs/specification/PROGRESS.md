@@ -1710,9 +1710,18 @@ the tenant (entitlements are written per school) and a second live subscription;
 **correction (2026-10-07)**: renewal is now genuinely scheduled —
 `saas.renew_subscriptions` (`RenewSubscriptionAction`, via `ScheduledTaskHandlerRegistry::registerGlobal`)
 registered and given a real cron entry by `routes/console.php`'s generic loop, closed in the
-project-wide scheduled-jobs gap-closing pass; past-due marking and usage-metering remain
-genuinely unscheduled (confirmed, no matching key registered) — still on demand; no
-plan create/edit form (catalogue is read + withdraw/offer); `serp.vendor`'s IP allowlist is
+project-wide scheduled-jobs gap-closing pass. **Built 2026-10-07 — judgment calls, not a literal
+spec reading** (see `SaasServiceProvider::registerScheduledTasks()`'s own inline docblocks for the
+full reasoning): `saas.mark_past_due_subscriptions` marks a `trial`/`active` subscription
+`past_due` once it carries a `tenant_invoices` row `status = 'issued'` past its `due_date` — the
+only concrete signal available, since nothing anywhere ever sets `grace_period_ends_at` (the
+column the spec's own schema seems to suggest as the trigger); it never moves a subscription into
+`grace`/`suspended`, both of which stay manual with no automated timeline given anywhere in the
+spec. `saas.record_usage_meters` records `active_learners` (active `Student` count),
+`storage_gb` (summed `files.size_bytes` across covered schools), and `messages_sent`
+(`Notification` rows `status = 'sent'` this calendar month, not channel-restricted) for every
+subscription — `RecordUsageMeterAction` had never been called by anything before this. No plan
+create/edit form (catalogue is read + withdraw/offer); `serp.vendor`'s IP allowlist is
 deliberately permissive while `VENDOR_IP_ALLOWLIST` is unset (existing, documented stance) —
 **set it in every deployed environment**; all vendor staff currently have equal console
 access (the spec defines no vendor sub-roles).

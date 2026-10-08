@@ -14,22 +14,29 @@ use Modules\Core\Domain\Registry\PermissionRegistry;
 use Modules\Core\Domain\Registry\ScheduledTaskHandlerRegistry;
 use Modules\Core\Domain\Registry\SettingDefinitionRegistry;
 use Modules\Core\Domain\Registry\TenantModelRegistry;
+use Modules\Core\Models\File;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Tenant;
 use Modules\Finance\Models\Journal;
 use Modules\Intelligence\Domain\DataObjects\RiskIndicatorResult;
+use Modules\People\Models\Student;
 use Modules\Saas\Domain\Actions\CheckSupportTicketSlaAction;
 use Modules\Saas\Domain\Actions\ComputeTenantHealthSnapshotAction;
 use Modules\Saas\Domain\Actions\ListStalledOnboardingChecklistsAction;
+use Modules\Saas\Domain\Actions\MarkSubscriptionPastDueAction;
 use Modules\Saas\Domain\Actions\RecordModuleAdoptionAction;
+use Modules\Saas\Domain\Actions\RecordUsageMeterAction;
 use Modules\Saas\Domain\Actions\RenewSubscriptionAction;
 use Modules\Saas\Domain\DataObjects\ChurnRiskIndicatorDefinition;
 use Modules\Saas\Domain\DataObjects\ModuleAdoptionSignalDefinition;
+use Modules\Saas\Domain\DataObjects\RecordUsageData;
 use Modules\Saas\Domain\Registry\ChurnRiskIndicatorRegistry;
 use Modules\Saas\Domain\Registry\ModuleAdoptionSignalRegistry;
 use Modules\Saas\Models\ModuleAdoptionScore;
 use Modules\Saas\Models\Subscription;
 use Modules\Saas\Models\SupportTicket;
+use Modules\Saas\Models\TenantInvoice;
 use Modules\Saas\Models\TrainingCompletion;
 use Modules\Welfare\Models\SickBayAdmission;
 use Nwidart\Modules\Support\ModuleServiceProvider;
@@ -314,6 +321,89 @@ class SaasServiceProvider extends ModuleServiceProvider
                 return "{$count} subscription(s) renewed";
             },
             description: 'Rolls every auto-renewing subscription whose period has ended into the next period and issues its invoice.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        /**
+         * **Judgment call, not a literal spec reading (2026-10-07).** Nothing anywhere ever sets
+         * `subscriptions.grace_period_ends_at` (confirmed by grep — `ReactivateSubscriptionAction`
+         * only ever clears it back to null), so "the grace period has ended" cannot be the trigger
+         * the spec's own column seems to suggest. The only concrete, already-populated signal is
+         * `tenant_invoices`: `status = 'issued'` (never fully paid, `RecordTenantPaymentAction`'s
+         * own doc) and `due_date` in the past. A subscription with such an invoice, still `trial`
+         * or `active`, moves to `past_due` via the existing `MarkSubscriptionPastDueAction` — this
+         * task only ever marks that one transition, never `grace`/`suspended`, both of which stay
+         * manual, vendor-triggered decisions with no automated timeline given anywhere in the spec.
+         */
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.mark_past_due_subscriptions',
+            moduleCode: 'SAA-01',
+            name: 'Mark Past-Due Subscriptions',
+            cron: '0 2 * * *',
+            handler: static function (): string {
+                $count = 0;
+                $subscriptionIds = TenantInvoice::query()
+                    ->where('status', 'issued')
+                    ->whereDate('due_date', '<', now()->toDateString())
+                    ->pluck('subscription_id')
+                    ->unique();
+
+                foreach ($subscriptionIds as $subscriptionId) {
+                    $subscription = Subscription::find((int) $subscriptionId);
+
+                    if ($subscription !== null && in_array($subscription->status, ['trial', 'active'], true)) {
+                        app(MarkSubscriptionPastDueAction::class)->execute((int) $subscriptionId);
+                        $count++;
+                    }
+                }
+
+                return "{$count} subscription(s) marked past due";
+            },
+            description: 'Marks a trial/active subscription past due once it carries an invoice overdue for payment.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        /**
+         * **Judgment call, not a literal spec reading (2026-10-07).** `RecordUsageMeterAction` had
+         * never been called by anything (confirmed by grep) — this is this session's own choice of
+         * what each of the three metrics `SubscriptionPlan::limitFor()` actually supports
+         * (`active_learners`/`storage_gb`/`messages_sent`) counts, from the most obvious existing
+         * data: active students, summed `files.size_bytes` (never `0`-floored, since the spec gives
+         * no basis for a free storage floor beyond the plan's own limit), and `Notification` rows
+         * `status = 'sent'` this calendar month, across every school `covered_school_ids` names —
+         * never channel-restricted, since the spec's own `messages_sent` names no specific channel.
+         * `api_calls` (a fourth metric `usage_meters` can store) is not recorded: no plan column
+         * gives it a limit to measure against, so there is nothing for a warning/hard-limit
+         * threshold to mean yet.
+         */
+        ScheduledTaskHandlerRegistry::registerGlobal(
+            key: 'saas.record_usage_meters',
+            moduleCode: 'SAA-01',
+            name: 'Record Usage Meters',
+            cron: '30 2 * * *',
+            handler: static function (): string {
+                $count = 0;
+                $periodMonth = now()->format('Y-m');
+                $monthStart = now()->startOfMonth();
+
+                foreach (Subscription::query()->whereIn('status', ['trial', 'active', 'past_due', 'grace'])->get() as $subscription) {
+                    $schoolIds = $subscription->covered_school_ids;
+
+                    $activeLearners = Student::withoutGlobalScopes()->whereIn('school_id', $schoolIds)->where('status', 'active')->count();
+                    app(RecordUsageMeterAction::class)->execute(new RecordUsageData($subscription->tenant_id, 'active_learners', (float) $activeLearners, $periodMonth));
+
+                    $storageBytes = (float) File::withoutGlobalScopes()->whereIn('school_id', $schoolIds)->sum('size_bytes');
+                    app(RecordUsageMeterAction::class)->execute(new RecordUsageData($subscription->tenant_id, 'storage_gb', round($storageBytes / 1073741824, 2), $periodMonth));
+
+                    $messagesSent = Notification::withoutGlobalScopes()->whereIn('school_id', $schoolIds)->where('status', 'sent')->where('sent_at', '>=', $monthStart)->count();
+                    app(RecordUsageMeterAction::class)->execute(new RecordUsageData($subscription->tenant_id, 'messages_sent', (float) $messagesSent, $periodMonth));
+
+                    $count++;
+                }
+
+                return "{$count} subscription(s) metered";
+            },
+            description: 'Records this month\'s active-learner, storage, and messages-sent usage for every subscription.',
             alertIfNotRunWithinMinutes: 1560,
         );
 

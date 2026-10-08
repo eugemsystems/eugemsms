@@ -5,9 +5,12 @@ use Illuminate\Support\Facades\Event;
 use Modules\Core\Domain\Contracts\Install\LicenceClient;
 use Modules\Core\Domain\Contracts\Install\LicenceServerResponse;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
+use Modules\Core\Models\File;
+use Modules\Core\Models\Notification;
 use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolModule;
 use Modules\Core\Models\Tenant;
+use Modules\People\Models\Student;
 use Modules\Saas\Domain\Actions\CancelSubscriptionAction;
 use Modules\Saas\Domain\Actions\ChangeSubscriptionPlanAction;
 use Modules\Saas\Domain\Actions\CreateSubscriptionAction;
@@ -318,4 +321,49 @@ it('never resolves another tenants subscription (AC-SAA-01-006)', function (): v
     expect($resolved?->id)->toBe($subscriptionA->id)
         ->and($resolved?->tenant_id)->toBe($tenantA->id)
         ->and($resolved?->tenant_id)->not->toBe($tenantB->id);
+});
+
+it('marks a trial/active subscription past due once it carries an overdue unpaid invoice, scheduled nightly', function (): void {
+    $tenant = Tenant::factory()->create();
+    $subscription = Subscription::factory()->for($tenant)->create(['status' => 'active']);
+    TenantInvoice::factory()->for($tenant)->create([
+        'subscription_id' => $subscription->id, 'due_date' => Carbon::today()->subDays(5)->toDateString(), 'status' => 'issued',
+    ]);
+
+    // A paid invoice, and one not yet due, must never trigger the transition on their own.
+    $onTimeTenant = Tenant::factory()->create();
+    $onTimeSubscription = Subscription::factory()->for($onTimeTenant)->create(['status' => 'active']);
+    TenantInvoice::factory()->for($onTimeTenant)->create([
+        'subscription_id' => $onTimeSubscription->id, 'due_date' => Carbon::today()->addDays(10)->toDateString(), 'status' => 'issued',
+    ]);
+
+    $this->artisan('serp:run-task', ['key' => 'saas.mark_past_due_subscriptions'])->assertSuccessful();
+
+    expect($subscription->fresh()->status)->toBe('past_due')
+        ->and($tenant->fresh()->status)->toBe('past_due')
+        ->and($onTimeSubscription->fresh()->status)->toBe('active');
+});
+
+it('records this month\'s active-learner, storage, and messages-sent usage for every subscription, scheduled nightly', function (): void {
+    $tenant = Tenant::factory()->create();
+    $school = School::factory()->for($tenant)->create();
+    $subscription = Subscription::factory()->for($tenant)->create(['status' => 'active', 'covered_school_ids' => [$school->id]]);
+
+    Student::factory()->for($school)->count(3)->create(['status' => 'active']);
+    Student::factory()->for($school)->create(['status' => 'withdrawn']);
+    File::factory()->create(['school_id' => $school->id, 'size_bytes' => 1_073_741_824]);
+    File::factory()->create(['school_id' => $school->id, 'size_bytes' => 536_870_912]);
+    Notification::factory()->create(['school_id' => $school->id, 'status' => 'sent', 'sent_at' => now()]);
+    Notification::factory()->create(['school_id' => $school->id, 'status' => 'sent', 'sent_at' => now()->subMonth()]);
+    Notification::factory()->create(['school_id' => $school->id, 'status' => 'failed', 'sent_at' => now()]);
+
+    $this->artisan('serp:run-task', ['key' => 'saas.record_usage_meters'])->assertSuccessful();
+
+    $periodMonth = Carbon::today()->format('Y-m');
+    $meters = UsageMeter::where('tenant_id', $tenant->id)->where('period_month', $periodMonth)->get()->keyBy('metric');
+
+    expect((float) $meters['active_learners']->usage_value)->toBe(3.0)
+        ->and((float) $meters['storage_gb']->usage_value)->toBe(1.5)
+        ->and((float) $meters['messages_sent']->usage_value)->toBe(1.0)
+        ->and($meters['active_learners']->subscription_id)->toBe($subscription->id);
 });
