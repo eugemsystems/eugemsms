@@ -715,15 +715,15 @@ from the request's own `onApproved()`. A school must configure an approval chain
 `project_amendment` type first (existing chain-builder screen). Tests:
 `ProjectAmendmentApprovalTest.php` (5 tests).
 
-### Book F — Boarding & Welfare — 🟡 two narrow items remain (BRD-04's portal/hardware-capture screens, BRD-05's unmade withdrawal-blocking policy decision); BRD-01/02/03 are fully done — see each module's own note
+### Book F — Boarding & Welfare — ✅ all 5 modules shipped; one narrow item remains (BRD-04's `PublicMenu` portal screen, deferred to the mobile/portal phase like every other parent-facing screen) — see each module's own note
 
 | Module | Screens | Status |
 |---|---|---|
 | BRD-01 | Hostel, Room & Bed Allocation | ✅ (the board is a plain table rather than a drag grid — a deliberate simplification, not a gap; see note) |
 | BRD-02 | Roll Call & Movement ⭐ | ✅ (see note) |
 | BRD-03 | Exeat, Leave & Visitor Management ⭐ | ✅ (see note) |
-| BRD-04 | Catering, Menus & Kitchen | 🟡 partial — `PublicMenu` portal screen and meal-attendance capture UI, both deferred to the mobile/portal phase like every other parent-facing screen (see note) |
-| BRD-05 | Laundry & Linen | 🟡 partial — `CheckLinenClearanceAction` deliberately not wired into `WithdrawStudentAction`, an unmade policy decision (see note) |
+| BRD-04 | Catering, Menus & Kitchen | ✅ (one remaining item: `PublicMenu` portal screen, deferred to the mobile/portal phase; see note — meal-attendance capture is now built) |
+| BRD-05 | Laundry & Linen | ✅ (see note — clearance is consistently informational, not a withdrawal-blocking gate, across every registered clearance type, not a linen-specific omission) |
 
 **BRD-01 note.** Built (`Livewire/Hostels/`, `Allocation/`, `Inspections/`,
 `Damages/` — 9 screens): `Hostels\{Structure,Show}`, `Allocation\{Board,
@@ -818,8 +818,24 @@ Cost columns read `unavailable`, never `0`, in this planning-only mode
 cost, else the latest priced lot; availability from lots, `null` when there is no stock record), requisition
 lines carry their cost, and closing a service computes its cost from fully priced ingredients scaled to the
 servings served. `Catering\Costs` shows cost per meal, per week and over-production; unpriced services are
-counted apart, never shown as zero. **Still not built**: `PublicMenu` (a portal screen) and a dedicated
-meal-attendance capture UI (`catering.meal_attendance_capture` defaults off).
+counted apart, never shown as zero. **Gap closed (2026-10-08, BR-BRD-04-015)**:
+meal-attendance capture — `RecordMealAttendanceAction`/`MealAttendance` already existed
+with nothing calling them. `Catering\ServingTerminal` now offers a "Confirm served"/
+"special meal given" control per scanned learner, against the service matching the
+date/meal picker above it, only when `catering.meal_attendance_capture` is enabled for
+the school (optional per school, per the rule's own wording — where disabled, the
+screen offers nothing and `ServicePlan`'s manual `actual_served` entry is unchanged).
+`Catering\ServicePlan`'s close-service form shows the captured count with a one-click
+"use this count" that fills `actualServed`, which stays a manually confirmed,
+overridable figure — never silently auto-filled, so `CloseMealServiceAction`'s own
+"hard validation, not merely a hint" gate is untouched. **Real bug found and fixed
+along the way**: both screens matched a meal service by `where('service_date', ...)`,
+an exact string-equality comparison that silently never matches under SQLite (which
+serialises a `date`-cast column with a `00:00:00` time suffix) — invisible under MySQL,
+where this pre-existing code was presumably never exercised against; fixed to
+`whereDate(...)` in both, portable across drivers. **Still not built**: `PublicMenu`
+(a portal screen, deferred to the mobile/portal phase like every other parent-facing
+screen in this codebase, not a backend gap).
 
 **BRD-05 note.** Built (`Livewire/Linen/`, `Laundry/` — 5 screens):
 `Linen\{Items,Issue,Clearance}`, `Laundry\{Cycles,Missing}`. `Linen\Issue`
@@ -829,9 +845,16 @@ report-then-approve lifecycle inline. **Clearance blocking is real and
 verified**: a dedicated test issues an item, confirms `Linen\Clearance`
 blocks (`CheckLinenClearanceAction`'s own query), returns the item via
 `ReturnIssuedItemAction`, and confirms clearance then clears
-(AC-BRD-05-001). `CheckLinenClearanceAction` remains deliberately NOT
-wired into `WithdrawStudentAction` in this pass, per that action's own
-docblock.
+(AC-BRD-05-001). **Correction (2026-10-08)**: this note previously
+singled out linen as "deliberately not wired into `WithdrawStudentAction`,"
+reading as a boarding-specific gap. Verified against the code: `WithdrawStudentAction`
+(`Modules/People/Domain/Actions/WithdrawStudentAction.php`) calls none of
+`LearnerClearanceRegistry`'s three registered checks (library, linen, fees)
+— the registry's aggregate (`CheckLearnerClearanceAction`) is read only
+informationally by `People\Students\TransferOut`. This is consistent,
+deliberate platform-wide design (BR-PPL-01-014 names clearance as
+something to show/settle, never as a hard block on withdrawal itself),
+not an unmade decision specific to linen.
 
 **Backend gaps found during this pass, all documented in-code**: no
 Action anywhere created `hostel_wings`, `allocation_constraints`,

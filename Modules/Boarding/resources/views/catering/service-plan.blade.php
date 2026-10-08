@@ -63,6 +63,11 @@
                     <div class="card">
                         <div class="card-header">{{ __('Close service') }}</div>
                         <div class="card-body">
+                            @if ($captureEnabled)
+                                <p class="small text-body-secondary">{{ __(':count recorded as served at the serving terminal.', ['count' => $capturedCount]) }}
+                                    <button type="button" class="btn btn-link btn-sm p-0" wire:click="useCapturedCount({{ $service->id }})">{{ __('Use this count') }}</button>
+                                </p>
+                            @endif
                             <input type="number" class="form-control mb-2" wire:model="actualServed" placeholder="{{ __('Actual served (required)') }}">
                             <input type="text" class="form-control mb-2" wire:model="wastageNote" placeholder="{{ __('Wastage note (optional)') }}">
                             <button type="button" class="btn btn-success btn-sm" wire:click="close({{ $service->id }})">{{ __('Close') }}</button>

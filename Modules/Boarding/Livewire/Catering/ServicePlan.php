@@ -14,8 +14,11 @@ use Modules\Boarding\Domain\Actions\CloseMealServiceAction;
 use Modules\Boarding\Domain\Actions\PlanMealServiceAction;
 use Modules\Boarding\Domain\DataObjects\CloseMealServiceData;
 use Modules\Boarding\Domain\DataObjects\PlanMealServiceData;
+use Modules\Boarding\Models\MealAttendance;
 use Modules\Boarding\Models\MealService;
 use Modules\Boarding\Models\MenuDay;
+use Modules\Core\Domain\Support\Settings\ScopeChain;
+use Modules\Core\Domain\Support\Settings\SettingResolver;
 use Modules\Core\Livewire\Concerns\AuthorizesPermissions;
 use Modules\Core\Livewire\Schools\Concerns\InteractsWithSchool;
 use Modules\Core\Livewire\Sessions\Concerns\InteractsWithSession;
@@ -31,7 +34,11 @@ use Modules\Core\Models\School;
  * nothing: required-quantity lines are the whole of what exists.
  * `CloseMealServiceAction`'s own gate — a service cannot close
  * without `actual_served` — is enforced here as a hard validation,
- * not merely a hint.
+ * not merely a hint. Where `catering.meal_attendance_capture` is
+ * enabled, the count `Catering\ServingTerminal` has recorded is shown
+ * and can be pulled in with one click — `actual_served` stays a
+ * manually confirmed figure the kitchen manager can still override,
+ * never silently auto-filled (BR-BRD-04-015/017).
  */
 #[Title('Daily service plan')]
 #[Layout('layouts.app')]
@@ -89,6 +96,11 @@ final class ServicePlan extends Component
         $this->toast(__('Service planned from live occupancy.'));
     }
 
+    public function useCapturedCount(int $mealServiceId): void
+    {
+        $this->actualServed = MealAttendance::where('meal_service_id', $mealServiceId)->where('attended', true)->count();
+    }
+
     public function close(int $mealServiceId): void
     {
         $this->authorizePermission('boarding.catering.service.manage');
@@ -112,14 +124,18 @@ final class ServicePlan extends Component
     public function render(): View
     {
         $service = MealService::where('school_id', $this->school->id)
-            ->where('service_date', $this->serviceDate)
+            ->whereDate('service_date', $this->serviceDate)
             ->where('meal', $this->meal)
             ->with('requisitionLines')
             ->first();
 
+        $captureEnabled = (bool) app(SettingResolver::class)->get('catering.meal_attendance_capture', new ScopeChain(schoolId: $this->school->id));
+
         return view('boarding::catering.service-plan', [
             'service' => $service,
             'menuDays' => MenuDay::whereHas('cycle', fn ($q) => $q->where('school_id', $this->school->id))->get(),
+            'captureEnabled' => $captureEnabled,
+            'capturedCount' => $captureEnabled && $service !== null ? MealAttendance::where('meal_service_id', $service->id)->where('attended', true)->count() : null,
         ]);
     }
 }

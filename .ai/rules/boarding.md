@@ -68,13 +68,19 @@ return beyond the required-quantity lines this screen already shows),
 `ServingTerminal`, `Dietary`. Cost analytics/wastage is now built — `Catering\Costs` (a later
 gap-closing pass, once `StoresIssuanceProvider` replaced the null provider): cost per meal, per
 week, and over-production (planned servings above those served — this screen's own wastage
-figure); unpriced services are counted apart, never shown as zero. **Still deliberately not
+figure); unpriced services are counted apart, never shown as zero. **Gap closed
+(2026-10-08, BR-BRD-04-015)**: `ServingTerminal` now offers per-learner attendance/special-meal
+capture via `RecordMealAttendanceAction` (which already existed, unused) when
+`catering.meal_attendance_capture` is enabled for the school; `ServicePlan`'s close form shows
+the captured count with a one-click pull-in, `actual_served` still a manually confirmed figure.
+**Found and fixed along the way**: both screens' meal-service lookup used
+`where('service_date', $date)` — exact string equality against a `date`-cast column, which
+silently never matches under SQLite (serialises with a `00:00:00` suffix); fixed to
+`whereDate(...)`, portable across drivers — check for this same pattern before trusting any
+other exact-equality date-column query in this codebase's test suite. **Still deliberately not
 built**: `PublicMenu` (a learner/guardian portal
 screen — `ACA-06`'s own precedent is to defer portal-facing screens,
-not build an admin stand-in for a different audience), and a dedicated
-meal-attendance-capture screen (`catering.meal_attendance_capture`
-defaults off; `ServicePlan`'s own `close()` already covers the
-default path via `actual_served`).
+not build an admin stand-in for a different audience).
 
 **BRD-05** (5 screens, `Livewire/Linen/`, `Laundry/`): `Linen\{Items,
 Issue,Clearance}`, `Laundry\{Cycles,Missing}`. `Linen\Issue` folds in

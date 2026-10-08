@@ -18,13 +18,17 @@ use Modules\Boarding\Models\DietaryRequirement;
 use Modules\Boarding\Models\Hostel;
 use Modules\Boarding\Models\HostelBed;
 use Modules\Boarding\Models\HostelRoom;
+use Modules\Boarding\Models\MealAttendance;
 use Modules\Boarding\Models\MealService;
 use Modules\Boarding\Models\RollCallPoint;
 use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
+use Modules\Core\Domain\Actions\Settings\SetSettingValueAction;
 use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
 use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
+use Modules\Core\Domain\DataObjects\Settings\SetSettingValueData;
 use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
+use Modules\Core\Domain\Support\Settings\SettingScope;
 use Modules\Core\Models\AcademicYear;
 use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
@@ -164,6 +168,47 @@ it('surfaces a life-threatening dietary alert, unverified until a nurse verifies
         ->call('verify', $requirement->id);
 
     expect($requirement->refresh()->verified_by_nurse)->toBeTrue();
+});
+
+it('offers no attendance capture at the serving terminal while meal_attendance_capture is disabled, the default (BR-BRD-04-015)', function (): void {
+    $f = cateringAdminFixture();
+    $student = Student::factory()->for($f['school'])->boarder()->create();
+    $user = cateringAdminUser($f, 'boarding.catering.serve');
+
+    Livewire::actingAs($user)->test(ServingTerminal::class, ['school' => $f['school']])
+        ->call('scan', $student->id)
+        ->assertDontSee('Confirm served');
+});
+
+it('records meal attendance at the serving terminal when capture is enabled, and lets the kitchen manager pull the count into close (BR-BRD-04-015/017)', function (): void {
+    $f = cateringAdminFixture();
+    app(SetSettingValueAction::class)->execute(new SetSettingValueData('catering.meal_attendance_capture', SettingScope::School, $f['school']->id, true));
+
+    $served = Student::factory()->for($f['school'])->boarder()->create();
+    $notServed = Student::factory()->for($f['school'])->boarder()->create();
+
+    $service = MealService::factory()->create([
+        'school_id' => $f['school']->id, 'service_date' => now()->toDateString(), 'meal' => 'lunch', 'status' => 'planned',
+    ]);
+
+    $user = cateringAdminUser($f, 'boarding.catering.serve', 'boarding.catering.service.view', 'boarding.catering.service.manage');
+
+    Livewire::actingAs($user)->test(ServingTerminal::class, ['school' => $f['school']])
+        ->set('serviceDate', $service->service_date->toDateString())->set('meal', 'lunch')
+        ->call('scan', $served->id)
+        ->assertSee('Confirm served')
+        ->call('confirmServed', false);
+
+    $attendance = MealAttendance::where('meal_service_id', $service->id)->where('student_id', $served->id)->first();
+    expect($attendance)->not->toBeNull()
+        ->and($attendance->attended)->toBeTrue()
+        ->and(MealAttendance::where('meal_service_id', $service->id)->where('student_id', $notServed->id)->exists())->toBeFalse();
+
+    Livewire::actingAs($user)->test(ServicePlan::class, ['school' => $f['school']])
+        ->set('serviceDate', $service->service_date->toDateString())->set('meal', 'lunch')
+        ->assertSee('1 recorded as served')
+        ->call('useCapturedCount', $service->id)
+        ->assertSet('actualServed', 1);
 });
 
 it('summarises catering cost per meal and per week from closed services, counting unpriced ones apart and never as zero (BR-BRD-04)', function (): void {
