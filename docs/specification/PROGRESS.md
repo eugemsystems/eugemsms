@@ -1031,7 +1031,7 @@ See `.ai/rules/stores.md` for the full reasoning, the permission
 module-code split (`INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET`, not one
 `STORES` call), and testing gotchas found along the way.
 
-### Book H2 — Operations & Estates — 🟡 all 7 modules shipped (stays below ✅ only because OPS-02's own prior deferred screens, not this pass)
+### Book H2 — Operations & Estates — ✅ all 7 modules shipped (OPS-02's own prior deferred screens were closed 2026-10-07 — see its note below)
 Verified module ownership (one Laravel module each): OPS-01 → `Transport`,
 OPS-02 → `Operations`, OPS-03 → `Farm`, OPS-04 → `Utilities`, OPS-05 →
 `Facilities`, OPS-06 → `Security`, OPS-07 → `Sport`. The first pass covered
@@ -1041,15 +1041,18 @@ OPS-06 (Security), and OPS-07 (Sport)** — independent of each other and of
 the first three per the book's own build order (§0.2 lists OPS-05/06/07 as
 "independent; parallel"), built here in spec reading order OPS-04 → OPS-05
 → OPS-06 → OPS-07. All seven modules now have a populated `Livewire/`
-directory. The book-level status stays 🟡 rather than ✅ only because
-OPS-02's own note below (from the first pass) documents two deliberately
+directory. The book-level status stayed 🟡 rather than ✅ only because
+OPS-02's own note below (from the first pass) documented two deliberately
 deferred screens — per this file's own honesty discipline, ANY module with
-a deferred item keeps the whole book below ✅; nothing in this second pass
-left a comparable gap (see each of the four new notes below).
+a deferred item keeps the whole book below ✅. **Correction (2026-10-07):**
+both of OPS-02's deferrals are now closed (capital project milestones in
+an earlier gap-closing pass, Contractor management this session — see its
+note below), so the book moves to ✅; nothing in this second pass left a
+comparable gap either (see each of the four new notes below).
 
 | Module | Screens | Status |
 |---|---|---|
-| OPS-02 | Maintenance & Works Management | ✅ (see note — 2 screens deliberately deferred) |
+| OPS-02 | Maintenance & Works Management | ✅ (both prior deferrals closed 2026-10-07 — see note) |
 | OPS-01 | Transport & Fleet Management 🇿🇼 | ✅ |
 | OPS-03 | Estates, Farm & Production Units 🇿🇼 | ✅ |
 | OPS-04 | Utilities & Energy Management 🇿🇼 | ✅ |
@@ -1086,8 +1089,11 @@ planning→approved→in_progress; nothing in the shipped domain layer moved
 a capital project out of `planning`, and `CompleteCapitalProjectAction`
 requires `approved`/`in_progress`). Gap-closing pass: `Projects\Index` now has a Details panel to name the main contractor
 (`AssignCapitalProjectContractorAction`, active suppliers only) and to add and complete milestones
-(`AddCapitalProjectMilestoneAction`, `CompleteCapitalProjectMilestoneAction`). **Still not built**: a
-standalone "Contractor management" screen — nothing distinguishes a contractor supplier from any other.
+(`AddCapitalProjectMilestoneAction`, `CompleteCapitalProjectMilestoneAction`). **Built 2026-10-07**:
+the standalone "Contractor management" screen — `suppliers.is_contractor` (new column, Book H1
+`Modules\Stores`), `SetSupplierContractorStatusAction`, and `Ops\Maintenance\Contractors`
+(flag/unflag any supplier, see each flagged contractor's real work-order cost/SLA history). Tests
+added to `Ops02MaintenanceWorksTest.php` (1 test).
 
 **OPS-01 note 🇿🇼.** Built (`Livewire/{Fleet,Compliance,Drivers,Routes,
 Assignment,Trips,Manifest,Fuel,FuelAnomalies,Incidents,RouteCosts}/`, 11

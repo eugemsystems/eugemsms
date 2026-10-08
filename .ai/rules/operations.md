@@ -49,23 +49,20 @@ permission exists to check here, not an oversight.
 
 ## Deliberately not built
 
-**Correction (2026-10-07):** both items below were closed by a later gap-closing pass.
+**Correction (2026-10-07):** all three items below were closed by later gap-closing passes.
 `Projects\Index` now has a Details panel to name the main contractor
 (`AssignCapitalProjectContractorAction`, active suppliers only) and to add and complete
 milestones (`AddCapitalProjectMilestoneAction`, `CompleteCapitalProjectMilestoneAction`,
-confirmed present in `Modules/Operations/Domain/Actions/`). **Still genuinely not built**: a
-standalone "Contractor management" screen — no `is_contractor` flag or Action anywhere
-classifies a `Supplier` as a contractor in general; `AssignCapitalProjectContractorAction` only
-names one supplier as a specific project's contractor, it doesn't add that classification.
-
-**Contractor management.** The spec's own screen table lists "Contractor
-management | `Ops\Maintenance\Contractors` | `maintenance.manage`", but
-no `is_contractor` flag or Action anywhere distinguishes a contractor
-`Supplier` (Book H1 `FIN-08`, `Modules\Stores`) from any other supplier —
-`WorkOrders\Index`'s own contractor picker already lets the user select
-any `Supplier` for `contractor_supplier_id`. Building a dedicated screen
-would mean inventing a new classification this book's own spec doesn't
-provide.
+confirmed present in `Modules/Operations/Domain/Actions/`). "Contractor management" (this
+session) now has its missing classification: `suppliers.is_contractor` (new column, Book H1
+`Modules\Stores`), `SetSupplierContractorStatusAction` (toggle, mirroring `BlacklistSupplierAction`'s
+own single-purpose-status-change shape), and `Ops\Maintenance\Contractors` — flag/unflag any
+supplier, see each flagged contractor's real cost/SLA history read straight off
+`work_orders.contractor_supplier_id`/`contractor_cost_minor`/`sla_met`, the same "group in PHP over
+an eager-loaded collection" discipline `Maintenance\Reports\Index` already established.
+`WorkOrders\Index`'s own contractor picker is unaffected — it still lets a work order name any
+`Supplier` as `contractor_supplier_id` regardless of this flag, which only governs who shows up on
+the dedicated management screen.
 
 **Capital project milestones** (`capital_project_milestones`) — now built, see the
 correction above.

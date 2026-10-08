@@ -28,6 +28,7 @@ use Modules\Stores\Database\Factories\SupplierFactory;
  * @property string $name
  * @property string|null $trading_name
  * @property string $supplier_type
+ * @property bool $is_contractor
  * @property string|null $vat_number
  * @property bool $is_vat_registered
  * @property string|null $account_number
@@ -49,7 +50,7 @@ class Supplier extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'school_id', 'code', 'name', 'trading_name', 'supplier_type', 'bp_number', 'vat_number',
+        'school_id', 'code', 'name', 'trading_name', 'supplier_type', 'is_contractor', 'bp_number', 'vat_number',
         'company_registration', 'is_vat_registered', 'contact_person', 'phone', 'email', 'address_line_1',
         'city', 'country', 'bank_name', 'bank_branch', 'account_number', 'account_name', 'swift_code',
         'mobile_money_number', 'preferred_currency', 'payment_terms_days', 'credit_limit_minor',
@@ -62,6 +63,7 @@ class Supplier extends Model
     {
         return [
             'is_vat_registered' => 'boolean',
+            'is_contractor' => 'boolean',
             'category_ids' => 'array',
             'rating' => 'decimal:2',
             'on_time_delivery_pct' => 'decimal:2',

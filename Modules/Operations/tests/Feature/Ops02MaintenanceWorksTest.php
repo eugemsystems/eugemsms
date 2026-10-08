@@ -4,12 +4,18 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Modules\Boarding\Models\HostelDamage;
+use Modules\Core\Domain\Actions\Auth\UpdateUserPermissionsAction;
 use Modules\Core\Domain\Actions\Documents\CreateNumberingSeriesAction;
+use Modules\Core\Domain\DataObjects\Auth\PermissionGrantData;
+use Modules\Core\Domain\DataObjects\Auth\UserPermissionData;
 use Modules\Core\Domain\DataObjects\Documents\CreateNumberingSeriesData;
 use Modules\Core\Domain\Exceptions\InvalidStateTransitionException;
+use Modules\Core\Domain\Support\Auth\PermissionScope;
 use Modules\Core\Domain\Support\SchoolContext;
 use Modules\Core\Models\AcademicYear;
+use Modules\Core\Models\Permission;
 use Modules\Core\Models\School;
 use Modules\Core\Models\Term;
 use Modules\Finance\Models\Account;
@@ -43,6 +49,7 @@ use Modules\Operations\Domain\Events\PreventiveWorkOrderGenerated;
 use Modules\Operations\Domain\Events\SafetyFaultReported;
 use Modules\Operations\Domain\Events\WorkOrderVerificationEscalated;
 use Modules\Operations\Domain\Exceptions\WorkOrderRequiresBudgetLineException;
+use Modules\Operations\Livewire\Maintenance\Contractors\Index as ContractorsIndex;
 use Modules\Operations\Models\CapitalProject;
 use Modules\Operations\Models\MaintenanceAsset;
 use Modules\Operations\Models\MaintenanceSchedule;
@@ -51,6 +58,7 @@ use Modules\People\Models\Staff;
 use Modules\Stores\Domain\Actions\CreateBudgetAction;
 use Modules\Stores\Domain\Actions\ReceiveStockAction;
 use Modules\Stores\Domain\Actions\RegisterSupplierInvoiceAction;
+use Modules\Stores\Domain\Actions\SetSupplierContractorStatusAction;
 use Modules\Stores\Domain\Actions\SubmitBudgetLineAction;
 use Modules\Stores\Domain\DataObjects\CreateBudgetData;
 use Modules\Stores\Domain\DataObjects\ReceiveStockData;
@@ -433,6 +441,41 @@ it('tracks a capital project and capitalises it to FIN-10 for real on completion
     expect($asset)->not->toBeNull()
         ->and($asset->acquisition_cost_minor)->toBe(48000000)
         ->and($asset->acquisition_source)->toBe('capital_project');
+});
+
+it('flags and unflags a supplier as a contractor, and rolls up their work-order cost and SLA history', function (): void {
+    $f = ops02Fixture();
+    $supplier = Supplier::factory()->for($f['school'])->create();
+
+    $flagged = app(SetSupplierContractorStatusAction::class)->execute($supplier->id, true);
+    expect($flagged->is_contractor)->toBeTrue();
+
+    WorkOrder::factory()->for($f['school'])->create([
+        'contractor_supplier_id' => $supplier->id, 'contractor_cost_minor' => 15000, 'total_cost_minor' => 15000, 'sla_met' => true,
+    ]);
+    WorkOrder::factory()->for($f['school'])->create([
+        'contractor_supplier_id' => $supplier->id, 'contractor_cost_minor' => 5000, 'total_cost_minor' => 5000, 'sla_met' => false,
+    ]);
+
+    $user = User::factory()->create();
+    $user->schools()->attach($f['school'], ['status' => 'active']);
+    $permission = Permission::firstOrCreate(['name' => 'maintenance.manage'], ['guard_name' => 'web', 'module_code' => 'MAINTENANCE', 'resource' => 'maintenance', 'action' => 'manage']);
+    app(UpdateUserPermissionsAction::class)->execute(new UserPermissionData(userId: $user->id, schoolId: $f['school']->id, grants: [new PermissionGrantData($permission->id, PermissionScope::School)]));
+
+    $screen = Livewire::actingAs($user)->test(ContractorsIndex::class, ['school' => $f['school']]);
+
+    $history = $screen->instance()->render()->getData()['history'];
+    expect($history[$supplier->id]['work_orders'])->toBe(2)
+        ->and($history[$supplier->id]['total_cost_minor'])->toBe(20000)
+        ->and($history[$supplier->id]['sla_met'])->toBe(1)
+        ->and($history[$supplier->id]['sla_total'])->toBe(2);
+
+    $screen->call('toggle', $supplier->id);
+    expect($supplier->fresh()->is_contractor)->toBeFalse();
+
+    $unprivileged = User::factory()->create();
+    $unprivileged->schools()->attach($f['school'], ['status' => 'active']);
+    Livewire::actingAs($unprivileged)->test(ContractorsIndex::class, ['school' => $f['school']])->assertForbidden();
 });
 
 /**
