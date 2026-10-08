@@ -850,12 +850,13 @@ showing only "under review" — verified by a dedicated test.
 `DeactivateBehaviourCategoryAction`'s own refusal to empty the last
 active trigger category, verified by a dedicated test. `Sanctions\Issue`
 surfaces `IssueSanctionAction`'s own committee/boarding-arrangement
-refusals as toasts, never a silent create. **Deliberately not built**:
-a sports-fixture clash check for detentions — `OPS-07` has since built
-`Fixture`, so the table exists now, but no cross-module query against
-it has been added to `ScheduleDetentionAction` — still a genuine gap,
-just no longer blocked on the table itself (see that Action's own
-corrected docblock).
+refusals as toasts, never a silent create. **Built 2026-10-07**: the
+sports-fixture clash check (AC-BRD-07-009) — `ScheduleDetentionAction`
+now queries `Modules\Sport\Models\Fixture` and throws a new
+`DetentionFixtureClashException` when the learner is already named in
+an unplayed fixture's squad on the same date (same-day only, not a
+fine-grained time overlap — a home fixture has no end-time column).
+Tests added to `Brd07DisciplineConductTest.php` (2 tests).
 
 **BRD-08 note 🔒🔒 — read before touching anything in this module.**
 Built (`Livewire/Safeguarding/`, `Livewire/Counselling/`, 9 screens):

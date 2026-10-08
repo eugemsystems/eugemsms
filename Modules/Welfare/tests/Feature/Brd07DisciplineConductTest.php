@@ -18,6 +18,7 @@ use Modules\Core\Models\School;
 use Modules\Core\Models\SchoolSection;
 use Modules\Core\Models\Term;
 use Modules\People\Models\Student;
+use Modules\Sport\Models\Fixture;
 use Modules\Welfare\Domain\Actions\ApproveSanctionAction;
 use Modules\Welfare\Domain\Actions\CreateBehaviourCategoryAction;
 use Modules\Welfare\Domain\Actions\CreateSanctionTypeAction;
@@ -34,6 +35,7 @@ use Modules\Welfare\Domain\DataObjects\IssueSanctionData;
 use Modules\Welfare\Domain\DataObjects\RecordBehaviourData;
 use Modules\Welfare\Domain\DataObjects\RecordDisciplinaryCommitteeData;
 use Modules\Welfare\Domain\DataObjects\ScheduleDetentionData;
+use Modules\Welfare\Domain\Exceptions\DetentionFixtureClashException;
 
 /**
  * @return array{school: School, year: AcademicYear, term: Term, gradeLevel: GradeLevel, user: User}
@@ -193,6 +195,48 @@ it('overturns a sanction on appeal without deleting it', function (): void {
     expect($sanctionAfter)->not->toBeNull()
         ->and($sanctionAfter->status)->toBe('overturned')
         ->and($sanctionAfter->exists)->toBeTrue();
+});
+
+it('refuses to schedule a detention that clashes with a sports fixture the learner is squadded for (AC-BRD-07-009)', function (): void {
+    $f = brd07Fixture();
+    $student = brd07Student($f);
+
+    Fixture::factory()->create([
+        'school_id' => $f['school']->id,
+        'fixture_date' => now()->toDateString(),
+        'squad_student_ids' => [$student->id],
+    ]);
+
+    expect(fn () => app(ScheduleDetentionAction::class)->execute(new ScheduleDetentionData(
+        schoolId: $f['school']->id, termId: $f['term']->id, studentId: $student->id,
+        scheduledDate: now(), startsAt: '15:30:00', endsAt: '16:30:00',
+    )))->toThrow(DetentionFixtureClashException::class);
+});
+
+it('allows scheduling a detention for a different learner or a completed fixture', function (): void {
+    $f = brd07Fixture();
+    $squadded = brd07Student($f);
+    $other = brd07Student($f);
+
+    $fixture = Fixture::factory()->create([
+        'school_id' => $f['school']->id,
+        'fixture_date' => now()->toDateString(),
+        'squad_student_ids' => [$squadded->id],
+    ]);
+
+    $detention = app(ScheduleDetentionAction::class)->execute(new ScheduleDetentionData(
+        schoolId: $f['school']->id, termId: $f['term']->id, studentId: $other->id,
+        scheduledDate: now(), startsAt: '15:30:00', endsAt: '16:30:00',
+    ));
+    expect($detention->status)->toBe('scheduled');
+
+    $fixture->update(['status' => 'completed']);
+
+    $detentionAfterCompletion = app(ScheduleDetentionAction::class)->execute(new ScheduleDetentionData(
+        schoolId: $f['school']->id, termId: $f['term']->id, studentId: $squadded->id,
+        scheduledDate: now(), startsAt: '15:30:00', endsAt: '16:30:00',
+    ));
+    expect($detentionAfterCompletion->status)->toBe('scheduled');
 });
 
 it('closes the detention and suspended roll-status stubs', function (): void {

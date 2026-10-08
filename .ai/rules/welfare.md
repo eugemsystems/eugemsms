@@ -10,10 +10,15 @@ paths:
 **Correction (2026-10-07):** both "deliberately not built" claims below are stale. A later
 gap-closing pass added `RecordConsultationAction` (Tier 3, complaint/assessment/plan encrypted at
 rest, a visiting practitioner must be named) wired into `Health\Record` — `Consultations` is
-built. Separately, `OPS-07` (Book H2) has since built `Modules\Sport\Models\Fixture`, so the
-sports-fixture clash check for detentions is no longer blocked on a missing table — see
-`ScheduleDetentionAction`'s own corrected docblock for what's still actually open there (the
-cross-module query itself, not the table).
+built. Separately, this session's own pass built the sports-fixture clash check for detentions
+itself: `ScheduleDetentionAction` now queries `Modules\Sport\Models\Fixture` (via
+`withoutGlobalScopes()`, the same escape hatch `ApprovalRequest::resolveApprovable()` already uses
+for a `BelongsToSchool` model reached by an explicit id rather than ambient `SchoolContext`) and
+throws `DetentionFixtureClashException` (new, `Modules\Welfare\Domain\Exceptions` — the module's
+first) when the learner is already named in an unplayed fixture's squad on the same date. A
+same-day check only, not a fine-grained time overlap — a home fixture carries no end-time column
+to compare against, and AC-BRD-07-009's own wording ("scheduled during a sports fixture") is itself
+day-level framing.
 
 **BRD-06** 🔒 (13 screens, `Livewire/Health/`): `Record` (folds
 "Clinical record" + "Condition register" — Tier 3, gated through
@@ -37,10 +42,8 @@ the correction above).
 grades". `Board`/`Review`/`Learner` all mask a safeguarding-paused
 (`is_confidential`) record's category/points, showing only "under
 review" (BR-BRD-07-018) — verified by a dedicated test.
-**Deliberately not built**: a sports-fixture clash check for
-detentions — `OPS-07` has since built `Fixture`, so this is now only
-missing the cross-module query itself, not the table (see the
-correction above).
+**Built 2026-10-07**: the sports-fixture clash check for detentions
+(see the correction above for detail).
 
 **BRD-08** 🔒🔒 (9 screens, `Livewire/Safeguarding/`,
 `Livewire/Counselling/`) — see the dedicated section below before
