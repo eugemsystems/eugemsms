@@ -1258,26 +1258,34 @@ Combined test count for this second pass: **47 new admin-UI tests**
 across the four modules (13 Utilities + 9 Facilities + 12 Security +
 13 Sport), all green, alongside the whole-app suite.
 
-### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 all 8 modules built, book stays 🟡 (PPL-05/FIN-13/FIN-12 each carry a deliberately-deferred item)
+### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 all 8 modules built (correction 2026-10-07: only FIN-12's own narrow "key ratios" line remains undeferred)
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13
 → `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. The first
 pass covered the four FIN/PPL modules, in the book's own build order
 (PPL-05 → FIN-13 → FIN-14 → FIN-12, §0.3 — "largest; independent of
 the rest" first, reporting last since it "needs everything else
 posting correctly"). **A second pass then built CMP-01–04
-(`Modules/Compliance`)**, completing the book. The book as a whole
-stays 🟡, not ✅ — PPL-05, FIN-13 and FIN-12 each already carry their
-own documented deferred item (see their notes below), and CMP-01–04
-turning out clean doesn't change that; this file's own "how to keep
-this file honest" rule is to mark partial explicitly rather than round
-up.
+(`Modules/Compliance`)**, completing the book. **Correction (2026-10-07):**
+the book originally stayed 🟡 because PPL-05, FIN-13 and FIN-12 each
+"carried a documented deferred item" — re-checked directly against
+each module's own note text, not the summary line: PPL-05's note
+names no unbuilt screen at all (only a design simplification, a raw
+JSON textarea instead of a structured band editor); FIN-13's own
+note already says its one deferred item (the audit log) "closed in
+the post-Book-K pass"; FIN-12's Board/PriorPeriod were closed this
+session (see its own note below). The only genuinely undeferred item
+left in the whole book is FIN-12's "key ratios" line (part of its
+Board pack wording, no ratio list given in the spec to build
+against) — this file's own "mark partial explicitly rather than round
+up" rule is why the book stays 🟡 for that one narrow reason, not
+three modules' worth.
 
 | Module | Screens | Status |
 |---|---|---|
-| PPL-05 | Payroll & Statutory Deductions 🇿🇼 | 🟡 partial (see note) |
-| FIN-13 | ZIMRA Fiscalisation (FDMS) 🇿🇼 | 🟡 partial (see note) |
+| PPL-05 | Payroll & Statutory Deductions 🇿🇼 | ✅ |
+| FIN-13 | ZIMRA Fiscalisation (FDMS) 🇿🇼 | ✅ |
 | FIN-14 | Student Wallet & Tuckshop | ✅ |
-| FIN-12 | Financial Reporting & Period Close ⭐ | 🟡 partial (see note) |
+| FIN-12 | Financial Reporting & Period Close ⭐ | 🟡 partial — gap: "key ratios" line only (see note) |
 | CMP-01 | ZIMSEC Candidate Registration & Results 🇿🇼 | ✅ |
 | CMP-02 | MoPSE Returns & EMIS Reporting 🇿🇼 | ✅ |
 | CMP-03 | Data Protection, Consent & Privacy 🇿🇼 | ✅ |
@@ -1368,10 +1376,15 @@ into one new `Financial\Management` screen (tabbed departmental/collection).
 `Modules\Intelligence`'s `GenerateBoardPackAction`/`Executive\BoardPack` (Book J INT-02) already
 covers BR-FIN-12-015's own "board reporting pack" concept under a different module/screen path;
 rather than duplicate it, this session added FIN-12's own `collection_rate` as a new section on
-that existing action/screen instead. Only **PriorPeriod** remains genuinely unbuilt — still no
-backing Action, confirmed by `find`/grep across `Modules/Reporting/Domain/Actions/`. FIN-12's own
-"key ratios" (part of the spec's Board pack wording) is also not built — no ratio list is named in
-the spec to build against. **A second occurrence of PPL-05's own
+that existing action/screen instead. **Third correction (2026-10-07):** "PriorPeriod" was never
+actually unbuilt either — read literally, it's BR-FIN-12-004/005's own point-in-time/reconciling-
+adjustments rule, which `GenerateIncomeStatementAction`/`Financial\IncomeStatement` already
+implemented in full (`asKnownOn`, `reconcilingItems`). The one real gap: `GenerateTrialBalanceAction`
+had the `asKnownOn` filter but never itemised the reconciling items separately — a genuine
+BR-FIN-12-005 violation for that one report. Closed this session, mirroring Income Statement's own
+shape (`TrialBalanceResult`, new `reconcilingItems` on `Financial\TrialBalance`). FIN-12's own
+"key ratios" (part of the spec's Board pack wording) is the only thing left genuinely unbuilt — no
+ratio list is named in the spec to build against. **A second occurrence of PPL-05's own
 date-comparison bug, found and fixed the same way**:
 `GenerateAccountingExportAction`'s overlap check. Permissions
 registered under module code `REPORTING`, diverging from the spec's

@@ -141,6 +141,40 @@ it('filters a point-in-time report on posted_at and itemises the reconciling pri
         ->and($asKnown->reconcilingItems)->not->toBeEmpty();
 });
 
+it('itemises the trial balance\'s own prior-period adjustment separately too, never blended (BR-FIN-12-005)', function (): void {
+    $f = fin12Fixture();
+    $knownOn = now()->subDays(2);
+
+    app(PostJournalAction::class)->execute(new PostJournalData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        journalType: 'RECEIPT', narration: 'Original entry, posted before the known-on date',
+        lines: [
+            new JournalLineData(accountId: $f['cash']->id, direction: 'DR', amount: Money::of(5000, Currency::USD)),
+            new JournalLineData(accountId: $f['income']->id, direction: 'CR', amount: Money::of(5000, Currency::USD)),
+        ],
+        effectiveAt: $f['term']->starts_on->copy()->addDays(2), postedByUserId: $f['user']->id,
+    ));
+    Journal::where('school_id', $f['school']->id)->update(['posted_at' => $knownOn->copy()->subDay()]);
+
+    app(PostJournalAction::class)->execute(new PostJournalData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        journalType: 'RECEIPT', narration: 'Prior-period adjustment, posted after the known-on date',
+        lines: [
+            new JournalLineData(accountId: $f['cash']->id, direction: 'DR', amount: Money::of(750, Currency::USD)),
+            new JournalLineData(accountId: $f['income']->id, direction: 'CR', amount: Money::of(750, Currency::USD)),
+        ],
+        effectiveAt: $f['term']->starts_on->copy()->addDays(3), postedByUserId: $f['user']->id,
+    ));
+
+    $asKnown = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData($f['school']->id, now(), $knownOn));
+    $current = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData($f['school']->id, now()));
+
+    expect(array_sum(array_column($asKnown->rows, 'debit_minor')))->toBe(5000)
+        ->and(array_sum(array_column($current->rows, 'debit_minor')))->toBe(5750)
+        ->and($asKnown->reconcilingItems)->not->toBeEmpty()
+        ->and(array_sum(array_column($asKnown->reconcilingItems, 'debit_minor')))->toBe(750);
+});
+
 it('fails the checklist as blocking when the trial balance does not balance, and no user can override it or lock the period (AC-FIN-12-004)', function (): void {
     $f = fin12Fixture();
 
@@ -269,10 +303,10 @@ it('produces a per-currency trial balance that balances for a healthy ledger (BR
         effectiveAt: now(), postedByUserId: $f['user']->id,
     ));
 
-    $rows = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData($f['school']->id, now()));
+    $result = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData($f['school']->id, now()));
 
-    $totalDebits = array_sum(array_column($rows, 'debit_minor'));
-    $totalCredits = array_sum(array_column($rows, 'credit_minor'));
+    $totalDebits = array_sum(array_column($result->rows, 'debit_minor'));
+    $totalCredits = array_sum(array_column($result->rows, 'credit_minor'));
 
     expect($totalDebits)->toBe($totalCredits)
         ->and($totalDebits)->toBeGreaterThan(0);

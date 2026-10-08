@@ -24,7 +24,11 @@ use Modules\Reporting\Domain\DataObjects\GenerateTrialBalanceData;
  * `INVENTORY`/`PROCUREMENT`/`ASSETS`/`BUDGET` codes). A pure query
  * over `journal_lines` — producible for any date, including a fully
  * closed and archived period, and reproduces identically no matter
- * when it's re-run (BR-FIN-12-003).
+ * when it's re-run (BR-FIN-12-003). `asKnownOn` also now surfaces
+ * `reconcilingItems` whenever given (BR-FIN-12-004/005, built
+ * 2026-10-07, mirroring `Financial\IncomeStatement`'s own already-built
+ * treatment of the identical rule) — a prior-period adjustment shows
+ * on its own, never blended into the rows above it.
  */
 #[Title('Trial balance')]
 #[Layout('layouts.app')]
@@ -40,6 +44,9 @@ final class TrialBalance extends Component
     /** @var array<int, array{account_id: int, code: string, name: string, currency: string, debit_minor: int, credit_minor: int}> */
     public array $rows = [];
 
+    /** @var array<int, array{account_id: int, code: string, name: string, currency: string, debit_minor: int, credit_minor: int}> */
+    public array $reconcilingItems = [];
+
     public bool $generated = false;
 
     public function mount(School $school): void
@@ -54,12 +61,14 @@ final class TrialBalance extends Component
     {
         $this->validate(['asAt' => ['required', 'date']]);
 
-        $this->rows = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData(
+        $result = app(GenerateTrialBalanceAction::class)->execute(new GenerateTrialBalanceData(
             schoolId: $this->school->id,
             asAt: Carbon::parse($this->asAt),
             asKnownOn: $this->asKnownOn !== '' ? Carbon::parse($this->asKnownOn) : null,
         ));
 
+        $this->rows = $result->rows;
+        $this->reconcilingItems = $result->reconcilingItems;
         $this->generated = true;
     }
 
