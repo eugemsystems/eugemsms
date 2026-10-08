@@ -933,11 +933,13 @@ into `Stock\OnHand` as a per-item "Rebuild" button instead). **Correction
 `stores.check_expiring_lots` (wrapping `CheckExpiringLotsAction`) is
 registered with `ScheduledTaskHandlerRegistry` and gets a genuine cron
 entry via `routes/console.php`'s generic scheduler loop, closed in the
-project-wide scheduled-jobs gap-closing pass. The reorder
-(`CheckReorderLevelsAction`) and anomaly (`DetectConsumptionAnomalyAction`)
-checks remain genuinely unscheduled — confirmed, neither key is
-registered in `StoresServiceProvider` — still on-demand only, from
-their own screens. **New gap-filling Action**: `RecordStockTakeVarianceReasonAction`
+project-wide scheduled-jobs gap-closing pass. **Built 2026-10-07**: the reorder
+(`stores.check_reorder_levels`, looping every store in the school since
+`CheckReorderLevelsAction` itself is store-scoped) and anomaly
+(`stores.detect_consumption_anomalies`, looping every `ConsumptionBaseline`
+row in the school over the same rolling 7-day window `Anomalies\Index`
+defaults to) checks are now also genuinely scheduled, both registered with
+`ScheduledTaskHandlerRegistry`. **New gap-filling Action**: `RecordStockTakeVarianceReasonAction`
 — `StockTake\Variance`'s own "save reason" control originally wrote
 `StockTakeLine::update()` directly; no Action anywhere in the domain
 layer ever set just that one field even though
@@ -1329,17 +1331,23 @@ recognise a balance as income), `Reports\Reconciliation` ⭐ (runs
 `Run\Wizard` uses. No gap-filling Actions were needed. See
 `.ai/rules/wallet.md`.
 
-**FIN-12 note ⭐.** Built (`Livewire/{Financial,Close,Schedules,
-Export}/`, 5 screens — only screens with a real Action behind them;
-the spec's own Departmental/Collection/PriorPeriod/Board have none,
-verified by grep, and are not built; BalanceSheet and CashFlow were added
-in the gap-closing pass, see below):
-`Financial\TrialBalance`, `Financial\IncomeStatement` (folds the
-spec's own separate "Point-in-time" screen in), `Close\Checklist`
+**FIN-12 note ⭐.** Built originally (`Livewire/{Financial,Close,Schedules,
+Export}/`, 5 screens — only screens with a real Action behind them; the
+spec's own Departmental/Collection/PriorPeriod/Board had none at the time,
+verified by grep): `Financial\TrialBalance`, `Financial\IncomeStatement`
+(folds the spec's own separate "Point-in-time" screen in), `Close\Checklist`
 (folds the spec's own separate "Close pack" screen in; a blocking
 check never shows an acknowledge control at all), `Schedules\Index`
-(also hosts the new `CreateReportDefinitionAction`),
-`Export\Accounting` ⚠. **A second occurrence of PPL-05's own
+(also hosts the new `CreateReportDefinitionAction`), `Export\Accounting` ⚠.
+**Correction (2026-10-07):** three of the four originally-missing screens are
+now built, verified directly against the filesystem, not just a note — a later
+gap-closing pass added `GenerateBalanceSheetAction`/`GenerateCashFlowAction`
+plus `Financial\{BalanceSheet,CashFlow}` screens, and
+`GenerateDepartmentalReportAction`/`GenerateCollectionReportAction` folded
+into one new `Financial\Management` screen (tabbed departmental/collection).
+Only **PriorPeriod** and **Board** remain genuinely unbuilt — still no
+backing Action for either, confirmed by `find`/grep across
+`Modules/Reporting/Domain/Actions/`. **A second occurrence of PPL-05's own
 date-comparison bug, found and fixed the same way**:
 `GenerateAccountingExportAction`'s overlap check. Permissions
 registered under module code `REPORTING`, diverging from the spec's

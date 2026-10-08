@@ -23,8 +23,10 @@ use Modules\Stores\Domain\Actions\CheckBudgetVarianceAction;
 use Modules\Stores\Domain\Actions\CheckContractExpiryAction;
 use Modules\Stores\Domain\Actions\CheckExpiringLotsAction;
 use Modules\Stores\Domain\Actions\CheckInsuranceExpiryAction;
+use Modules\Stores\Domain\Actions\CheckReorderLevelsAction;
 use Modules\Stores\Domain\Actions\CheckTaxClearanceExpiryAction;
 use Modules\Stores\Domain\Actions\CheckUnderInsuranceAction;
+use Modules\Stores\Domain\Actions\DetectConsumptionAnomalyAction;
 use Modules\Stores\Domain\Actions\ReconcileAssetRegisterAction;
 use Modules\Stores\Domain\Events\CapitalPurchaseReceived;
 use Modules\Stores\Domain\Events\InvoiceMatched;
@@ -687,6 +689,48 @@ class StoresServiceProvider extends ModuleServiceProvider
                 return $r->count().' lot(s) flagged';
             },
             description: 'Alerts on stock lots crossing an expiry alert threshold.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.check_reorder_levels',
+            moduleCode: 'FIN-09',
+            name: 'Check Reorder Levels',
+            cron: '55 6 * * *',
+            handler: static function (School $school): string {
+                $action = app(CheckReorderLevelsAction::class);
+                $flagged = 0;
+
+                foreach (Store::where('school_id', $school->id)->pluck('id') as $storeId) {
+                    $flagged += $action->execute($storeId)->count();
+                }
+
+                return $flagged.' item(s) flagged';
+            },
+            description: 'Alerts when a stocked item\'s on-hand quantity falls to or below its reorder level.',
+            alertIfNotRunWithinMinutes: 1560,
+        );
+
+        ScheduledTaskHandlerRegistry::register(
+            key: 'stores.detect_consumption_anomalies',
+            moduleCode: 'FIN-09',
+            name: 'Detect Consumption Anomalies',
+            cron: '0 7 * * *',
+            handler: static function (School $school): string {
+                $action = app(DetectConsumptionAnomalyAction::class);
+                $periodStart = now()->subDays(7);
+                $periodEnd = now();
+                $flagged = 0;
+
+                foreach (ConsumptionBaseline::where('school_id', $school->id)->get(['store_id', 'item_id']) as $baseline) {
+                    if ($action->execute($baseline->store_id, $baseline->item_id, $periodStart, $periodEnd) !== null) {
+                        $flagged++;
+                    }
+                }
+
+                return $flagged.' anomal(ies) flagged';
+            },
+            description: 'Compares the last 7 days\' consumption against each item\'s baseline, per store.',
             alertIfNotRunWithinMinutes: 1560,
         );
     }
