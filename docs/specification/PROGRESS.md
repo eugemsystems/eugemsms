@@ -1358,7 +1358,7 @@ Combined test count for this second pass: **47 new admin-UI tests**
 across the four modules (13 Utilities + 9 Facilities + 12 Security +
 13 Sport), all green, alongside the whole-app suite.
 
-### Book H3 — Payroll, Fiscalisation & Compliance — 🟡 all 8 modules built (correction 2026-10-07: only FIN-12's own narrow "key ratios" line remains undeferred)
+### Book H3 — Payroll, Fiscalisation & Compliance — ✅ all 8 modules built, nothing deferred (FIN-12's own "key ratios" line closed 2026-10-08)
 Verified module ownership: PPL-05 → `Payroll`, FIN-12 → `Reporting`, FIN-13
 → `Fiscal`, FIN-14 → `Wallet`, CMP-01–CMP-04 → `Compliance`. The first
 pass covered the four FIN/PPL modules, in the book's own build order
@@ -1373,19 +1373,18 @@ names no unbuilt screen at all (only a design simplification, a raw
 JSON textarea instead of a structured band editor); FIN-13's own
 note already says its one deferred item (the audit log) "closed in
 the post-Book-K pass"; FIN-12's Board/PriorPeriod were closed this
-session (see its own note below). The only genuinely undeferred item
-left in the whole book is FIN-12's "key ratios" line (part of its
-Board pack wording, no ratio list given in the spec to build
-against) — this file's own "mark partial explicitly rather than round
-up" rule is why the book stays 🟡 for that one narrow reason, not
-three modules' worth.
+session (see its own note below). **Gap closed (2026-10-08):** FIN-12's
+own "key ratios" line — the spec names no specific ratio list, so this
+was a genuine judgment call, made only with the user's own explicit
+approval of the ratio selection, not a guess. All 8 modules in this
+book are now fully built, nothing deferred.
 
 | Module | Screens | Status |
 |---|---|---|
 | PPL-05 | Payroll & Statutory Deductions 🇿🇼 | ✅ |
 | FIN-13 | ZIMRA Fiscalisation (FDMS) 🇿🇼 | ✅ |
 | FIN-14 | Student Wallet & Tuckshop | ✅ |
-| FIN-12 | Financial Reporting & Period Close ⭐ | 🟡 partial — gap: "key ratios" line only (see note) |
+| FIN-12 | Financial Reporting & Period Close ⭐ | ✅ complete ("key ratios" built 2026-10-08; see note) |
 | CMP-01 | ZIMSEC Candidate Registration & Results 🇿🇼 | ✅ |
 | CMP-02 | MoPSE Returns & EMIS Reporting 🇿🇼 | ✅ |
 | CMP-03 | Data Protection, Consent & Privacy 🇿🇼 | ✅ |
@@ -1482,9 +1481,20 @@ adjustments rule, which `GenerateIncomeStatementAction`/`Financial\IncomeStateme
 implemented in full (`asKnownOn`, `reconcilingItems`). The one real gap: `GenerateTrialBalanceAction`
 had the `asKnownOn` filter but never itemised the reconciling items separately — a genuine
 BR-FIN-12-005 violation for that one report. Closed this session, mirroring Income Statement's own
-shape (`TrialBalanceResult`, new `reconcilingItems` on `Financial\TrialBalance`). FIN-12's own
-"key ratios" (part of the spec's Board pack wording) is the only thing left genuinely unbuilt — no
-ratio list is named in the spec to build against. **A second occurrence of PPL-05's own
+shape (`TrialBalanceResult`, new `reconcilingItems` on `Financial\TrialBalance`). **Gap closed
+(2026-10-08, user-approved ratio selection, BR-FIN-12-015):** FIN-12's own "key ratios" — the spec
+names no specific ratio list, so the four computed (operating margin, staff cost %,
+total-assets-to-total-liabilities, collection rate) were chosen with the user's explicit approval,
+not guessed. `GenerateKeyFinancialRatiosAction` (new, `Modules/Reporting/Domain/Actions/`) derives
+every figure from `journal_lines` directly, same doctrine as every other FIN-12 report; staff cost
+is isolated by `journal_type = 'PAYROLL'` since there is no stored school-level payroll-account
+mapping to query otherwise (`PayrollGlAccounts` is passed ad hoc per posting call — see its own
+docblock). "Current ratio" specifically is not literally buildable — this codebase's chart of
+accounts has no current/non-current classification anywhere — so the ratio reported is named
+exactly what it is (total-assets-to-total-liabilities), never mislabelled. Wired into
+`GenerateBoardPackAction` as a new `key_ratios` section. Tests added to
+`Fin12ReportingPeriodCloseTest.php` (2 tests) and `Int02ExecutiveDashboardsAdminUiTest.php` (updated).
+**A second occurrence of PPL-05's own
 date-comparison bug, found and fixed the same way**:
 `GenerateAccountingExportAction`'s overlap check. Permissions
 registered under module code `REPORTING`, diverging from the spec's
@@ -1953,11 +1963,13 @@ digest" action (exceptions only, through CORE-09). The warning threshold is
 compared **directly** with the KPI's own value (the backend's reading of the
 spec's worked example), so for a non-percentage KPI such as days overdue it must
 be set deliberately — the KPI screen says so. The board pack offers only the
-five sections the backend can resolve (enrolment, financial = FIN-12's income
-statement unmodified, staffing, boarding, and — **built 2026-10-07** —
+six sections the backend can resolve (enrolment, financial = FIN-12's income
+statement unmodified, staffing, boarding, — **built 2026-10-07** —
 `collection_rate`, rolled up from FIN-12's own real `GenerateCollectionReportAction`, closing
 Book H3 FIN-12's own "Board pack" requirement under this screen rather than a duplicate
-`Reports\Board\Pack`); `academic` and the INT-03 risk summary are not offered.
+`Reports\Board\Pack`, and — **built 2026-10-08** — `key_ratios` (operating margin, staff
+cost %, total-assets-to-total-liabilities, collection rate), closing FIN-12's own
+BR-FIN-12-015 "key ratios" line the same way); `academic` and the INT-03 risk summary are not offered.
 One backend hardening: `SetKpiTargetAction` now refuses
 an unregistered KPI key. **Deliberately not built:** the `/api/v1/executive/*`
 endpoints, the daily digest *scheduling* (the Action exists; the cron wiring is

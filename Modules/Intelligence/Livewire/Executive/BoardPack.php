@@ -49,12 +49,13 @@ final class BoardPack extends Component
         'staffing' => 'Staffing',
         'boarding' => 'Boarding occupancy',
         'collection_rate' => 'Fee collection rate',
+        'key_ratios' => 'Key financial ratios',
     ];
 
     public ?int $termId = null;
 
     /** @var array<int, string> */
-    public array $sections = ['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate'];
+    public array $sections = ['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate', 'key_ratios'];
 
     public function mount(School $school): void
     {

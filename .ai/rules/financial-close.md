@@ -35,9 +35,17 @@ above implied — `Modules\Intelligence\Domain\Actions\GenerateBoardPackAction`/
 one document", the same concept BR-FIN-12-015 names under a different module/screen path. Rather
 than build a second `Reports\Board\Pack` screen, this session added the one genuinely missing
 piece instead — a `collection_rate` section, rolled up from this module's own real
-`GenerateCollectionReportAction` — to that existing action/screen. FIN-12's own "key ratios" line
-is still not built: the spec names no specific ratio list, and inventing one would be guessing at
-a figure a school's board would actually rely on. **Further correction (2026-10-07):** "PriorPeriod" was never actually unbuilt either — read
+`GenerateCollectionReportAction` — to that existing action/screen. **Gap closed (2026-10-08,
+user-approved ratio selection):** FIN-12's own "key ratios" line — the spec names no specific
+ratio list, so this was a judgment call, made only after checking with the user rather than
+guessing: `GenerateKeyFinancialRatiosAction` computes operating margin, staff cost %, and
+total-assets-to-total-liabilities (explicitly NOT called "current ratio" — this codebase's chart
+of accounts has no current/non-current classification anywhere to compute the textbook ratio
+from), plus the same collection rate the `collection_rate` section already surfaces. Wired into
+`GenerateBoardPackAction` as a new `key_ratios` section, same "real GL data, never a cached
+balance" doctrine every other FIN-12 report follows. Staff cost is isolated by journal_type =
+'PAYROLL' (`PostPayrollRunAction`'s own tag), since `PayrollGlAccounts` is passed ad hoc per
+posting call with no stored school-level account mapping to look up otherwise. **Further correction (2026-10-07):** "PriorPeriod" was never actually unbuilt either — read
 literally, the spec's own "PriorPeriod" screen is BR-FIN-12-004/005's "point-in-time reporting...
 lists the reconciling prior-period adjustments separately" rule, and `GenerateIncomeStatementAction`/
 `Financial\IncomeStatement` already implemented exactly that (`asKnownOn`, `reconcilingItems`,
@@ -48,9 +56,8 @@ BR-FIN-12-005 violation for that one report ("never blended" in, which is exactl
 filter does). Closed this session: `GenerateTrialBalanceAction` now returns a `TrialBalanceResult`
 (`rows`/`reconcilingItems`, mirroring `IncomeStatementResult`'s own shape) and
 `Financial\TrialBalance` shows the same "prior-period adjustments, posted after..." card Income
-Statement already had. Nothing in FIN-12's own 12-screen table remains genuinely unbuilt except
-"key ratios" (part of the spec's own Board pack wording, no ratio list given to build against —
-see the Board correction above).
+Statement already had. Nothing in FIN-12's own 12-screen table remains genuinely unbuilt — "key
+ratios" was the last item, closed 2026-10-08 (see the correction above).
 
 ## `Financial\IncomeStatement` folds in Point-in-time
 

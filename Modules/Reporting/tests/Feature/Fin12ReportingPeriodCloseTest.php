@@ -40,6 +40,7 @@ use Modules\Reporting\Domain\Actions\GenerateClosePackAction;
 use Modules\Reporting\Domain\Actions\GenerateCollectionReportAction;
 use Modules\Reporting\Domain\Actions\GenerateDepartmentalReportAction;
 use Modules\Reporting\Domain\Actions\GenerateIncomeStatementAction;
+use Modules\Reporting\Domain\Actions\GenerateKeyFinancialRatiosAction;
 use Modules\Reporting\Domain\Actions\GenerateTrialBalanceAction;
 use Modules\Reporting\Domain\Actions\RunAndRecordCloseChecklistAction;
 use Modules\Reporting\Domain\DataObjects\AcknowledgeCloseCheckData;
@@ -48,6 +49,7 @@ use Modules\Reporting\Domain\DataObjects\GenerateBalanceSheetData;
 use Modules\Reporting\Domain\DataObjects\GenerateCashFlowData;
 use Modules\Reporting\Domain\DataObjects\GenerateClosePackData;
 use Modules\Reporting\Domain\DataObjects\GenerateIncomeStatementData;
+use Modules\Reporting\Domain\DataObjects\GenerateKeyFinancialRatiosData;
 use Modules\Reporting\Domain\DataObjects\GenerateManagementReportData;
 use Modules\Reporting\Domain\DataObjects\GenerateTrialBalanceData;
 use Modules\Reporting\Domain\DataObjects\RunAndRecordCloseChecklistData;
@@ -418,4 +420,72 @@ it('compares fees billed with fees collected by grade level and leaves voided in
     expect($report['rows'])->toHaveCount(1)->and($report['rows'][0]['grade_level'])->toBe('Form 1')->and($report['rows'][0]['learners'])->toBe(1)
         ->and($report['total_billed_minor'])->toBe(60000)->and($report['total_paid_minor'])->toBe(30000)->and($report['total_outstanding_minor'])->toBe(30000)
         ->and($report['rate_percent'])->toBe(50.0);
+});
+
+it('computes operating margin, staff cost %, and asset-to-liability ratio straight from the journal (BR-FIN-12-015)', function (): void {
+    $f = fin12Fixture();
+    $payable = Account::factory()->for($f['school'])->liability()->create();
+
+    // Fee income: DR cash 100,000 / CR income 100,000.
+    app(PostJournalAction::class)->execute(new PostJournalData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        journalType: 'MANUAL', narration: 'Fee income',
+        lines: [
+            new JournalLineData(accountId: $f['cash']->id, direction: 'DR', amount: Money::of(100000, Currency::USD)),
+            new JournalLineData(accountId: $f['income']->id, direction: 'CR', amount: Money::of(100000, Currency::USD)),
+        ],
+        effectiveAt: now(), postedByUserId: $f['user']->id,
+    ));
+
+    // A regular (non-payroll) operating expense: DR expense 20,000 / CR cash 20,000.
+    app(PostJournalAction::class)->execute(new PostJournalData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        journalType: 'MANUAL', narration: 'Stationery',
+        lines: [
+            new JournalLineData(accountId: $f['expense']->id, direction: 'DR', amount: Money::of(20000, Currency::USD)),
+            new JournalLineData(accountId: $f['cash']->id, direction: 'CR', amount: Money::of(20000, Currency::USD)),
+        ],
+        effectiveAt: now(), postedByUserId: $f['user']->id,
+    ));
+
+    // A payroll run's own employer-cost debit, tagged journalType PAYROLL exactly as
+    // PostPayrollRunAction does: DR expense 30,000 / CR a payable 30,000.
+    app(PostJournalAction::class)->execute(new PostJournalData(
+        schoolId: $f['school']->id, academicYearId: $f['year']->id, termId: $f['term']->id,
+        journalType: 'PAYROLL', narration: 'Salaries & wages',
+        lines: [
+            new JournalLineData(accountId: $f['expense']->id, direction: 'DR', amount: Money::of(30000, Currency::USD)),
+            new JournalLineData(accountId: $payable->id, direction: 'CR', amount: Money::of(30000, Currency::USD)),
+        ],
+        effectiveAt: now(), postedByUserId: $f['user']->id,
+    ));
+
+    $ratios = app(GenerateKeyFinancialRatiosAction::class)->execute(new GenerateKeyFinancialRatiosData(
+        schoolId: $f['school']->id, periodStart: now()->startOfMonth(), periodEnd: now()->endOfMonth(), currency: 'USD',
+    ));
+
+    expect($ratios['total_income_minor'])->toBe(100000)
+        ->and($ratios['total_expense_minor'])->toBe(50000)
+        ->and($ratios['staff_cost_minor'])->toBe(30000)
+        ->and($ratios['operating_margin_percent'])->toBe(50.0)
+        ->and($ratios['staff_cost_percent'])->toBe(30.0)
+        ->and($ratios['total_assets_minor'])->toBe(80000)
+        ->and($ratios['total_liabilities_minor'])->toBe(30000)
+        ->and($ratios['asset_to_liability_ratio'])->toBe(2.67)
+        // No invoices exist in this fixture, so the collection rate is genuinely undefined,
+        // not zero (GenerateCollectionReportAction's own null-when-nothing-billed rule).
+        ->and($ratios['collection_rate_percent'])->toBeNull();
+});
+
+it('returns null ratios rather than dividing by zero when there is no income or no liabilities yet', function (): void {
+    $f = fin12Fixture();
+
+    $ratios = app(GenerateKeyFinancialRatiosAction::class)->execute(new GenerateKeyFinancialRatiosData(
+        schoolId: $f['school']->id, periodStart: now()->startOfMonth(), periodEnd: now()->endOfMonth(), currency: 'USD',
+    ));
+
+    expect($ratios['operating_margin_percent'])->toBeNull()
+        ->and($ratios['staff_cost_percent'])->toBeNull()
+        ->and($ratios['asset_to_liability_ratio'])->toBeNull()
+        ->and($ratios['collection_rate_percent'])->toBeNull();
 });

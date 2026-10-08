@@ -17,7 +17,9 @@ use Modules\People\Models\Staff;
 use Modules\People\Models\Student;
 use Modules\Reporting\Domain\Actions\GenerateCollectionReportAction;
 use Modules\Reporting\Domain\Actions\GenerateIncomeStatementAction;
+use Modules\Reporting\Domain\Actions\GenerateKeyFinancialRatiosAction;
 use Modules\Reporting\Domain\DataObjects\GenerateIncomeStatementData;
+use Modules\Reporting\Domain\DataObjects\GenerateKeyFinancialRatiosData;
 use Modules\Reporting\Domain\DataObjects\GenerateManagementReportData;
 
 /**
@@ -36,24 +38,30 @@ use Modules\Reporting\Domain\DataObjects\GenerateManagementReportData;
  * a simpler presentation format).
  *
  * **Honest scope boundary.** `enrolment`, `financial`, `staffing`,
- * `boarding`, and `collection_rate` are real, resolvable sections.
- * `academic` (outcomes) and `risk_summary` (only meaningful once
- * `INT-03` exists) are named in the spec's own `sections_included`
+ * `boarding`, `collection_rate`, and `key_ratios` are real, resolvable
+ * sections. `academic` (outcomes) and `risk_summary` (only meaningful
+ * once `INT-03` exists) are named in the spec's own `sections_included`
  * example but have no resolver in this pass — requesting either
  * throws a clear exception rather than fabricating a section with no
- * real data behind it. FIN-12's own "key ratios" is also not built:
- * the spec names no specific ratio list, and inventing one (current
- * ratio? operating margin? debt-collection ratio?) would be guessing
- * at a figure a school's board would actually rely on — left as a
- * documented gap rather than a fabricated one.
+ * real data behind it.
+ *
+ * **Gap closed (2026-10-08, BR-FIN-12-015, user-approved ratio
+ * selection):** `key_ratios` — operating margin, staff cost %,
+ * total-assets-to-total-liabilities (not literally "current ratio";
+ * see `GenerateKeyFinancialRatiosAction`'s own docblock for why), and
+ * the same collection rate `collection_rate` already surfaces. The
+ * spec names no specific ratio list, so this is a deliberate,
+ * documented choice of four conventional, GL-derived ratios, not a
+ * guess at an unspecified figure.
  */
 final class GenerateBoardPackAction extends Action
 {
-    private const array SUPPORTED_SECTIONS = ['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate'];
+    private const array SUPPORTED_SECTIONS = ['enrolment', 'financial', 'staffing', 'boarding', 'collection_rate', 'key_ratios'];
 
     public function __construct(
         private readonly GenerateIncomeStatementAction $generateIncomeStatement,
         private readonly GenerateCollectionReportAction $generateCollectionReport,
+        private readonly GenerateKeyFinancialRatiosAction $generateKeyFinancialRatios,
         private readonly UploadFileAction $uploadFile,
     ) {}
 
@@ -78,6 +86,7 @@ final class GenerateBoardPackAction extends Action
                 'staffing' => ['active_staff' => Staff::where('school_id', $schoolId)->where('status', 'active')->count()],
                 'boarding' => ['confirmed_bed_allocations' => BedAllocation::where('school_id', $schoolId)->where('status', 'confirmed')->count()],
                 'collection_rate' => $this->collectionRateSection($schoolId, $term),
+                'key_ratios' => $this->keyRatiosSection($schoolId, $term),
             };
         }
 
@@ -141,5 +150,20 @@ final class GenerateBoardPackAction extends Action
             'paid_minor' => $result['total_paid_minor'],
             'rate_percent' => $result['rate_percent'],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function keyRatiosSection(int $schoolId, Term $term): array
+    {
+        $currency = School::findOrFail($schoolId)->base_currency;
+
+        return $this->generateKeyFinancialRatios->execute(new GenerateKeyFinancialRatiosData(
+            schoolId: $schoolId,
+            periodStart: $term->starts_on,
+            periodEnd: $term->ends_on,
+            currency: $currency,
+        ));
     }
 }
